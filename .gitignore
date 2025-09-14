@@ -1,7 +1,7 @@
 ### General
 .DS_Store
-.env
-.env.*
+# .env
+# .env.*
 
 ### Node
 node_modules/

@@ -1,10 +1,9 @@
 import 'dotenv/config'
 import path from 'node:path'
-import pino from 'pino'
+import { logger } from './logger.js'
 import express from 'express'
 import { z } from 'zod'
 import { app } from './app.js'
-const logger = pino({ name: 'ff-tools' })
 
 // Serve built client
 const clientDir = path.resolve(process.cwd(), 'dist/client')

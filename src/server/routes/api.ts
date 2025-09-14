@@ -5,6 +5,7 @@ import { getKeeperData } from '../services/keeper.js'
 import { dynastyNerdsProvider } from '../providers/dynastyNerds.js'
 import { dynastyCalculatorProvider } from '../providers/dynastyCalculator.js'
 import { listPlayers, seedPlayersFromSleeper } from '../services/players.js'
+import { parseCsvToValuations, saveValuations, getLatestValuations } from '../services/valuations.js'
 
 export function registerApiRoutes(app: Express) {
   app.get('/api/sleeper-tools/adp', async (_req: Request, res: Response) => {
@@ -16,8 +17,10 @@ export function registerApiRoutes(app: Express) {
     }
   })
 
-  app.get('/api/sleeper-tools/keeper-data', async (_req: Request, res: Response) => {
+  app.get('/api/sleeper-tools/keeper-data', async (req: Request, res: Response) => {
     try {
+      // @ts-ignore
+      req.log?.info('keeper-data requested')
       const data = await getKeeperData()
       res.json(data)
     } catch (err: any) {
@@ -43,9 +46,46 @@ export function registerApiRoutes(app: Express) {
     try {
       const provider = source === 'dynasty-nerds' ? dynastyNerdsProvider : dynastyCalculatorProvider
       const data = await provider.run({ headless: true })
-      res.json(data)
+      const prisma = (await import('../db.js')).prisma
+      const stats = await saveValuations(prisma as any, data)
+      // @ts-ignore
+      req.log?.info({ source, items: data.length, saved: stats.created }, 'sync complete')
+      res.json({ saved: stats.created, items: data.length })
     } catch (e: any) {
+      // @ts-ignore
+      req.log?.error({ err: e }, 'sync failed')
       res.status(500).json({ error: e?.message || 'sync failed' })
+    }
+  })
+
+  // Import valuations via CSV
+  app.post('/api/valuations/import', async (req: Request, res: Response) => {
+    const sourceParam = String(req.query.source || '').trim()
+    if (!sourceParam) return res.status(400).json({ error: 'source is required' })
+    try {
+      const records = parseCsvToValuations(String(req.body || ''), sourceParam as any)
+      const prisma = (await import('../db.js')).prisma
+      const stats = await saveValuations(prisma as any, records)
+      // @ts-ignore
+      req.log?.info({ source: sourceParam, saved: stats.created }, 'csv import complete')
+      res.json({ saved: stats.created })
+    } catch (e: any) {
+      // @ts-ignore
+      req.log?.error({ err: e }, 'csv import failed')
+      res.status(500).json({ error: e?.message || 'import failed' })
+    }
+  })
+
+  // Latest valuations per player
+  app.get('/api/valuations/latest', async (req: Request, res: Response) => {
+    try {
+      const source = typeof req.query.source === 'string' ? req.query.source : undefined
+      const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 200
+      const prisma = (await import('../db.js')).prisma
+      const rows = await getLatestValuations(prisma as any, source, limit)
+      res.json(rows)
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'failed' })
     }
   })
 

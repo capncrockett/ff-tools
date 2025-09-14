@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id         Int      @id @default(autoincrement())
+  sleeperId  String?  @unique
+  name       String
+  position   String?
+  team       String?
+  createdAt  DateTime @default(now())
+  valuations Valuation[]
+  mappings   Mapping[]
+}
+
+model Source {
+  id    Int      @id @default(autoincrement())
+  name  String   @unique
+  notes String?
+  valuations Valuation[]
+  mappings   Mapping[]
+}
+
+model Valuation {
+  id         Int      @id @default(autoincrement())
+  player     Player   @relation(fields: [playerId], references: [id])
+  playerId   Int
+  source     Source   @relation(fields: [sourceId], references: [id])
+  sourceId   Int
+  value      Float
+  unit       String   @default("index")
+  capturedAt DateTime @default(now())
+}
+
+model Mapping {
+  id            Int     @id @default(autoincrement())
+  source        Source  @relation(fields: [sourceId], references: [id])
+  sourceId      Int
+  sourceKey     String  // e.g., name or ID used by the source
+  player        Player  @relation(fields: [playerId], references: [id])
+  playerId      Int
+  @@unique([sourceId, sourceKey])
+}
+

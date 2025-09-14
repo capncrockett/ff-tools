@@ -1,0 +1,163 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sleeper Public API (Curated)",
+    "version": "1.0.0",
+    "description": "Subset of common Sleeper endpoints with sample responses for local tooling and LLMs."
+  },
+  "servers": [{ "url": "https://api.sleeper.app" }],
+  "paths": {
+    "/v1/user/{username}": {
+      "get": {
+        "summary": "Get user by username",
+        "parameters": [
+          { "name": "username", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" },
+                "examples": {
+                  "sample": {
+                    "value": { "user_id": "123", "username": "crockett", "display_name": "Crockett" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/user/{user_id}/leagues/nfl/{season}": {
+      "get": {
+        "summary": "Get leagues for a user in a season",
+        "parameters": [
+          { "name": "user_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "season", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of leagues",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/League" } },
+                "examples": {
+                  "sample": {
+                    "value": [ { "league_id": "league456", "name": "Grundle League", "season": "2024" } ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/league/{league_id}/users": {
+      "get": {
+        "summary": "Get users for a league",
+        "parameters": [
+          { "name": "league_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of users",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/User" } },
+                "examples": {
+                  "sample": { "value": [ { "user_id": "owner1", "display_name": "Owner One" } ] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/league/{league_id}/rosters": {
+      "get": {
+        "summary": "Get rosters for a league",
+        "parameters": [
+          { "name": "league_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of rosters",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Roster" } },
+                "examples": {
+                  "sample": { "value": [ { "owner_id": "owner1", "players": ["ply1", "ply2"] } ] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/players/nfl": {
+      "get": {
+        "summary": "Get all NFL players (object keyed by player_id)",
+        "responses": {
+          "200": {
+            "description": "Players object",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlayersMap" },
+                "examples": {
+                  "sample": {
+                    "value": {
+                      "ply1": { "full_name": "Player One", "position": "RB", "team": "SF" },
+                      "ply2": { "full_name": "Player Two", "position": "DL", "fantasy_positions": ["EDGE"], "team": "DAL" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "username": { "type": "string" },
+          "display_name": { "type": "string" }
+        }
+      },
+      "League": {
+        "type": "object",
+        "properties": {
+          "league_id": { "type": "string" },
+          "name": { "type": "string" },
+          "season": { "type": "string" }
+        }
+      },
+      "Roster": {
+        "type": "object",
+        "properties": {
+          "owner_id": { "type": "string" },
+          "players": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "PlayersMap": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "full_name": { "type": "string" },
+            "position": { "type": "string" },
+            "team": { "type": "string" },
+            "fantasy_positions": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    }
+  }
+}
+

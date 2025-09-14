@@ -12,11 +12,19 @@ module.exports = {
       },
     ],
   },
+  globals: {
+    'ts-jest': {
+      diagnostics: false,
+    },
+  },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@server/(.*)\\.js$': '<rootDir>/src/server/$1',
     '^@server/(.*)$': '<rootDir>/src/server/$1',
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
+    // Mock Prisma client in tests to avoid schema engines
+    '^@server/db$': '<rootDir>/tests/mocks/db.ts',
+    '^@server/db\\.js$': '<rootDir>/tests/mocks/db.ts',
   },
   setupFiles: ['dotenv/config'],
   collectCoverage: true,
@@ -24,6 +32,7 @@ module.exports = {
   coveragePathIgnorePatterns: [
     '<rootDir>/src/server/index.ts',
     '<rootDir>/src/server/jobs/',
+    '<rootDir>/src/server/db.ts',
   ],
   coverageReporters: ['text', 'lcov'],
   coverageThreshold: {

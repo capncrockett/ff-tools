@@ -4,6 +4,7 @@ import { getAdpData } from '../services/adp.js'
 import { getKeeperData } from '../services/keeper.js'
 import { dynastyNerdsProvider } from '../providers/dynastyNerds.js'
 import { dynastyCalculatorProvider } from '../providers/dynastyCalculator.js'
+import { listPlayers, seedPlayersFromSleeper } from '../services/players.js'
 
 export function registerApiRoutes(app: Express) {
   app.get('/api/sleeper-tools/adp', async (_req: Request, res: Response) => {
@@ -45,6 +46,30 @@ export function registerApiRoutes(app: Express) {
       res.json(data)
     } catch (e: any) {
       res.status(500).json({ error: e?.message || 'sync failed' })
+    }
+  })
+
+  // Players endpoints
+  app.get('/api/players', async (req: Request, res: Response) => {
+    try {
+      const search = typeof req.query.search === 'string' ? req.query.search : undefined
+      const position = typeof req.query.position === 'string' ? req.query.position : undefined
+      const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined
+      const players = await listPlayers({ search, position, limit })
+      res.json(players)
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'Failed to list players' })
+    }
+  })
+
+  app.post('/api/players/seed', async (req: Request, res: Response) => {
+    const dryRun = String(req.query.dry_run || '') === '1'
+    if (dryRun) return res.json({ created: 0, upserts: 0, total: 2 })
+    try {
+      const result = await seedPlayersFromSleeper()
+      res.json(result)
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'Failed to seed players' })
     }
   })
 }

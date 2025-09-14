@@ -1,5 +1,7 @@
 # FF Tools — Unified Sleeper Toolkit
 
+A place for all fantasy tools.
+
 Overview
 
 - Sleeper-first, local-only toolkit built with Node + React.

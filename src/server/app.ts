@@ -6,7 +6,8 @@ import { logger } from './logger.js'
 
 export function createApp() {
   const app = express()
-  app.use(pinoHttp({ logger }))
+  // Cast to any to align differing pino@9 and pino-http typings
+  app.use(pinoHttp({ logger: logger as any } as any))
   app.use(cors())
   app.use(express.json({ limit: '1mb' }))
   app.use(express.text({ type: ['text/*', 'application/csv', 'text/csv'], limit: '1mb' }))

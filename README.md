@@ -26,6 +26,8 @@ The database is `prisma/dev.db`. Credentials live in ignored `.env.local`; brows
 
 ## Using the tracker
 
+Open **How to use this tracker** for a three-step guide and an example you can change without affecting your data. The **?** buttons beside headings explain each measure: hover, focus with the keyboard, or tap to read; press Escape or click outside to dismiss. Help also explains why captured roster players do not automatically become investment entries.
+
 1. Click **Capture values** for each source when you need a new observation. The API and CLI share a persisted one-hour minimum between attempts, including failures. There is no scheduler, background scraping, or capture on page reload.
 2. Filter **Player values** and compare growth since the first saved value under **Since tracking began**. Click a player's name for dated history. Use **Record entry** to record a separate acquisition cost, date, source, portfolio, and target.
 3. Review **My investments**. Return is `(value - cost) / cost * 100`; the editable initial target is 20%. A target hit is an unrealized signal, not proof that someone will accept the trade.
@@ -37,6 +39,8 @@ Zero cost produces absolute gain with undefined percentage ROI. Quotes older tha
 Each provider and scoring context keeps a separate series. DTC's imported league is half-PPR/1QB; Dynasty GM calls its valuation set PPR. Their numbers are never averaged. Current capture scope is the owned QB/RB/WR/TE roster, including supported bench/taxi/IR players. Both providers exposed 29 supported players while Sleeper listed 30 roster entries at verification. Missing players and draft picks do not become zero-valued observations.
 
 See [source behavior and limitations](docs/sources.md).
+
+The known DTC automatic-refresh issue is flagged on its source card and that capture control is deferred. Saved DTC history and dated imports remain available. The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
 
 ## Import existing observations
 

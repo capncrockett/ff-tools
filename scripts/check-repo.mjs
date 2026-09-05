@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 const maintained =
-  /^(src\/|tests\/|e2e\/|scripts\/|prisma\/|\.github\/|docs\/(architecture|agent-workflow|grill-me-dynasty-tracker|sources|versioning)|AGENTS\.md$|CONTEXT\.md$|README\.md$|TODO\.md$)/
+  /^(src\/|tests\/|e2e\/|scripts\/|prisma\/|\.github\/|docs\/(architecture|agent-workflow|grill-me-dynasty-tracker|sources|versioning|workbook-review)|AGENTS\.md$|CONTEXT\.md$|README\.md$|TODO\.md$)/
 const paths = execFileSync(
   'git',
   ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],

@@ -10,6 +10,9 @@ import {
 } from '../../shared/tracker'
 import HistoryChart from './HistoryChart'
 import Modal from './Modal'
+import HelpTip from './HelpTip'
+import TrackerGuide from './TrackerGuide'
+import { trackerHelp } from '../trackerHelp'
 
 const number = (n: number | null | undefined) =>
   n == null ? 'Unavailable' : n.toLocaleString(undefined, { maximumFractionDigits: 1 })
@@ -137,24 +140,33 @@ export default function ValueTracker() {
           </a>
         </div>
       </section>
+      <TrackerGuide />
       <div className="summary-grid" aria-label="Tracker summary">
         <div>
-          <span className="eyebrow">PLAYERS OBSERVED</span>
+          <span className="eyebrow help-label">
+            PLAYERS OBSERVED <HelpTip label="players observed">{trackerHelp.players}</HelpTip>
+          </span>
           <strong>{new Set(data.market.map((r) => r.playerId)).size}</strong>
           <span>Across saved source snapshots</span>
         </div>
         <div>
-          <span className="eyebrow">OPEN INVESTMENTS</span>
+          <span className="eyebrow help-label">
+            OPEN INVESTMENTS <HelpTip label="open investments">{trackerHelp.investments}</HelpTip>
+          </span>
           <strong>{open.length}</strong>
           <span>Acquisitions with a recorded cost</span>
         </div>
         <div>
-          <span className="eyebrow">TARGETS IN REACH</span>
+          <span className="eyebrow help-label">
+            TARGETS IN REACH <HelpTip label="targets in reach">{trackerHelp.targets}</HelpTip>
+          </span>
           <strong className="positive">{targets.length}</strong>
           <span>Fresh observations meeting your target</span>
         </div>
         <div>
-          <span className="eyebrow">RECORDED EXITS</span>
+          <span className="eyebrow help-label">
+            RECORDED EXITS <HelpTip label="recorded exits">{trackerHelp.exits}</HelpTip>
+          </span>
           <strong>{data.holdings.filter((h) => h.closedAt).length}</strong>
           <span>Realized returns kept in your ledger</span>
         </div>
@@ -188,47 +200,71 @@ export default function ValueTracker() {
                 <p>Last capture: {date(s.lastSuccess)}</p>
               </div>
               <span
-                className={`badge badge-sm ${s.status === 'failed' ? 'badge-warning' : 'badge-ghost'}`}
+                className={`badge badge-sm ${s.status === 'failed' || s.source === 'dynasty-calculator' ? 'badge-warning' : 'badge-ghost'}`}
               >
-                {s.status === 'failed'
-                  ? 'Needs attention'
-                  : s.lastSuccess
-                    ? 'Connected'
-                    : s.configured
-                      ? 'Ready'
-                      : 'Sign-in needed'}
+                {s.source === 'dynasty-calculator'
+                  ? 'Issue tracked'
+                  : s.status === 'failed'
+                    ? 'Needs attention'
+                    : s.lastSuccess
+                      ? 'Connected'
+                      : s.configured
+                        ? 'Ready'
+                        : 'Sign-in needed'}
               </span>
             </div>
+            {s.source === 'dynasty-calculator' && (
+              <p id="dtc-refresh-issue" className="source-issue" role="note">
+                <strong>DTC automatic refresh needs a fix.</strong> Saved DTC values are still
+                available. Repair is deferred; this source may be out of date.
+              </p>
+            )}
             <div className="source-card-bottom">
               <p>
-                {s.status === 'failed'
-                  ? s.message
-                  : s.nextAllowedAt && Date.parse(s.nextAllowedAt) > clock
-                    ? `Next capture ${date(s.nextAllowedAt)}`
-                    : 'Capture on demand. No scheduled refresh.'}
-                {s.status === 'failed' &&
+                {s.source === 'dynasty-calculator'
+                  ? 'Use saved values or import a dated snapshot.'
+                  : s.status === 'failed'
+                    ? s.message
+                    : s.nextAllowedAt && Date.parse(s.nextAllowedAt) > clock
+                      ? `Next capture ${date(s.nextAllowedAt)}`
+                      : 'Capture on demand. No scheduled refresh.'}
+                {s.source !== 'dynasty-calculator' &&
+                  s.status === 'failed' &&
                   s.nextAllowedAt &&
                   Date.parse(s.nextAllowedAt) > clock && (
                     <span className="block">Next attempt {date(s.nextAllowedAt)}</span>
                   )}
               </p>
-              <button
-                className="btn btn-sm btn-primary"
-                disabled={
-                  !!busy ||
-                  !s.configured ||
-                  (!!s.nextAllowedAt && Date.parse(s.nextAllowedAt) > clock)
-                }
-                onClick={() =>
-                  action(
-                    s.source,
-                    () => api(`/api/sync/${s.source}`, {}),
-                    `${s.label} snapshot saved.`,
-                  )
-                }
-              >
-                {busy === s.source ? 'Capturing...' : 'Capture values'}
-              </button>
+              <div className="button-help">
+                <button
+                  className="btn btn-sm btn-primary"
+                  aria-describedby={
+                    s.source === 'dynasty-calculator' ? 'dtc-refresh-issue' : undefined
+                  }
+                  disabled={
+                    !!busy ||
+                    s.source === 'dynasty-calculator' ||
+                    !s.configured ||
+                    (!!s.nextAllowedAt && Date.parse(s.nextAllowedAt) > clock)
+                  }
+                  onClick={() =>
+                    action(
+                      s.source,
+                      () => api(`/api/sync/${s.source}`, {}),
+                      `${s.label} snapshot saved.`,
+                    )
+                  }
+                >
+                  {s.source === 'dynasty-calculator'
+                    ? 'Refresh deferred'
+                    : busy === s.source
+                      ? 'Capturing...'
+                      : 'Capture values'}
+                </button>
+                {s.source !== 'dynasty-calculator' && (
+                  <HelpTip label="capturing values">{trackerHelp.capture}</HelpTip>
+                )}
+              </div>
             </div>
           </article>
         ))}
@@ -253,14 +289,22 @@ export default function ValueTracker() {
               My investments <span className="ml-2 opacity-60">{data.holdings.length}</span>
             </button>
           </div>
-          <button
-            className="btn btn-sm btn-ghost"
-            disabled={!!busy}
-            onClick={() => action('reload', reload, 'Saved data loaded.')}
-          >
-            Reload saved data
-          </button>
+          <div className="button-help">
+            <button
+              className="btn btn-sm btn-ghost"
+              disabled={!!busy}
+              onClick={() => action('reload', reload, 'Saved data loaded.')}
+            >
+              Reload saved data
+            </button>
+            <HelpTip label="reloading saved data">{trackerHelp.reload}</HelpTip>
+          </div>
         </div>
+        <p className="workspace-hint">
+          {view === 'market'
+            ? "Click a player's name for history. Compare each source with its own starting value; scroll the table sideways on a small screen."
+            : 'These are the entries you recorded, not an automatic copy of your roster. Record an entry under Player values to start measuring return.'}
+        </p>
         <div className="filters">
           <label className="search-field">
             <span>Find a player</span>
@@ -344,13 +388,26 @@ export default function ValueTracker() {
                 <thead>
                   <tr>
                     <th>Player</th>
-                    <th>Source / format</th>
-                    <th className="numeric">Latest value</th>
-                    <th className="numeric">Since last capture</th>
-                    <th className="numeric">Since tracking began</th>
-                    <th>Captured</th>
                     <th>
-                      <span className="sr-only">Actions</span>
+                      Source / format{' '}
+                      <HelpTip label="source and format">{trackerHelp.source}</HelpTip>
+                    </th>
+                    <th className="numeric">
+                      Latest value <HelpTip label="latest value">{trackerHelp.latest}</HelpTip>
+                    </th>
+                    <th className="numeric">
+                      Since last capture{' '}
+                      <HelpTip label="change since last capture">{trackerHelp.previous}</HelpTip>
+                    </th>
+                    <th className="numeric">
+                      Since tracking began{' '}
+                      <HelpTip label="growth since tracking began">{trackerHelp.baseline}</HelpTip>
+                    </th>
+                    <th>
+                      Captured <HelpTip label="capture time">{trackerHelp.captured}</HelpTip>
+                    </th>
+                    <th>
+                      Entry <HelpTip label="recording an entry">{trackerHelp.entry}</HelpTip>
                     </th>
                   </tr>
                 </thead>
@@ -439,10 +496,19 @@ export default function ValueTracker() {
                 <thead>
                   <tr>
                     <th>Investment</th>
-                    <th className="numeric">Cost / current</th>
-                    <th className="numeric">Return</th>
-                    <th>Target</th>
-                    <th>Status</th>
+                    <th className="numeric">
+                      Cost / current{' '}
+                      <HelpTip label="cost and current value">{trackerHelp.cost}</HelpTip>
+                    </th>
+                    <th className="numeric">
+                      Return <HelpTip label="investment return">{trackerHelp.roi}</HelpTip>
+                    </th>
+                    <th>
+                      Target <HelpTip label="target value">{trackerHelp.target}</HelpTip>
+                    </th>
+                    <th>
+                      Status <HelpTip label="investment status">{trackerHelp.status}</HelpTip>
+                    </th>
                     <th>
                       <span className="sr-only">Exit action</span>
                     </th>
@@ -646,6 +712,11 @@ function AcquisitionForm({
       <p className="text-sm muted mb-4">
         {sourceLabels[row.source]} / {row.contextLabel}. Latest observed value: {number(row.value)}.
       </p>
+      <p className="form-intro">
+        This is the starting value for this investment. Your captured roster stays in Player values
+        whether or not you record an entry.{' '}
+        <HelpTip label="entry cost and starting benchmarks">{trackerHelp.entry}</HelpTip>
+      </p>
       <form onSubmit={submit} className="tracker-form">
         <label>
           Portfolio
@@ -669,9 +740,14 @@ function AcquisitionForm({
               step="any"
               placeholder="What you invested"
               value={cost}
+              aria-describedby="entry-cost-help"
               onChange={(e) => setCost(e.target.value)}
               required
             />
+            <span id="entry-cost-help" className="field-hint">
+              Use this provider's points. If you choose a starting benchmark instead of historical
+              cost, explain it in Entry notes.
+            </span>
           </label>
           <label>
             Target ROI (%)
@@ -682,9 +758,14 @@ function AcquisitionForm({
               max="10000"
               step="any"
               value={target}
+              aria-describedby="entry-target-help"
               onChange={(e) => setTarget(e.target.value)}
               required
             />
+            <span id="entry-target-help" className="field-hint">
+              At 100 points, a 20% target means 120 points. You can change this percentage before
+              saving.
+            </span>
           </label>
         </div>
         <label>
@@ -724,6 +805,15 @@ function AcquisitionForm({
               Your recorded cost stays separate from the first observed value. No earlier prices are
               inferred.
             </p>
+            {result.targetValue !== null && (
+              <p className="text-xs">
+                At the latest quote:{' '}
+                {result.targetReached
+                  ? 'target reached, still unrealized'
+                  : `${number(Math.max(0, result.targetValue - row.value))} more points to target`}
+                .
+              </p>
+            )}
           </div>
         )}
         {error && (
@@ -785,9 +875,14 @@ function ExitForm({
             max="1000000000"
             step="any"
             value={proceeds}
+            aria-describedby="exit-proceeds-help"
             onChange={(e) => setProceeds(e.target.value)}
             required
           />
+          <span id="exit-proceeds-help" className="field-hint">
+            Enter only this player's share of a package trade. Saving closes this entry; a later
+            reacquisition is a new entry.
+          </span>
         </label>
         <label>
           Exit date
@@ -905,6 +1000,10 @@ function ImportForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           CSV columns: player_name, value, captured_at. Optional: source_key, sleeper_id, position,
           team. Use an ISO timestamp with timezone. JSON uses the snapshot schema described in the
           README.
+        </p>
+        <p className="text-xs muted">
+          Excel workbooks need their sheets, dates, and value types reviewed first. This importer
+          currently accepts dated CSV or snapshot JSON files.
         </p>
         {error && (
           <p className="text-error" role="alert">

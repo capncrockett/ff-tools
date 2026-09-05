@@ -10,6 +10,7 @@ The active MVP is the dynasty value tracker. Other experiments remain parked.
 - [x] Authenticated provider adapters for the supported owned roster with minimum one-hour attempt intervals.
 - [x] Confirmed Sleeper league and approved DTC connection.
 - [x] Local secret/session boundaries, additive SQLite migrations, diagnostics, and repeatable verification.
+- [x] Contextual help, a worked example, and a [review of the original 21-sheet workbook](docs/workbook-review.md).
 
 ## Decisions before the next slice
 
@@ -25,7 +26,7 @@ Continue [the Grill Me document](docs/grill-me-dynasty-tracker.md). Answers 1-9 
 
 ## Operational follow-ups
 
-- [ ] Complete the remaining DTC automatic-refresh check using its failure-stage message and hourly guard; the initial real snapshot is already saved.
+- [ ] Deferred by user: repair DTC automatic refresh. The app flags the issue and defers its capture control; saved DTC history remains available. Use the failure-stage message and hourly guard when work resumes.
 - [ ] Observe a later real capture to establish actual movement; never invent a prior price.
 - [ ] Keep provider DOM fixtures aligned when either subscription UI changes.
 - [ ] Add a manual sign-in/session recovery wizard if normal automated sign-in becomes insufficient.

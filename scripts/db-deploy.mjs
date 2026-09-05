@@ -1,0 +1,21 @@
+import { config } from 'dotenv'
+import path from 'node:path'
+import fs from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
+import { spawnSync } from 'node:child_process'
+config({ path: '.env.local', quiet: true })
+config({ path: '.env', quiet: true })
+const url = process.env.DATABASE_URL || 'file:./dev.db'
+if (!url.startsWith('file:')) throw new Error('The local tracker requires a SQLite file URL.')
+const filename = path.resolve('prisma', url.slice(5))
+fs.mkdirSync(path.dirname(filename), { recursive: true })
+// Prisma 6 on this Windows/Node combination cannot migrate a missing SQLite file.
+// Opening an existing file preserves its contents; this also makes a fresh empty file.
+const db = new DatabaseSync(filename)
+db.close()
+const result = spawnSync(
+  process.execPath,
+  ['node_modules/prisma/build/index.js', 'migrate', 'deploy'],
+  { stdio: 'inherit', env: { ...process.env, DATABASE_URL: url } },
+)
+process.exitCode = result.status ?? 1

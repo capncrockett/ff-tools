@@ -1,0 +1,16 @@
+node_modules
+dist
+.cache
+.local
+.playwright-mcp
+coverage
+test-results
+playwright-report
+pnpm-lock.yaml
+commish-recap
+flea-flicker
+sleeper-lfas
+sleeper-mini
+docs/sleeper_openapi.json
+docs/sleeper_api_index.md
+prisma/migrations

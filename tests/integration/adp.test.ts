@@ -41,8 +41,7 @@ describe('GET /api/sleeper-tools/adp', () => {
         earliest_pick: expect.any(Number),
         latest_pick: expect.any(Number),
         draft_percentage: expect.any(Number),
-      })
+      }),
     )
   })
 })
-

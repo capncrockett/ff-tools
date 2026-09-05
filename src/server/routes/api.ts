@@ -1,115 +1,172 @@
-import type { Express, Request, Response } from 'express'
+import type { Express, RequestHandler } from 'express'
+import type { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
+import { sourceSchema, contextSchema } from '../../shared/tracker.js'
 import { getAdpData } from '../services/adp.js'
 import { getKeeperData } from '../services/keeper.js'
 import { dynastyNerdsProvider } from '../providers/dynastyNerds.js'
 import { dynastyCalculatorProvider } from '../providers/dynastyCalculator.js'
 import { listPlayers, seedPlayersFromSleeper } from '../services/players.js'
-import { parseCsvToValuations, saveValuations, getLatestValuations } from '../services/valuations.js'
+import { DataError, getMarket, parseCsvSnapshot, saveSnapshot } from '../services/valuations.js'
+import { addHolding, closeHolding, getHoldings } from '../services/holdings.js'
+import { getSourceStatuses, syncSource } from '../services/sync.js'
 
-export function registerApiRoutes(app: Express) {
-  app.get('/api/sleeper-tools/adp', async (_req: Request, res: Response) => {
-    try {
-      const data = await getAdpData()
-      res.json(data)
-    } catch (err: any) {
-      res.status(500).json({ error: err?.message || 'Failed to load ADP' })
-    }
-  })
-
-  app.get('/api/sleeper-tools/keeper-data', async (req: Request, res: Response) => {
-    try {
-      // @ts-ignore
-      req.log?.info('keeper-data requested')
-      const data = await getKeeperData()
-      res.json(data)
-    } catch (err: any) {
-      res.status(500).json({ error: err?.message || 'Failed to load keeper data' })
-    }
-  })
-
-  // Sync endpoints for value sources
-  app.post('/api/sync/:source', async (req: Request, res: Response) => {
-    const params = z.object({ source: z.enum(['dynasty-nerds', 'dynasty-calculator']) }).safeParse(req.params)
-    if (!params.success) return res.status(400).json({ error: 'invalid source' })
-    const source = params.data.source
-
-    // Dry-run returns local samples to avoid live scraping in tests
-    const dryRun = String(req.query.dry_run || '') === '1'
-    if (dryRun) {
-      // Minimal samples
-      return res.json([
-        { playerName: 'Sample Player', value: 123, source, capturedAt: new Date().toISOString() },
+const route =
+  (handler: RequestHandler): RequestHandler =>
+  (req, res, next) => {
+    Promise.resolve(handler(req, res, next)).catch(next)
+  }
+export function registerApiRoutes(app: Express, injected?: PrismaClient) {
+  const database = async () => injected ?? (await import('../db.js')).prisma
+  app.get(
+    '/api/sleeper-tools/adp',
+    route(async (_req, res) => {
+      res.json(await getAdpData())
+    }),
+  )
+  app.get(
+    '/api/sleeper-tools/keeper-data',
+    route(async (_req, res) => {
+      res.json(await getKeeperData())
+    }),
+  )
+  app.get(
+    '/api/tracker',
+    route(async (_req, res) => {
+      const db = await database()
+      const market = await getMarket(db)
+      const [holdings, sources] = await Promise.all([
+        getHoldings(db, market),
+        getSourceStatuses(db),
       ])
-    }
-
-    try {
-      const provider = source === 'dynasty-nerds' ? dynastyNerdsProvider : dynastyCalculatorProvider
-      const data = await provider.run({ headless: true })
-      const prisma = (await import('../db.js')).prisma
-      const stats = await saveValuations(prisma as any, data)
-      // @ts-ignore
-      req.log?.info({ source, items: data.length, saved: stats.created }, 'sync complete')
-      res.json({ saved: stats.created, items: data.length })
-    } catch (e: any) {
-      // @ts-ignore
-      req.log?.error({ err: e }, 'sync failed')
-      res.status(500).json({ error: e?.message || 'sync failed' })
-    }
-  })
-
-  // Import valuations via CSV
-  app.post('/api/valuations/import', async (req: Request, res: Response) => {
-    const sourceParam = String(req.query.source || '').trim()
-    if (!sourceParam) return res.status(400).json({ error: 'source is required' })
-    try {
-      const records = parseCsvToValuations(String(req.body || ''), sourceParam as any)
-      const prisma = (await import('../db.js')).prisma
-      const stats = await saveValuations(prisma as any, records)
-      // @ts-ignore
-      req.log?.info({ source: sourceParam, saved: stats.created }, 'csv import complete')
-      res.json({ saved: stats.created })
-    } catch (e: any) {
-      // @ts-ignore
-      req.log?.error({ err: e }, 'csv import failed')
-      res.status(500).json({ error: e?.message || 'import failed' })
-    }
-  })
-
-  // Latest valuations per player
-  app.get('/api/valuations/latest', async (req: Request, res: Response) => {
-    try {
-      const source = typeof req.query.source === 'string' ? req.query.source : undefined
-      const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 200
-      const prisma = (await import('../db.js')).prisma
-      const rows = await getLatestValuations(prisma as any, source, limit)
-      res.json(rows)
-    } catch (e: any) {
-      res.status(500).json({ error: e?.message || 'failed' })
-    }
-  })
-
-  // Players endpoints
-  app.get('/api/players', async (req: Request, res: Response) => {
-    try {
-      const search = typeof req.query.search === 'string' ? req.query.search : undefined
-      const position = typeof req.query.position === 'string' ? req.query.position : undefined
-      const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined
-      const players = await listPlayers({ search, position, limit })
-      res.json(players)
-    } catch (e: any) {
-      res.status(500).json({ error: e?.message || 'Failed to list players' })
-    }
-  })
-
-  app.post('/api/players/seed', async (req: Request, res: Response) => {
-    const dryRun = String(req.query.dry_run || '') === '1'
-    if (dryRun) return res.json({ created: 0, upserts: 0, total: 2 })
-    try {
-      const result = await seedPlayersFromSleeper()
-      res.json(result)
-    } catch (e: any) {
-      res.status(500).json({ error: e?.message || 'Failed to seed players' })
-    }
-  })
+      res.json({ market, holdings, sources })
+    }),
+  )
+  app.post(
+    '/api/sync/:source',
+    route(async (req, res) => {
+      const source = sourceSchema.parse(req.params.source)
+      if (req.query.dry_run === '1')
+        return res.json([
+          { source, playerName: 'Sample Player', value: 123, capturedAt: new Date().toISOString() },
+        ])
+      res.json(
+        await syncSource(
+          await database(),
+          source,
+          source === 'dynasty-nerds' ? dynastyNerdsProvider : dynastyCalculatorProvider,
+        ),
+      )
+    }),
+  )
+  app.post(
+    '/api/snapshots/import',
+    route(async (req, res) => {
+      res.json(await saveSnapshot(await database(), req.body))
+    }),
+  )
+  app.post(
+    '/api/valuations/import',
+    route(async (req, res) => {
+      const source = sourceSchema.parse(req.query.source)
+      const context = contextSchema.parse({
+        label: req.query.format,
+        settings: { format: req.query.format },
+      })
+      if (typeof req.body !== 'string') throw new DataError('Upload CSV as text/csv.')
+      res.json(
+        await saveSnapshot(await database(), parseCsvSnapshot(req.body, source, context), 'csv'),
+      )
+    }),
+  )
+  app.get(
+    '/api/valuations/latest',
+    route(async (req, res) => {
+      const source = req.query.source ? sourceSchema.parse(req.query.source) : undefined
+      const limit = z.coerce.number().int().min(1).max(10000).default(200).parse(req.query.limit)
+      res.json(
+        (await getMarket(await database()))
+          .filter((r) => !source || r.source === source)
+          .slice(0, limit),
+      )
+    }),
+  )
+  app.get(
+    '/api/timeseries/:playerId',
+    route(async (req, res) => {
+      const playerId = z.coerce.number().int().positive().parse(req.params.playerId)
+      res.json(
+        (await getMarket(await database()))
+          .filter((r) => r.playerId === playerId)
+          .map((r) => ({
+            source: r.source,
+            contextKey: r.contextKey,
+            contextLabel: r.contextLabel,
+            history: r.history,
+          })),
+      )
+    }),
+  )
+  app.post(
+    '/api/holdings',
+    route(async (req, res) => {
+      res.status(201).json(await addHolding(await database(), req.body))
+    }),
+  )
+  app.post(
+    '/api/holdings/:id/exit',
+    route(async (req, res) => {
+      res.json(await closeHolding(await database(), req.params.id, req.body))
+    }),
+  )
+  app.get(
+    '/api/export',
+    route(async (_req, res) => {
+      const db = await database()
+      const [observations, holdings] = await Promise.all([
+        db.valuation.findMany({
+          include: { player: true, source: true, snapshot: true },
+          orderBy: { capturedAt: 'asc' },
+        }),
+        db.holding.findMany({ include: { player: true } }),
+      ])
+      // Deliberate allowlist: export contains no account/session or raw provider responses.
+      const rows = observations.map((v) => ({
+        playerId: v.playerId,
+        playerName: v.player.name,
+        sleeperId: v.player.sleeperId,
+        position: v.player.position,
+        team: v.player.team,
+        source: v.source.name,
+        sourceKey: v.sourceKey,
+        value: v.value,
+        capturedAt: v.capturedAt,
+        contextKey: v.contextKey,
+        context: v.snapshot ? JSON.parse(v.snapshot.contextJson) : null,
+      }))
+      res
+        .attachment(`dynasty-history-${new Date().toISOString().slice(0, 10)}.json`)
+        .json({ version: 1, exportedAt: new Date().toISOString(), observations: rows, holdings })
+    }),
+  )
+  app.get(
+    '/api/players',
+    route(async (req, res) => {
+      const params = z
+        .object({
+          search: z.string().max(100).optional(),
+          position: z.string().max(5).optional(),
+          limit: z.coerce.number().int().min(1).max(200).optional(),
+        })
+        .parse(req.query)
+      res.json(await listPlayers({ ...params, prisma: await database() }))
+    }),
+  )
+  app.post(
+    '/api/players/seed',
+    route(async (req, res) => {
+      if (req.query.dry_run === '1') return res.json({ created: 0, upserts: 0, total: 2 })
+      res.json(await seedPlayersFromSleeper({ prisma: await database() }))
+    }),
+  )
 }

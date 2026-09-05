@@ -14,18 +14,26 @@ describe('keeper service (unit)', () => {
 
     // user
     const spy = jest.spyOn(axios, 'get')
-    spy.mockResolvedValueOnce({ data: { user_id: userId, username, display_name: 'Crockett' } } as any)
+    spy.mockResolvedValueOnce({
+      data: { user_id: userId, username, display_name: 'Crockett' },
+    } as any)
     // leagues
-    spy.mockResolvedValueOnce({ data: [ { league_id: leagueId, name: 'Grundle League', season: year } ] } as any)
+    spy.mockResolvedValueOnce({
+      data: [{ league_id: leagueId, name: 'Grundle League', season: year }],
+    } as any)
     // rosters
-    spy.mockResolvedValueOnce({ data: [ { owner_id: 'owner1', players: ['p1','p2'] } ] } as any)
+    spy.mockResolvedValueOnce({ data: [{ owner_id: 'owner1', players: ['p1', 'p2'] }] } as any)
     // users
-    spy.mockResolvedValueOnce({ data: [ { user_id: 'owner1', username: 'owner1', display_name: 'Owner One' } ] } as any)
+    spy.mockResolvedValueOnce({
+      data: [{ user_id: 'owner1', username: 'owner1', display_name: 'Owner One' }],
+    } as any)
     // players map
-    spy.mockResolvedValueOnce({ data: {
-      p1: { full_name: 'Player One', position: 'RB', team: 'SF' },
-      p2: { full_name: 'Player Two', position: 'DL', fantasy_positions: ['EDGE'], team: 'DAL' },
-    } } as any)
+    spy.mockResolvedValueOnce({
+      data: {
+        p1: { full_name: 'Player One', position: 'RB', team: 'SF' },
+        p2: { full_name: 'Player Two', position: 'DL', fantasy_positions: ['EDGE'], team: 'DAL' },
+      },
+    } as any)
 
     const res = await getKeeperData()
     expect(res.league_name).toBe('Grundle League')
@@ -35,7 +43,7 @@ describe('keeper service (unit)', () => {
       expect.arrayContaining([
         expect.objectContaining({ name: 'Player One', position: 'RB' }),
         expect.objectContaining({ name: 'Player Two', position: 'EDGE' }),
-      ])
+      ]),
     )
   })
 })

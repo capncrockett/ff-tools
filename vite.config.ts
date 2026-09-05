@@ -7,20 +7,20 @@ export default defineConfig({
   root: path.resolve(__dirname, 'src/web'),
   plugins: [react()],
   server: {
+    host: '127.0.0.1',
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': 'http://localhost:3000'
-    }
+      '^/api/': 'http://127.0.0.1:3000',
+    },
   },
   build: {
     outDir: path.resolve(__dirname, 'dist/client'),
-    emptyOutDir: true
+    emptyOutDir: true,
   },
   resolve: {
     alias: {
       '@web': path.resolve(__dirname, 'src/web'),
-    }
-  }
+    },
+  },
 })
-

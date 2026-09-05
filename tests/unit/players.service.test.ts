@@ -1,42 +1,42 @@
-import { seedPlayersFromSleeper, listPlayers } from '@server/services/players.js'
-
-describe('players service (unit with DI)', () => {
-  it('seedPlayersFromSleeper creates and upserts players', async () => {
+import { seedPlayersFromSleeper, listPlayers } from '../../src/server/services/players'
+describe('players service', () => {
+  it('seeds using SQLite-compatible upserts', async () => {
     const http = {
-      get: jest.fn().mockResolvedValue({ data: {
-        a1: { full_name: 'Alpha One', position: 'QB', team: 'KC' },
-        b2: { first_name: 'Beta', last_name: 'Two', fantasy_positions: ['RB'] },
-      } }),
+      get: jest.fn().mockResolvedValue({
+        data: {
+          a1: { full_name: 'Alpha One', position: 'QB', team: 'KC' },
+          b2: { first_name: 'Beta', last_name: 'Two', fantasy_positions: ['RB'] },
+        },
+      }),
     } as any
-
-    const upserts: any[] = []
-    const prisma = {
+    const db = {
       player: {
-        createMany: jest.fn().mockResolvedValue({ count: 2 }),
-        upsert: jest.fn().mockImplementation(async (args: any) => { upserts.push(args); return {} }),
-      }
-    }
-
-    const res = await seedPlayersFromSleeper({ http, prisma })
-    expect(res).toEqual(expect.objectContaining({ created: 2, total: 2 }))
-    expect(upserts.length).toBe(2)
-  })
-
-  it('listPlayers applies search/position/limit', async () => {
-    const prisma = {
-      player: {
-        findMany: jest.fn().mockResolvedValue([
-          { sleeperId: 'x', name: 'X Man', position: 'WR', team: 'DAL' },
-        ]),
+        findUnique: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn().mockResolvedValue({}),
       },
-    }
-    const rows = await listPlayers({ prisma, search: 'x', position: 'WR', limit: 1 })
-    expect(rows).toEqual([{ sleeperId: 'x', name: 'X Man', position: 'WR', team: 'DAL' }])
-    expect(prisma.player.findMany).toHaveBeenCalledWith({
-      where: { name: { contains: 'x', mode: 'insensitive' }, position: 'WR' },
+    } as any
+    expect(await seedPlayersFromSleeper({ http, prisma: db })).toMatchObject({
+      created: 2,
+      total: 2,
+      upserts: 2,
+    })
+    expect(db.player.upsert).toHaveBeenCalledTimes(2)
+  })
+  it('lists players without unsupported SQLite mode filter', async () => {
+    const db = {
+      player: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ sleeperId: 'x', name: 'X Man', position: 'WR', team: 'DAL' }]),
+      },
+    } as any
+    expect(await listPlayers({ prisma: db, search: 'x', position: 'WR', limit: 1 })).toEqual([
+      { sleeperId: 'x', name: 'X Man', position: 'WR', team: 'DAL' },
+    ])
+    expect(db.player.findMany).toHaveBeenCalledWith({
+      where: { name: { contains: 'x' }, position: 'WR' },
       take: 1,
       orderBy: { name: 'asc' },
     })
   })
 })
-

@@ -3,7 +3,10 @@ import axios from 'axios'
 type SleeperUser = { user_id: string; username: string; display_name: string }
 type League = { league_id: string; name: string; season: string }
 type Roster = { owner_id?: string; players?: string[] }
-type PlayerMap = Record<string, { full_name?: string; position?: string; team?: string; fantasy_positions?: string[] }>
+type PlayerMap = Record<
+  string,
+  { full_name?: string; position?: string; team?: string; fantasy_positions?: string[] }
+>
 
 export async function getKeeperData() {
   const username = process.env.SLEEPER_USERNAME || 'crockett'
@@ -22,9 +25,13 @@ export async function getKeeperData() {
   if (!league) return { league_name: 'No Leagues Found', teams: [] }
 
   const [rosters, users, players] = await Promise.all([
-    axios.get<Roster[]>(`https://api.sleeper.app/v1/league/${league.league_id}/rosters`).then((r) => r.data),
-    axios.get<SleeperUser[]>(`https://api.sleeper.app/v1/league/${league.league_id}/users`).then((r) => r.data),
-    axios.get<PlayerMap>('https://api.sleeper.app/v1/players/nfl').then((r) => r.data)
+    axios
+      .get<Roster[]>(`https://api.sleeper.app/v1/league/${league.league_id}/rosters`)
+      .then((r) => r.data),
+    axios
+      .get<SleeperUser[]>(`https://api.sleeper.app/v1/league/${league.league_id}/users`)
+      .then((r) => r.data),
+    axios.get<PlayerMap>('https://api.sleeper.app/v1/players/nfl').then((r) => r.data),
   ])
 
   const userMap = Object.fromEntries(users.map((u) => [u.user_id, u.display_name || u.username]))
@@ -35,7 +42,11 @@ export async function getKeeperData() {
       const playersDetailed = (r.players || []).map((pid) => {
         const info = players[pid] || {}
         let pos = info.position || 'N/A'
-        if (['DL', 'LB', 'DB'].includes(pos) && Array.isArray(info.fantasy_positions) && info.fantasy_positions.length) {
+        if (
+          ['DL', 'LB', 'DB'].includes(pos) &&
+          Array.isArray(info.fantasy_positions) &&
+          info.fantasy_positions.length
+        ) {
           pos = info.fantasy_positions[0]!
         }
         return {
@@ -44,19 +55,18 @@ export async function getKeeperData() {
           position: pos,
           draft_round: 'N/A',
           draft_pick: 'N/A',
-          team: info.team || 'FA'
+          team: info.team || 'FA',
         }
       })
       return {
         owner_id: r.owner_id!,
         owner_name: userMap[r.owner_id!] || 'Unknown Owner',
-        players: playersDetailed
+        players: playersDetailed,
       }
     })
 
   return {
     league_name: league.name,
-    teams
+    teams,
   }
 }
-

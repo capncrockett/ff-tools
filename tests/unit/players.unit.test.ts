@@ -13,8 +13,7 @@ describe('mapSleeperPlayers', () => {
         expect.objectContaining({ sleeperId: 'p1', name: 'John Doe', position: 'RB', team: 'SF' }),
         expect.objectContaining({ sleeperId: 'p2', name: 'Jane Smith', position: 'WR' }),
         expect.objectContaining({ sleeperId: 'p3', name: 'Solo' }),
-      ])
+      ]),
     )
   })
 })
-

@@ -16,6 +16,7 @@ model Player {
   createdAt  DateTime @default(now())
   valuations Valuation[]
   mappings   Mapping[]
+  holdings   Holding[]
 }
 
 model Source {
@@ -24,6 +25,7 @@ model Source {
   notes String?
   valuations Valuation[]
   mappings   Mapping[]
+  snapshots  Snapshot[]
 }
 
 model Valuation {
@@ -35,6 +37,13 @@ model Valuation {
   value      Float
   unit       String   @default("index")
   capturedAt DateTime @default(now())
+  snapshot   Snapshot? @relation(fields: [snapshotId], references: [id])
+  snapshotId String?
+  contextKey String @default("legacy-unverified")
+  sourceKey  String?
+
+  @@unique([snapshotId, playerId])
+  @@index([playerId, sourceId, contextKey, capturedAt])
 }
 
 model Mapping {
@@ -45,5 +54,52 @@ model Mapping {
   player        Player  @relation(fields: [playerId], references: [id])
   playerId      Int
   @@unique([sourceId, sourceKey])
+}
+
+model Snapshot {
+  id          String @id @default(cuid())
+  source      Source @relation(fields: [sourceId], references: [id])
+  sourceId    Int
+  contextKey  String
+  contextJson String
+  capturedAt  DateTime
+  importedAt  DateTime @default(now())
+  checksum    String
+  rowCount    Int
+  method      String
+  valuations  Valuation[]
+
+  @@unique([sourceId, contextKey, capturedAt])
+  @@index([sourceId, contextKey, capturedAt])
+}
+
+model Holding {
+  id           String @id @default(cuid())
+  player       Player @relation(fields: [playerId], references: [id])
+  playerId     Int
+  sourceName   String
+  contextKey   String
+  portfolio    String
+  acquiredAt   DateTime
+  costBasis    Float
+  targetRoi    Float @default(20)
+  notes        String @default("")
+  closedAt     DateTime?
+  proceeds     Float?
+  createdAt    DateTime @default(now())
+
+  @@index([playerId, sourceName, contextKey])
+}
+
+model SyncRun {
+  id          String @id @default(cuid())
+  sourceName  String
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  status      String
+  message     String
+  saved       Int @default(0)
+
+  @@index([sourceName, startedAt])
 }
 

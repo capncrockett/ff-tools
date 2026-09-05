@@ -25,8 +25,7 @@ export async function getAdpData() {
       }
       return row
     })
-  } catch (e) {
+  } catch {
     return []
   }
 }
-

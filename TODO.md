@@ -1,45 +1,30 @@
-# Roadmap (Checklist)
+# Dynasty tracker next work
 
-## M1: Dynasty Value Tracker
+The active MVP is the dynasty value tracker. Other experiments remain parked.
 
-- [ ] Server: Express+Zod endpoints: `/api/sync/:source`, `/api/players`, `/api/valuations`, `/api/timeseries/:playerId`.
-- [ ] DB: Prisma schema applied; migrate and seed players via Sleeper API.
-- [ ] Scrapers: Playwright flows for Dynasty Nerds GM and Dynasty Calculator; CSV import fallback.
-- [ ] Mapping: Sleeper master players → canonical IDs; add `Mapping` overrides when needed.
-- [ ] UI: DaisyUI table with per-player timeseries, source comparison, and sync buttons.
+## Implemented in this slice
 
-## M1.1: Polish + Scheduler
+- [x] Local React/DaisyUI tracker with source-specific values, dated history, filters, and freshness.
+- [x] Atomic, immutable snapshot persistence with identity matching and strict CSV/JSON import.
+- [x] Acquisition lots, editable initial ROI target, manual cost/proceeds, realized exits, and reacquisition.
+- [x] Authenticated provider adapters for the supported owned roster with minimum one-hour attempt intervals.
+- [x] Confirmed Sleeper league and approved DTC connection.
+- [x] Local secret/session boundaries, additive SQLite migrations, diagnostics, and repeatable verification.
 
-- [ ] Node-cron nightly sync if creds present; rate limit + backoff.
-- [ ] Basic charts and sparklines.
+## Decisions before the next slice
 
-## M2: Sleeper Tools (Beta → Solid)
+Continue [the Grill Me document](docs/grill-me-dynasty-tracker.md). Answers 1-9 establish one owned dynasty roster, tracking from current values, an initial 20% target, separate source scales, and a preference for nightly collection with eventual Vercel hosting. Historical acquisition records also exist on FleaFlicker.
 
-- [x] Port basic Keeper and ADP endpoints to Node (beta).
-- [ ] Configurable league filter; caching; refine data mapping.
-- [ ] Add simple draft board (non-drag first).
+- [ ] Agree on cost allocation for package trades and which source governs an exit.
+- [ ] Decide whether to include draft picks; whole-market/watchlist coverage is explicitly deferred.
+- [ ] Define explicit mapping and acquisition-correction workflows.
+- [ ] Decide whether Sleeper transaction import should suggest acquisition lots.
+- [ ] Define trade-chain return and whether player utility affects it.
+- [ ] Design nightly capture and Vercel hosting with durable storage, private access, and a browser worker. The current SQLite file and local sessions require an explicit hosting transition.
+- [ ] Decide on delivered alerts and backup/restore UX.
 
-## M3: Sleeper Mini (TBD)
+## Operational follow-ups
 
-- [ ] Playoffs bracket experiment.
-
----
-
-## Testing Strategy (Trophy)
-
-- [x] Integration test setup (Jest + ts-jest + supertest + nock).
-- [x] Initial integration tests for health, ADP, keeper endpoints.
-- [x] E2E scaffold (Playwright) with smoke test.
-- [ ] Maintain 70%+ coverage as features ship.
-
-## Tech Tasks
-
-- [ ] Set up Prisma migration successfully on local (schema engine was flaky on CI).
-- [ ] Sleeper API wrapper util and player seeding script.
-- [ ] `/api/sync/:source` orchestrator with Playwright providers.
-- [x] Add docs: Sleeper API cheat sheet and OpenAPI-like index.
-
-## Cleanup/Archival
-
-- [x] Move legacy projects to `legacy/` and remove nested `.git`.
-- [x] Rename legacy `package.json` to `package.json.legacy` to avoid interference.
+- [ ] Observe a later real capture to establish actual movement; never invent a prior price.
+- [ ] Keep provider DOM fixtures aligned when either subscription UI changes.
+- [ ] Add a manual sign-in/session recovery wizard if normal automated sign-in becomes insufficient.

@@ -8,7 +8,7 @@ Question: Is success a higher calculator value, a completed trade returning more
 
 Recommended: Track both unrealized value growth and realized return on completed exits. Eventually track trade chains separately. A target hit means it is time to consider an exit; it does not mean a league mate will pay that value.
 
-Answer: Pending
+Answer: Yes I think you got it here. We clearly have a baseline and that is the current value of all players on my team. From this point we want to track their value over time so we can determine when to "exit" on a player. Of course the perceived value of a player by another manager (league mate) could differ, but the growth has happened and it's probably time to sell. Then yes we'd also want to track the realized return on a completed trade (exit).
 
 ## 2. Confirm the trading direction
 
@@ -16,7 +16,7 @@ Question: You wrote "trade high sell low." Did you mean buy low and sell high, i
 
 Recommended: Buy low, sell once the target return is available. Do not try to predict the absolute peak.
 
-Answer: Pending
+Answer: whoops! Yes. of course buy low sell high. My bad. Also yes, we're not trying to chase the absolute peak, we just want some value returned over time and that value to be consistent. Predicting a peak in fantasy football is a fools errand.
 
 ## 3. Which league and whose roster?
 
@@ -24,7 +24,7 @@ Question: Which roster ID represents your team, and should other leagues join la
 
 Recommended: Start with that analyzer, one explicitly selected team, and a league-scoped portfolio. Do not assume Grundle League is this dynasty league or infer a team from its manager's name.
 
-Answer: Confirmed by user: Sleeper league `1378427936817815552` ([league](https://sleeper.com/leagues/1378427936817815552)). Live provider metadata identifies Cascadia Corsairs as the owned team, Dynasty GM analyzer `273947`, and canonical Sleeper roster `7`. Sleeper's actual settings are 12 teams, 1QB, half-PPR, no TE premium, and eight starters. Dynasty GM labels its value set PPR; keep that provider label distinct. Additional leagues: pending.
+Answer: Confirmed by user: Sleeper league `1378427936817815552` ([league](https://sleeper.com/leagues/1378427936817815552)). Live provider metadata identifies Cascadia Corsairs as the owned team, Dynasty GM analyzer `273947`, and canonical Sleeper roster `7`. Sleeper's actual settings are 12 teams, 1QB, half-PPR, no TE premium, and eight starters. Dynasty GM labels its value set PPR; keep that provider label distinct. Additional leagues: This is my only dynasty league but you got it right. Dyn GM doesn't have 0.5ppr which is lame so ya, we just settle for 1ppr.
 
 ## 4. What is the cost basis?
 
@@ -32,7 +32,7 @@ Question: For existing players, should entry cost mean value on acquisition day,
 
 Recommended: Enter a source-specific cost once, with acquisition date and notes. Label the first observed value separately from cost. Never invent historical values. A later slice can suggest acquisition lots from Sleeper trades.
 
-Answer: Pending
+Answer: we can explore this. I don't believe those platforms go back 7 years which is how long we've been playing. Though they might. One thing I forgot to mention, this league migrated from FleaFlicker actually so there's plenty of historical data there in terms of acquisitions of players. I'm of a mind to just set everything from today moving forward though. Especially if there's no historical data on DGM or DTC.
 
 ## 5. What is the exit target?
 
@@ -40,7 +40,7 @@ Question: Is a fixed percentage return enough, or do targets vary by player, hol
 
 Recommended: Editable target per acquisition, initially 20%. Show current return, target value, and points still needed beside the formula. Zero-cost pickups use absolute gain because percentage ROI is undefined.
 
-Answer: Pending
+Answer: I think 20% to start in reasonable. We'll defintely want to tweak it and track it.
 
 ## 6. Which scoring settings must match?
 
@@ -56,7 +56,7 @@ Question: Should an exit signal require either source, both sources, or a prefer
 
 Recommended: Show source-specific results side by side and let you choose which basis you are acting on. Do not average their raw values.
 
-Answer: Pending
+Answer: You got it. Side by side.
 
 ## 8. How much data should we collect?
 
@@ -64,7 +64,7 @@ Question: Track the whole player pool already delivered by each page, only roste
 
 Recommended: Save only player ID, name, position/team, numeric trade value, settings, and timestamps from the selected view. Avoid per-player page crawls and paid articles/projections. Filter your portfolio in the app.
 
-Answer: Pending
+Answer: Yes this is correct. Let's not worry about the whole player pool just yet. Maybe in the future. Right now just concerned with my team.
 
 ## 9. How often should values refresh?
 
@@ -72,7 +72,7 @@ Question: Is a manual snapshot before trade decisions sufficient, or would you e
 
 Recommended: Manual only for the MVP. Never scrape on page load. Show source-specific freshness and failures.
 
-Answer: User confirmed on 2026-09-05: refresh the roster as needed, no more than once per hour. Enforce a persisted one-hour minimum between source attempts, including failures. No scheduler is enabled.
+Answer: User confirmed on 2026-09-05: refresh the roster as needed, no more than once per hour. Enforce a persisted one-hour minimum between source attempts, including failures. No scheduler is enabled. We should schedule a refresh nightly though to be respectful of their servers. That once per hour is more like a guideline for you during development. The golden rule is don't be an asshole to these platforms we love. Perhaps a worker or a serverless function. We'll host this on Vercel and I believe they allow that? We'll have to decide.
 
 ## 10. What should happen when login changes?
 

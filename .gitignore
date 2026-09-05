@@ -1,7 +1,10 @@
 ### General
 .DS_Store
-# .env
-# .env.*
+.env
+.env.*
+!.env.example
+.local/
+.playwright-mcp/
 
 ### Node
 node_modules/
@@ -40,6 +43,8 @@ test-results/
 ### Prisma (SQLite)
 prisma/*.db
 prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
 
 ### Legacy folders
 legacy/**/.git/

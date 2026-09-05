@@ -25,6 +25,7 @@ Continue [the Grill Me document](docs/grill-me-dynasty-tracker.md). Answers 1-9 
 
 ## Operational follow-ups
 
+- [ ] Complete the remaining DTC automatic-refresh check using its failure-stage message and hourly guard; the initial real snapshot is already saved.
 - [ ] Observe a later real capture to establish actual movement; never invent a prior price.
 - [ ] Keep provider DOM fixtures aligned when either subscription UI changes.
 - [ ] Add a manual sign-in/session recovery wizard if normal automated sign-in becomes insufficient.

@@ -30,6 +30,8 @@ Each snapshot verifies league/owner identity and records actual calculator rules
 
 ## Limits and failures
 
+MVP acceptance on 2026-09-05: a complete Dynasty GM CLI capture saved 29 players. The approved DTC browser import also supplied 29 saved observations with canonical Sleeper identities. Its standalone automatic refresh still failed at the last eligible attempt. The corrected row/settings extractor was checked against the already-loaded real DTC DOM and synthetic browser fixtures, but full automatic DTC navigation needs another eligible live check. Failure-stage messages now identify where a future attempt stops. Do not describe this remaining integration as fully verified or reset its cooldown to retry.
+
 Both providers exposed 29 supported players while Sleeper listed 30 roster entries. This MVP does not invent a value for the missing roster entry or for picks. It currently tracks the supported owned roster; a whole-market watchlist is a pending decision.
 
 Use the UI or `npm run sync:nerds` / `npm run sync:calc`. A shared SQLite reservation enforces at least 60 minutes between attempts per source, including failures, CLI calls, and app restarts. There is no force-refresh bypass. The user now prefers nightly collection for the hosted product; that scheduler and hosting transition are recorded in the next slice, not enabled in this local MVP.

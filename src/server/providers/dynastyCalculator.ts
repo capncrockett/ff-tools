@@ -129,45 +129,63 @@ export const dynastyCalculatorProvider: ValueProvider = {
     if (!/^\d+$/.test(leagueId))
       throw new ProviderError('configuration', 'SLEEPER_LEAGUE_ID must be numeric.')
     return withProviderPage('dynasty-calculator', options.headless !== false, async (page) => {
-      await page.goto('https://dynastytradecalculator.com/calculator/', {
-        waitUntil: 'domcontentloaded',
-      })
-      await checkAccess(page)
-      if (/wp-login|pricing/.test(page.url()) || (await page.locator('#user_login').isVisible())) {
-        const login = credentials('DYNASTY_CALC')
-        await page.goto('https://dynastytradecalculator.com/wp-login.php', {
-          waitUntil: 'domcontentloaded',
-        })
-        await checkAccess(page)
-        await page.locator('#user_login').fill(login.email)
-        await page.locator('#user_pass').fill(login.password)
-        await page.locator('#wp-submit').click()
-        await page
-          .waitForURL((url) => !url.pathname.includes('wp-login'), { timeout: 20_000 })
-          .catch(() => {})
-        if (page.url().includes('wp-login'))
-          throw new ProviderError(
-            'login',
-            'DTC sign-in needs attention. Open the site and complete sign-in manually.',
-          )
+      let stage = 'opening the calculator'
+      try {
         await page.goto('https://dynastytradecalculator.com/calculator/', {
           waitUntil: 'domcontentloaded',
         })
+        await checkAccess(page)
+        if (
+          /wp-login|pricing/.test(page.url()) ||
+          (await page.locator('#user_login').isVisible())
+        ) {
+          stage = 'signing in'
+          const login = credentials('DYNASTY_CALC')
+          await page.goto('https://dynastytradecalculator.com/wp-login.php', {
+            waitUntil: 'domcontentloaded',
+          })
+          await checkAccess(page)
+          await page.locator('#user_login').fill(login.email)
+          await page.locator('#user_pass').fill(login.password)
+          await page.locator('#wp-submit').click()
+          await page
+            .waitForURL((url) => !url.pathname.includes('wp-login'), { timeout: 20_000 })
+            .catch(() => {})
+          if (page.url().includes('wp-login'))
+            throw new ProviderError(
+              'login',
+              'DTC sign-in needs attention. Open the site and complete sign-in manually.',
+            )
+          await page.goto('https://dynastytradecalculator.com/calculator/', {
+            waitUntil: 'domcontentloaded',
+          })
+        }
+        const announcement = page.locator('.pum-active .pum-close')
+        if (await announcement.isVisible()) await announcement.click()
+        // User explicitly approved this league connection and its hourly refresh on 2026-09-05.
+        stage = 'opening Connect a League'
+        await page.getByRole('button', { name: 'Connect a League', exact: true }).click()
+        const modal = page.locator('[data-remodal-id="dtc-integration-modal"]')
+        await modal.waitFor({ state: 'visible' })
+        stage = 'selecting the Sleeper league'
+        await modal.getByRole('link', { name: 'Sleeper', exact: true }).click()
+        const select = modal.locator('select[name=sleeper_api_league_id]')
+        await select.waitFor()
+        await select.selectOption(leagueId)
+        stage = 'importing the connected roster'
+        await modal.getByRole('link', { name: 'Import League', exact: true }).click()
+        await modal.waitFor({ state: 'hidden', timeout: 30_000 })
+        await checkAccess(page)
+        stage = 'validating the roster values and settings'
+        return parseDtcRoster(await readDtcRoster(page))
+      } catch (error) {
+        if (error instanceof ProviderError) throw error
+        // Never expose browser exceptions: they can contain session URLs or credential fields.
+        throw new ProviderError(
+          'format',
+          `DTC stopped while ${stage}. No snapshot saved; existing history is still available.`,
+        )
       }
-      const announcement = page.locator('.pum-active .pum-close')
-      if (await announcement.isVisible()) await announcement.click()
-      // User explicitly approved this league connection and its hourly refresh on 2026-09-05.
-      await page.getByRole('button', { name: 'Connect a League', exact: true }).click()
-      const modal = page.locator('[data-remodal-id="dtc-integration-modal"]')
-      await modal.waitFor({ state: 'visible' })
-      await modal.getByRole('link', { name: 'Sleeper', exact: true }).click()
-      const select = modal.locator('select[name=sleeper_api_league_id]')
-      await select.waitFor()
-      await select.selectOption(leagueId)
-      await modal.getByRole('link', { name: 'Import League', exact: true }).click()
-      await modal.waitFor({ state: 'hidden', timeout: 30_000 })
-      await checkAccess(page)
-      return parseDtcRoster(await readDtcRoster(page))
     })
   },
 }

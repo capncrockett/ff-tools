@@ -30,7 +30,9 @@ Each snapshot verifies league/owner identity and records actual calculator rules
 
 ## Limits and failures
 
-User deferred DTC repair while the MVP's usability improves. Its source card now explicitly flags the issue and disables the DTC capture button. Reading saved data and importing valid dated observations remain available. Do not run live DTC captures as part of help or workbook-review work.
+User resumed DTC repair on 2026-09-08. One eligible diagnostic capture stopped while opening Connect a League, before roster import. The existing connected page confirmed that DTC hides that button under `#league_connect` and exposes the icon-only `#edit_league_click` link. Both target `#dtc-integration-modal`. The adapter now opens a visible link to that modal. Browser fixtures cover both initial connection and an already-connected league.
+
+Full live refresh after this fix still needs the next eligible attempt. The source card shows DTC's controlled failure message and hourly countdown instead of permanently deferring its capture control. Its failure flag clears only when the saved source status reports success. Reading saved data and importing valid dated observations remain available. Do not run live DTC captures as part of help or workbook-review work.
 
 MVP acceptance on 2026-09-05: a complete Dynasty GM CLI capture saved 29 players. The approved DTC browser import also supplied 29 saved observations with canonical Sleeper identities. Its standalone automatic refresh still failed at the last eligible attempt. The corrected row/settings extractor was checked against the already-loaded real DTC DOM and synthetic browser fixtures, but full automatic DTC navigation needs another eligible live check. Failure-stage messages now identify where a future attempt stops. Do not describe this remaining integration as fully verified or reset its cooldown to retry.
 

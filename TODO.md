@@ -12,6 +12,7 @@ The active MVP is the dynasty value tracker. Other experiments remain parked.
 - [x] Local secret/session boundaries, additive SQLite migrations, diagnostics, and repeatable verification.
 - [x] Contextual help, a worked example, and a [review of the original 21-sheet workbook](docs/workbook-review.md).
 - [x] One row per player with Dynasty GM and DTC value columns and one entry action.
+- [x] Fix DTC's hidden Connect a League control for already-connected leagues; cover both connection states in browser fixtures.
 
 ## Decisions before the next slice
 
@@ -27,7 +28,7 @@ Continue [the Grill Me document](docs/grill-me-dynasty-tracker.md). Answers 1-9 
 
 ## Operational follow-ups
 
-- [ ] Deferred by user: repair DTC automatic refresh. The app flags the issue and defers its capture control; saved DTC history remains available. Use the failure-stage message and hourly guard when work resumes.
+- [ ] Confirm DTC's full live refresh after the connected-league navigation fix. The 2026-09-08 diagnostic stopped at the hidden Connect a League button before importing. The next attempt must respect the persisted hourly guard; the app shows the last failure until a capture succeeds.
 - [ ] Observe a later real capture to establish actual movement; never invent a prior price.
 - [ ] Keep provider DOM fixtures aligned when either subscription UI changes.
 - [ ] Add a manual sign-in/session recovery wizard if normal automated sign-in becomes insufficient.

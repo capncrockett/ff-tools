@@ -57,7 +57,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/tracker', (route) => route.fulfill({ json: data }))
 })
 
-test('worked example explains both growth measures without changing saved data; DTC stays flagged', async ({
+test('worked example explains both growth measures without changing saved data; failed DTC capture stays flagged', async ({
   page,
 }) => {
   const writes: string[] = []
@@ -65,8 +65,12 @@ test('worked example explains both growth measures without changing saved data; 
     if (request.method() === 'POST') writes.push(request.url())
   })
   await page.goto('/')
-  await expect(page.getByText('DTC automatic refresh needs a fix.', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Refresh deferred', exact: true })).toBeDisabled()
+  const dtc = page
+    .locator('.source-card')
+    .filter({ has: page.getByRole('heading', { name: 'Dynasty Trade Calculator', exact: true }) })
+  await expect(dtc.getByText('Last DTC capture failed.', { exact: true })).toBeVisible()
+  await expect(dtc).toContainText('Fixture failure')
+  await expect(dtc.getByRole('button', { name: 'Capture values', exact: true })).toBeEnabled()
   await page.locator('.tracker-guide > summary').click()
   await page.getByLabel('Try a latest value (example only)').fill('130')
   const output = page.locator('.guide-example dl')
@@ -79,6 +83,44 @@ test('worked example explains both growth measures without changing saved data; 
   await page.getByLabel('Try a latest value (example only)').fill('')
   await expect(output).toContainText('Enter a value')
   expect(writes).toEqual([])
+})
+
+test('DTC capture obeys cooldown and clears its failure flag after a successful saved-data reload', async ({
+  page,
+}) => {
+  const nextAllowedAt = new Date(Date.now() + 3_600_000).toISOString()
+  let recovered = false
+  await page.route('**/api/tracker', (route) =>
+    route.fulfill({
+      json: {
+        ...data,
+        sources: data.sources.map((s) =>
+          s.source === 'dynasty-calculator'
+            ? {
+                ...s,
+                nextAllowedAt,
+                status: recovered ? 'success' : 'failed',
+                message: recovered ? 'Saved 29 player observations.' : s.message,
+              }
+            : s,
+        ),
+      },
+    }),
+  )
+  await page.goto('/')
+  const dtc = page
+    .locator('.source-card')
+    .filter({ has: page.getByRole('heading', { name: 'Dynasty Trade Calculator', exact: true }) })
+  await expect(dtc).toContainText('Last DTC capture failed.')
+  await expect(dtc).toContainText('Next attempt')
+  await expect(dtc.getByRole('button', { name: 'Capture values', exact: true })).toBeDisabled()
+  recovered = true
+  await page.getByRole('button', { name: 'Reload saved data', exact: true }).click()
+  await expect(dtc).toContainText('Connected')
+  await expect(dtc).not.toContainText('Last DTC capture failed.')
+  await expect(dtc).not.toContainText('Fixture failure')
+  await expect(dtc).toContainText('Next capture')
+  await expect(dtc.getByRole('button', { name: 'Capture values', exact: true })).toBeDisabled()
 })
 
 test('help supports hover, keyboard dismissal, and pointer movement into the tooltip', async ({

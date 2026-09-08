@@ -220,36 +220,31 @@ export default function ValueTracker() {
                 <p>Last capture: {date(s.lastSuccess)}</p>
               </div>
               <span
-                className={`badge badge-sm ${s.status === 'failed' || s.source === 'dynasty-calculator' ? 'badge-warning' : 'badge-ghost'}`}
+                className={`badge badge-sm ${s.status === 'failed' ? 'badge-warning' : 'badge-ghost'}`}
               >
-                {s.source === 'dynasty-calculator'
-                  ? 'Issue tracked'
-                  : s.status === 'failed'
-                    ? 'Needs attention'
-                    : s.lastSuccess
-                      ? 'Connected'
-                      : s.configured
-                        ? 'Ready'
-                        : 'Sign-in needed'}
+                {s.status === 'failed'
+                  ? 'Needs attention'
+                  : s.lastSuccess
+                    ? 'Connected'
+                    : s.configured
+                      ? 'Ready'
+                      : 'Sign-in needed'}
               </span>
             </div>
-            {s.source === 'dynasty-calculator' && (
+            {s.source === 'dynasty-calculator' && s.status === 'failed' && (
               <p id="dtc-refresh-issue" className="source-issue" role="note">
-                <strong>DTC automatic refresh needs a fix.</strong> Saved DTC values are still
-                available. Repair is deferred; this source may be out of date.
+                <strong>Last DTC capture failed.</strong> Saved DTC values are still available. The
+                latest error and next attempt time are below.
               </p>
             )}
             <div className="source-card-bottom">
               <p>
-                {s.source === 'dynasty-calculator'
-                  ? 'Use saved values or import a dated snapshot.'
-                  : s.status === 'failed'
-                    ? s.message
-                    : s.nextAllowedAt && Date.parse(s.nextAllowedAt) > clock
-                      ? `Next capture ${date(s.nextAllowedAt)}`
-                      : 'Capture on demand. No scheduled refresh.'}
-                {s.source !== 'dynasty-calculator' &&
-                  s.status === 'failed' &&
+                {s.status === 'failed'
+                  ? s.message
+                  : s.nextAllowedAt && Date.parse(s.nextAllowedAt) > clock
+                    ? `Next capture ${date(s.nextAllowedAt)}`
+                    : 'Capture on demand. No scheduled refresh.'}
+                {s.status === 'failed' &&
                   s.nextAllowedAt &&
                   Date.parse(s.nextAllowedAt) > clock && (
                     <span className="block">Next attempt {date(s.nextAllowedAt)}</span>
@@ -259,11 +254,12 @@ export default function ValueTracker() {
                 <button
                   className="btn btn-sm btn-primary"
                   aria-describedby={
-                    s.source === 'dynasty-calculator' ? 'dtc-refresh-issue' : undefined
+                    s.source === 'dynasty-calculator' && s.status === 'failed'
+                      ? 'dtc-refresh-issue'
+                      : undefined
                   }
                   disabled={
                     !!busy ||
-                    s.source === 'dynasty-calculator' ||
                     !s.configured ||
                     (!!s.nextAllowedAt && Date.parse(s.nextAllowedAt) > clock)
                   }
@@ -275,15 +271,9 @@ export default function ValueTracker() {
                     )
                   }
                 >
-                  {s.source === 'dynasty-calculator'
-                    ? 'Refresh deferred'
-                    : busy === s.source
-                      ? 'Capturing...'
-                      : 'Capture values'}
+                  {busy === s.source ? 'Capturing...' : 'Capture values'}
                 </button>
-                {s.source !== 'dynasty-calculator' && (
-                  <HelpTip label="capturing values">{trackerHelp.capture}</HelpTip>
-                )}
+                <HelpTip label="capturing values">{trackerHelp.capture}</HelpTip>
               </div>
             </div>
           </article>

@@ -122,6 +122,16 @@ export async function readDtcRoster(page: Page): Promise<DtcRoster> {
     }
   }) as Promise<DtcRoster>
 }
+
+export async function openDtcLeagueModal(page: Page) {
+  // Once connected, DTC hides Connect a League and exposes an icon-only edit link.
+  // Both controls open this modal. Use the visible link instead of the hidden button.
+  await page.locator('a[href="#dtc-integration-modal"]:visible').first().click()
+  const modal = page.locator('[data-remodal-id="dtc-integration-modal"]')
+  await modal.waitFor({ state: 'visible' })
+  return modal
+}
+
 export const dynastyCalculatorProvider: ValueProvider = {
   name: 'dynasty-calculator',
   async run(options = {}) {
@@ -163,10 +173,8 @@ export const dynastyCalculatorProvider: ValueProvider = {
         const announcement = page.locator('.pum-active .pum-close')
         if (await announcement.isVisible()) await announcement.click()
         // User explicitly approved this league connection and its hourly refresh on 2026-09-05.
-        stage = 'opening Connect a League'
-        await page.getByRole('button', { name: 'Connect a League', exact: true }).click()
-        const modal = page.locator('[data-remodal-id="dtc-integration-modal"]')
-        await modal.waitFor({ state: 'visible' })
+        stage = 'opening the league connection'
+        const modal = await openDtcLeagueModal(page)
         stage = 'selecting the Sleeper league'
         await modal.getByRole('link', { name: 'Sleeper', exact: true }).click()
         const select = modal.locator('select[name=sleeper_api_league_id]')

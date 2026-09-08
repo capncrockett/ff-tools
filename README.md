@@ -40,7 +40,7 @@ Each provider and scoring context keeps a separate series. DTC's imported league
 
 See [source behavior and limitations](docs/sources.md).
 
-The known DTC automatic-refresh issue is flagged on its source card and that capture control is deferred. Saved DTC history and dated imports remain available. The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
+DTC's source card shows its latest capture error and next eligible attempt time. The connected-league navigation fix is covered by browser fixtures; a successful live refresh is still needed to confirm the full flow. Saved DTC history and dated imports remain available. The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
 
 ## Import existing observations
 

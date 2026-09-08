@@ -1,6 +1,46 @@
 import { test, expect } from '@playwright/test'
 import { readNerdsRows, parseNerdsRows } from '../src/server/providers/dynastyNerds'
-import { readDtcRoster, parseDtcRoster } from '../src/server/providers/dynastyCalculator'
+import {
+  openDtcLeagueModal,
+  readDtcRoster,
+  parseDtcRoster,
+} from '../src/server/providers/dynastyCalculator'
+
+for (const connected of [false, true]) {
+  test(`DTC opens league settings with ${connected ? 'an existing connection and hidden Connect button' : 'no existing connection'}`, async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.setContent(`
+      <div id="league_info_area">
+        <div id="league_connect" ${connected ? 'hidden' : ''}>
+          <a href="#dtc-integration-modal"><button>Connect a League</button></a>
+        </div>
+        <div id="edit_league_button" ${connected ? '' : 'hidden'}>
+          <a id="edit_league_click" href="#dtc-integration-modal"><span aria-hidden="true">*</span></a>
+        </div>
+      </div>
+      <section data-remodal-id="dtc-integration-modal" hidden><h2>League settings</h2></section>`)
+    await page.evaluate(() => {
+      for (const link of document.querySelectorAll('a[href="#dtc-integration-modal"]')) {
+        link.addEventListener('click', (event) => {
+          event.preventDefault()
+          // The real site's modal opens after its animation and event handler run.
+          setTimeout(() => {
+            document.querySelector<HTMLElement>(
+              '[data-remodal-id="dtc-integration-modal"]',
+            )!.hidden = false
+          }, 50)
+        })
+      }
+    })
+    if (connected)
+      await expect(page.getByRole('button', { name: 'Connect a League', exact: true })).toBeHidden()
+    const modal = await openDtcLeagueModal(page)
+    await expect(modal).toBeVisible()
+    await expect(modal.getByRole('heading')).toHaveText('League settings')
+  })
+}
 
 test('Dynasty GM reads values for players with initials and rejects truncated rosters', async ({
   page,

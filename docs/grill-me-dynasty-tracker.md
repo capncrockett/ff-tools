@@ -88,7 +88,7 @@ Question: When two players and a pick buy three assets, should cost be allocated
 
 Recommended: Manual allocation until we agree on an auditable package ledger. Never count the full outgoing package as the cost of every incoming player.
 
-Answer: Pending
+Answer: Package trades should be considered the same as a one for one swap on a player. I'm not really sure what you're after here? Like the cost of getting apackage discount or something? If players go out we lose that value, when players come in we gain that value.
 
 ## 12. Are draft picks part of the first milestone?
 
@@ -96,7 +96,7 @@ Question: Do you need owned picks with year/round/original-team identity, or jus
 
 Recommended: Player tracking first; then real pick identity with explicitly provisional slot estimates. Do not match a pick label to a player.
 
-Answer: Pending
+Answer: I mean yes we want to track players coverted pick value when we draft them in the end. If I have the 1.05 and draft a player the value gets converted, almost like a trade, into the new value. Am I answering the right question?
 
 ## 13. Is this a portfolio or also a market watchlist?
 
@@ -104,7 +104,7 @@ Question: Do you want separate owned holdings and acquisition targets, including
 
 Recommended: A market table for all captured players and an explicit portfolio for acquired players. Add saved buy targets after the ownership/cost workflow is settled.
 
-Answer: Pending
+Answer: let's just start with the tracking. Targets can come layer.
 
 ## 14. What is a useful alert?
 
@@ -112,7 +112,7 @@ Question: Target reached, source divergence, sharp drops, or stale data? Should 
 
 Recommended: Visible target and freshness badges first. No email, push, or chat delivery in this slice.
 
-Answer: Pending
+Answer: Exactly. Put those things on the roadmap though.
 
 ## 15. How do we handle reacquisition?
 
@@ -120,7 +120,7 @@ Question: If you sell and later buy the same player again, should those be indep
 
 Recommended: Separate acquisition lots with their own costs and exits. Preserve the closed lot even while a new one is open.
 
-Answer: Pending
+Answer: agreed.
 
 ## 16. Do fantasy points count toward ROI?
 
@@ -128,7 +128,7 @@ Question: Does starting a player for a productive season reduce the return you r
 
 Recommended: Keep roster utility separate from trade-value ROI until you define a conversion. No implicit points-to-value formula.
 
-Answer: Pending
+Answer: Oh ya we're not doing that. We're just using the values from those two platforms.
 
 ## 17. Which historical data exists already?
 
@@ -136,7 +136,7 @@ Question: Do your old CSVs contain source, capture date, scoring format, and acq
 
 Recommended: Import dated observations under their original source/settings, retaining gaps. Reject malformed rows visibly. Never backfill using today's values.
 
-Answer: Pending
+Answer: No need to import that. It's 3 years old. It was really just so you could get an idea of how I USED to track things manually. We're building it's replacement and values will come from scratch.
 
 ## 18. Where will this run?
 
@@ -144,7 +144,7 @@ Question: Is this a private tool on your Windows computer, or do you need phone 
 
 Recommended: Local-only Express + SQLite + Vite for this MVP. Hosted access requires its own authentication, secret storage, backups, and provider-permission decisions.
 
-Answer: Pending
+Answer: Ya it will get hosted on Vercel, but for now we'll just be running locally.
 
 ## 19. How should corrections work?
 
@@ -152,7 +152,7 @@ Question: If an acquisition cost, player mapping, or observation is wrong, do yo
 
 Recommended: Immutable source observations; explicit acquisition corrections and mapping review. Export history before major data changes. Do not silently rewrite old provider values.
 
-Answer: Pending
+Answer: you got it.
 
 ## 20. What would make this useful enough to replace CSV entry?
 
@@ -160,4 +160,4 @@ Question: Name one real player and acquisition/exit scenario we should use as th
 
 Recommended: One real league, both sources captured with verified formats, one acquisition, two dated observations, a visible ROI calculation, and a recorded exit that survives restart.
 
-Answer: Pending
+Answer: There is only one league we're tracking. We'll track this over time so having some sort of graph will be really helpful, just a line graph that can be filered to position.

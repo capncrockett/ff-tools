@@ -13,22 +13,25 @@ The active MVP is the dynasty value tracker. Other experiments remain parked.
 - [x] Contextual help, a worked example, and a [review of the original 21-sheet workbook](docs/workbook-review.md).
 - [x] One row per player with Dynasty GM and DTC value columns and one entry action.
 - [x] Fix DTC's hidden Connect a League control for already-connected leagues; cover both connection states in browser fixtures.
+- [x] Replace DTC's hidden-table capture with validated official position exports, force `.5 PPR`, and filter to the current Sleeper roster.
 
-## Decisions before the next slice
+## Confirmed next directions
 
-Continue [the Grill Me document](docs/grill-me-dynasty-tracker.md). Answers 1-9 establish one owned dynasty roster, tracking from current values, an initial 20% target, separate source scales, and a preference for nightly collection with eventual Vercel hosting. Historical acquisition records also exist on FleaFlicker.
+The completed [Grill Me document](docs/grill-me-dynasty-tracker.md) establishes one owned dynasty roster, tracking from current values, an initial 20% target, separate source scales, and nightly collection after hosting. The old workbook is reference material only; its values will not be imported.
 
-- [ ] Agree on cost allocation for package trades and which source governs an exit.
-- [ ] Decide whether to include draft picks; whole-market/watchlist coverage is explicitly deferred.
+- [ ] Add a package-trade ledger that compares total outgoing value with total incoming value. Do not assign the full package cost to every incoming player.
+- [ ] Track owned draft picks, then convert a used pick holding into the drafted player's holding while preserving the transaction history.
+- [ ] Add a line graph that can filter tracked value history by position.
+- [ ] Add acquisition targets later; current scope remains the owned roster.
 - [ ] Define explicit mapping and acquisition-correction workflows.
 - [ ] Decide whether Sleeper transaction import should suggest acquisition lots.
-- [ ] Define trade-chain return and whether player utility affects it.
+- [ ] Define trade-chain return across package trades. Fantasy points and lineup production do not enter ROI.
 - [ ] Design nightly capture and Vercel hosting with durable storage, private access, and a browser worker. The current SQLite file and local sessions require an explicit hosting transition.
-- [ ] Decide on delivered alerts and backup/restore UX.
+- [ ] Add in-app target, source-divergence, sharp-drop, and stale-data alerts, then decide whether any should be delivered elsewhere.
+- [ ] Define backup/restore UX.
 
 ## Operational follow-ups
 
-- [ ] Confirm DTC's full live refresh after the connected-league navigation fix. The 2026-09-08 diagnostic stopped at the hidden Connect a League button before importing. The next attempt must respect the persisted hourly guard; the app shows the last failure until a capture succeeds.
 - [ ] Observe a later real capture to establish actual movement; never invent a prior price.
 - [ ] Keep provider DOM fixtures aligned when either subscription UI changes.
 - [ ] Add a manual sign-in/session recovery wizard if normal automated sign-in becomes insufficient.

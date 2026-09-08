@@ -1,9 +1,100 @@
-import { parseDtcRoster } from '../../src/server/providers/dynastyCalculator'
-const roster = {
-  leagueId: '1378427936817815552',
-  leagueName: 'Fixture League',
-  ownerId: '82289736559247360',
-  rules: {
+import type { AxiosInstance } from 'axios'
+import {
+  buildDtcSnapshot,
+  fetchOwnedSleeperRoster,
+  parseDtcRankingsCsv,
+  type DtcRankingRow,
+} from '../../src/server/providers/dynastyCalculator'
+import type { CanonicalPlayer } from '../../src/server/services/players'
+
+const header = '"Rank","Name","Team","Pos","Age","Value"'
+const rankings: DtcRankingRow[] = [
+  {
+    rank: 1,
+    playerName: 'Example Receiver',
+    team: 'CIN',
+    position: 'WR',
+    age: '25.4',
+    value: 48,
+  },
+  {
+    rank: 2,
+    playerName: 'Example Tight End',
+    team: 'CHI',
+    position: 'TE',
+    age: '27.2',
+    value: 0,
+  },
+]
+const roster: CanonicalPlayer[] = [
+  { sleeperId: '1', name: 'Example Receiver', position: 'WR', team: 'CIN' },
+  { sleeperId: '2', name: 'Example Tight End', position: 'TE', team: 'CHI' },
+  { sleeperId: '3', name: 'Unsupported Runner', position: 'RB', team: 'FA' },
+]
+
+test('DTC parses the official quoted export, including commas and zero values', () => {
+  const csv = `${header}\r\n"1","Receiver, Example","CIN","WR","25.4","48.0"\r\n"2","Quote ""Test""","FA","WR","","0.0"\r\n`
+  expect(parseDtcRankingsCsv(csv, 'WR')).toEqual([
+    {
+      rank: 1,
+      playerName: 'Receiver, Example',
+      team: 'CIN',
+      position: 'WR',
+      age: '25.4',
+      value: 48,
+    },
+    {
+      rank: 2,
+      playerName: 'Quote "Test"',
+      team: 'FA',
+      position: 'WR',
+      age: '',
+      value: 0,
+    },
+  ])
+})
+
+test('DTC rejects changed columns, wrong positions, malformed values and duplicate ranks', () => {
+  expect(() => parseDtcRankingsCsv('Name,Value\nPlayer,1', 'WR')).toThrow('columns changed')
+  expect(() => parseDtcRankingsCsv(header, 'WR')).toThrow('export is empty')
+  expect(() => parseDtcRankingsCsv(`${header}\n"1","Too Short"`, 'WR')).toThrow('invalid row')
+  expect(() => parseDtcRankingsCsv(`${header}\n"1","Unclosed`, 'WR')).toThrow('invalid CSV')
+  expect(() => parseDtcRankingsCsv('x'.repeat(1_000_001), 'WR')).toThrow('unexpectedly large')
+  expect(() =>
+    parseDtcRankingsCsv(`${header}\n"1","Wrong Position","FA","RB","24","1"`, 'WR'),
+  ).toThrow('invalid player row')
+  expect(() =>
+    parseDtcRankingsCsv(`${header}\n"1","Missing Value","FA","WR","24",""`, 'WR'),
+  ).toThrow('invalid player row')
+  expect(() =>
+    parseDtcRankingsCsv(
+      `${header}\n"1","One","FA","WR","24","1"\n"1","Two","FA","WR","24","2"`,
+      'WR',
+    ),
+  ).toThrow('duplicate ranks')
+})
+
+test('DTC matches exports to canonical Sleeper IDs and preserves half-PPR context', () => {
+  const result = buildDtcSnapshot(rankings, roster, new Date('2026-09-08T12:00:00Z'))
+  expect(result.records).toEqual([
+    {
+      sourceKey: '1',
+      sleeperId: '1',
+      playerName: 'Example Receiver',
+      team: 'CIN',
+      position: 'WR',
+      value: 48,
+    },
+    {
+      sourceKey: '2',
+      sleeperId: '2',
+      playerName: 'Example Tight End',
+      team: 'CHI',
+      position: 'TE',
+      value: 0,
+    },
+  ])
+  expect(result.context.settings).toMatchObject({
     team_size: '12',
     team_type: 'half_ppr',
     team_format: 'standard',
@@ -12,47 +103,68 @@ const roster = {
     devy: 0,
     offense: 1,
     idp: 0,
-    mode: 'normal',
-    startup_rookie: 'no',
-  },
-  rows: [
-    {
-      sourceKey: '1',
-      playerName: 'Example Receiver',
-      team: 'CIN',
-      position: 'WR',
-      valueText: '48.0',
-    },
-    {
-      sourceKey: '2',
-      playerName: 'Example Tight End',
-      team: 'CHI',
-      position: 'ZTE',
-      valueText: '0.0',
-    },
-  ],
-}
-const now = new Date('2026-09-04T12:00:00Z')
-test('DTC reads roster values, normalizes ZTE, preserves zero and actual scoring', () => {
-  const result = parseDtcRoster(roster, now)
-  expect(result.records.map((r) => r.value)).toEqual([48, 0])
-  expect(result.records[1].position).toBe('TE')
-  expect(result.context.settings.team_type).toBe('half_ppr')
+  })
 })
-test('DTC rejects missing values, duplicate players, empty roster and wrong league', () => {
-  expect(() => parseDtcRoster({ ...roster, rows: [] }, now)).toThrow()
-  expect(() => parseDtcRoster({ ...roster, rows: [roster.rows[0], roster.rows[0]] }, now)).toThrow(
-    'duplicate',
+
+test('DTC fails closed when exports miss more than one owned player or names are ambiguous', () => {
+  expect(() => buildDtcSnapshot(rankings.slice(0, 1), roster)).toThrow('matched 1 of 3')
+  expect(() => buildDtcSnapshot([...rankings, rankings[0]], roster)).toThrow('ambiguous')
+  expect(() =>
+    buildDtcSnapshot(rankings, [{ sleeperId: '9', name: 'Kicker', position: 'K' }]),
+  ).toThrow('no eligible players')
+  expect(() =>
+    buildDtcSnapshot(
+      [{ ...rankings[0], playerName: 'Michael Penix Jr.', position: 'QB' }],
+      [
+        { sleeperId: '4', name: 'Michael Penix', position: 'QB' },
+        { sleeperId: '5', name: 'Michael Penix Jr.', position: 'QB' },
+      ],
+    ),
+  ).toThrow('more than one roster player')
+})
+
+test('DTC uses a unique suffix-insensitive fallback for Sleeper name differences', () => {
+  const result = buildDtcSnapshot(
+    [
+      { ...rankings[0], playerName: 'Michael Penix Jr.', position: 'QB' },
+      { ...rankings[0], playerName: 'Michael Carter', position: 'RB' },
+      { ...rankings[0], playerName: 'Michael Carter Jr.', position: 'RB', rank: 2 },
+    ],
+    [{ sleeperId: '4', name: 'Michael Penix', position: 'QB', team: 'ATL' }],
   )
-  expect(() =>
-    parseDtcRoster({ ...roster, rows: [{ ...roster.rows[0], valueText: '' }] }, now),
-  ).toThrow()
-  expect(() => parseDtcRoster({ ...roster, leagueId: '1234' }, now)).toThrow('another league')
-  expect(() => parseDtcRoster({ ...roster, ownerId: '1234' }, now)).toThrow('another owner')
-  expect(() =>
-    parseDtcRoster({ ...roster, rules: { ...roster.rules, team_size: 'unknown' } }, now),
-  ).toThrow('settings')
-  expect(() =>
-    parseDtcRoster({ ...roster, rules: { ...roster.rules, mode: 'startup' } }, now),
-  ).toThrow('settings')
+  expect(result.records[0]).toMatchObject({ sleeperId: '4', value: 48 })
+})
+
+test('Sleeper roster lookup selects the configured owner and requires complete metadata', async () => {
+  const http = {
+    get: jest.fn(async () => ({
+      data: [
+        { owner_id: 'other', players: ['9'] },
+        { owner_id: 'owner', players: ['1', '2'] },
+      ],
+    })),
+  } as unknown as AxiosInstance
+  await expect(
+    fetchOwnedSleeperRoster('league', 'owner', { http, catalog: roster }),
+  ).resolves.toEqual(roster.slice(0, 2))
+  await expect(
+    fetchOwnedSleeperRoster('league', 'owner', { http, catalog: roster.slice(0, 1) }),
+  ).rejects.toThrow('metadata is incomplete')
+  await expect(
+    fetchOwnedSleeperRoster('league', 'missing', { http, catalog: roster }),
+  ).rejects.toThrow('configured owned roster')
+  await expect(
+    fetchOwnedSleeperRoster('league', 'owner', {
+      http: { get: jest.fn(async () => ({ data: {} })) } as unknown as AxiosInstance,
+      catalog: roster,
+    }),
+  ).rejects.toThrow('response changed')
+  await expect(
+    fetchOwnedSleeperRoster('league', 'owner', {
+      http: {
+        get: jest.fn(async () => Promise.reject(new Error('offline'))),
+      } as unknown as AxiosInstance,
+      catalog: roster,
+    }),
+  ).rejects.toThrow('roster refresh failed')
 })

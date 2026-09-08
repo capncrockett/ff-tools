@@ -30,18 +30,17 @@ export async function fetchSleeperPlayers(http: AxiosInstance = axios): Promise<
     (await http.get('https://api.sleeper.app/v1/players/nfl', { timeout: 30_000 })).data,
   )
 }
-export async function seedPlayersFromSleeper(opts?: {
+export async function loadSleeperPlayers(opts?: {
   http?: AxiosInstance
-  prisma?: PrismaClient
-}) {
-  const db = opts?.prisma || (await import('../db.js')).prisma
+  now?: number
+}): Promise<CanonicalPlayer[]> {
   const cache = path.join(localDir, 'sleeper-players.json')
   let players: CanonicalPlayer[] | undefined
   if (!opts?.http) {
     try {
       const stat = await fs.stat(cache)
-      if (Date.now() - stat.mtimeMs < 86_400_000)
-        players = JSON.parse(await fs.readFile(cache, 'utf8'))
+      if ((opts?.now ?? Date.now()) - stat.mtimeMs < 86_400_000)
+        players = JSON.parse(await fs.readFile(cache, 'utf8')) as CanonicalPlayer[]
     } catch {
       /* first refresh */
     }
@@ -53,6 +52,14 @@ export async function seedPlayersFromSleeper(opts?: {
       await fs.writeFile(cache, JSON.stringify(players))
     }
   }
+  return players
+}
+export async function seedPlayersFromSleeper(opts?: {
+  http?: AxiosInstance
+  prisma?: PrismaClient
+}) {
+  const db = opts?.prisma || (await import('../db.js')).prisma
+  const players = await loadSleeperPlayers({ http: opts?.http })
   // SQLite does not support Prisma's createMany skipDuplicates option.
   let created = 0
   for (const p of players) {

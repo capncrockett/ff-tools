@@ -18,7 +18,7 @@ npm run players:seed
 npm run dev
 ```
 
-Only copy the example on first setup; preserve an existing `.env.local`. Fill its optional credentials to enable capture. Player seeding downloads Sleeper's public player catalog at most once per day and provides canonical identities before the first import.
+Only copy the example on first setup; preserve an existing `.env.local`. Fill its optional credentials to enable capture. Player seeding downloads Sleeper's public player catalog at most once per day and provides canonical identities before the first import. A DTC capture also reads the current owned Sleeper roster, while reusing that daily player catalog cache.
 
 Open [the local app](http://127.0.0.1:5173). For a built app, run `npm run build`, then `npm start` and open [port 3000](http://127.0.0.1:3000). Both servers bind to loopback. This MVP runs on your computer. The user intends Vercel hosting and nightly collection; the durable storage, authentication, and browser-worker design is the next slice.
 
@@ -40,7 +40,7 @@ Each provider and scoring context keeps a separate series. DTC's imported league
 
 See [source behavior and limitations](docs/sources.md).
 
-DTC's source card shows its latest capture error and next eligible attempt time. The connected-league navigation fix is covered by browser fixtures; a successful live refresh is still needed to confirm the full flow. Saved DTC history and dated imports remain available. The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
+DTC capture opens its official rankings page, explicitly selects and verifies 12-team `.5 PPR` Standard/1QB settings, and downloads the QB, RB, WR, and TE exports in memory. It matches those rows to the current Sleeper roster before saving. The deeper position exports cover 29 of the current 30 players; Jacob Saylors is absent from DTC and keeps a missing DTC value. Saved history remains available if a later download or match fails. The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
 
 ## Import existing observations
 

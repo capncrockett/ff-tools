@@ -31,7 +31,7 @@ History is ordered by observation time even if old files arrive later. The table
 
 Unrealized return uses the latest observation at or after acquisition. Realized return uses explicit exit proceeds. Zero cost has a defined absolute gain and undefined percentage return. Target flags are advisory and stale quotes do not enter the fresh-target count.
 
-Only the provider-supported owned roster is captured today. A missing row is never filled with zero. Departed players keep their prior history and become stale unless another valid observation is imported; whole-market scouting is future scope.
+Only the provider-supported owned roster is captured today. DTC refreshes the current roster from Sleeper and filters its position exports before persistence. A missing row is never filled with zero. Departed players keep their prior history and become stale unless another valid observation is imported; whole-market scouting is future scope.
 
 ## Operational properties
 

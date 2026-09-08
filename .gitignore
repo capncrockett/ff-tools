@@ -5,6 +5,7 @@
 !.env.example
 .local/
 .playwright-mcp/
+.zvec-grep/
 
 ### Node
 node_modules/

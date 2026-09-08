@@ -16,6 +16,8 @@ Adapted from Grundle Ball's current AGENTS.md and docs/agent-workflow.md (2026-0
    User authorized frequent implementation checkpoints on 2026-09-05. Commit each working, verified slice during this MVP; do not wait for another permission question. Push/merge/deploy remain separate actions.
 8. Never use Unicode em dashes or en dashes in maintained files or responses. Use ASCII hyphen-minus.
 
+Use `rg` for exact names, paths, keys, and exhaustive matches. When the wording or location is unknown, or the answer depends on relationships across files, use the local zvec-grep index for one focused semantic search and verify the result with `rg` or direct file reads. Run `npm run search:index` to create or refresh the ignored local index. Do not use remote embeddings for this repository without explicit user approval.
+
 ## Data boundaries
 
 - Paid-provider credentials belong only in ignored `.env.local`; session state and databases are local and ignored. Never log credentials, tokens, request headers, full provider bodies, or account profiles.

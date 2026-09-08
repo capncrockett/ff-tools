@@ -21,6 +21,17 @@ try {
 } catch {
   check('Git checkout', false)
 }
+try {
+  const version =
+    process.platform === 'win32'
+      ? execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'zg version'], {
+          encoding: 'utf8',
+        }).trim()
+      : execFileSync('zg', ['version'], { encoding: 'utf8' }).trim()
+  console.log(`Optional zvec-grep: ${version}`)
+} catch {
+  console.log('Optional zvec-grep: absent (exact rg search remains available)')
+}
 console.log(
   `Local credentials file: ${fs.existsSync('.env.local') ? 'present (contents not inspected)' : 'optional; absent'}`,
 )

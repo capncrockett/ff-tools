@@ -82,14 +82,16 @@ Settings, not their display label, define a context. A CSV's free-text format de
 
 Start with `npm run doctor` and [the agent workflow](docs/agent-workflow.md).
 
-| Command                                    | Purpose                                                           |
-| ------------------------------------------ | ----------------------------------------------------------------- |
-| `npm run verify:quick`                     | Repository checks, formatting, lint, and both TypeScript projects |
-| `npm run verify`                           | Quick checks, isolated SQLite tests, and client/server builds     |
-| `npm run verify -- --e2e`                  | Full checks plus real Chromium UI and provider DOM fixtures       |
-| `npm run sync:nerds` / `npm run sync:calc` | Explicit live capture using the same hourly guard as the UI       |
-| `npm run players:seed`                     | Seed/update canonical players using the daily local catalog cache |
-| `npm run db:deploy`                        | Apply checked-in SQLite migrations without resetting data         |
+| Command                                          | Purpose                                                           |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
+| `npm run verify:quick`                           | Repository checks, formatting, lint, and both TypeScript projects |
+| `npm run verify`                                 | Quick checks, isolated SQLite tests, and client/server builds     |
+| `npm run verify -- --e2e`                        | Full checks plus real Chromium UI and provider DOM fixtures       |
+| `npm run sync:nerds` / `npm run sync:calc`       | Explicit live capture using the same hourly guard as the UI       |
+| `npm run players:seed`                           | Seed/update canonical players using the daily local catalog cache |
+| `npm run db:deploy`                              | Apply checked-in SQLite migrations without resetting data         |
+| `npm run record:dtc` / `npm run record:nerds`    | Record a provider flow locally with Playwright Inspector          |
+| `npm run search:index` / `npm run search:status` | Build or inspect the ignored local zvec-grep index                |
 
 Tests never contact the paid providers or use the real database. Browser tests run a separate app on port 4174 and use synthetic fixture data. The retained Sleeper ADP/keeper experiments are outside this MVP and remain unlinked in the UI.
 

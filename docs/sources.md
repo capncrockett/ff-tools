@@ -24,7 +24,7 @@ Entry: [rankings](https://dynastytradecalculator.com/dynasty-rankings-2/). Sign-
 
 The previous Connect a League import was explicitly authorized, but its hidden roster table was not reliable enough for unattended capture. The adapter now uses DTC's official Export control. No ChatDTC credits are used.
 
-Capture explicitly selects 12 teams, `.5 PPR`, Standard/1QB, and offense. It explicitly disables IDP, Devy, TE Premium, and RB PPC. Those states are verified before every download. The adapter downloads the deeper QB, RB, WR, and TE lists in memory, validates the exact CSV columns and positions, and discards the raw files after parsing. Picks are excluded. Zero remains a real zero; missing or changed fields are rejected.
+Capture explicitly selects 12 teams, `.5 PPR`, Standard/1QB, and offense. It explicitly disables IDP, Devy, TE Premium, and RB PPC. Those states are verified before every download. The adapter downloads the deeper QB, RB, WR, and TE lists in memory, validates the exact CSV columns and positions, and discards the raw files after parsing. Matches use prefixed canonical Sleeper IDs because the export has no DTC player ID. Picks are excluded. Zero remains a real zero; missing or changed fields are rejected.
 
 Each snapshot records the configured Sleeper league/owner identity and the verified DTC controls: team count, scoring, QB format, TE premium, RB PPC, offense/IDP/devy, and normal calculator mode. These are the same context settings used by the earlier imported view, so new observations continue that half-PPR series.
 

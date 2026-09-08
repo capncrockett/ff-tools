@@ -161,7 +161,7 @@ export function buildDtcSnapshot(
     return row
       ? [
           {
-            sourceKey: player.sleeperId,
+            sourceKey: `sleeper:${player.sleeperId}`,
             sleeperId: player.sleeperId,
             playerName: player.name,
             team: row.team || player.team || null,

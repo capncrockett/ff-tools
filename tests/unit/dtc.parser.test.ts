@@ -78,7 +78,7 @@ test('DTC matches exports to canonical Sleeper IDs and preserves half-PPR contex
   const result = buildDtcSnapshot(rankings, roster, new Date('2026-09-08T12:00:00Z'))
   expect(result.records).toEqual([
     {
-      sourceKey: '1',
+      sourceKey: 'sleeper:1',
       sleeperId: '1',
       playerName: 'Example Receiver',
       team: 'CIN',
@@ -86,7 +86,7 @@ test('DTC matches exports to canonical Sleeper IDs and preserves half-PPR contex
       value: 48,
     },
     {
-      sourceKey: '2',
+      sourceKey: 'sleeper:2',
       sleeperId: '2',
       playerName: 'Example Tight End',
       team: 'CHI',

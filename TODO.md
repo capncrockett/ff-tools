@@ -11,6 +11,7 @@ The active MVP is the dynasty value tracker. Other experiments remain parked.
 - [x] Confirmed Sleeper league and approved DTC connection.
 - [x] Local secret/session boundaries, additive SQLite migrations, diagnostics, and repeatable verification.
 - [x] Contextual help, a worked example, and a [review of the original 21-sheet workbook](docs/workbook-review.md).
+- [x] One row per player with Dynasty GM and DTC value columns and one entry action.
 
 ## Decisions before the next slice
 

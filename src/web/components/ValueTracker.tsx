@@ -29,6 +29,8 @@ const date = (value: string | null) =>
     : 'No capture yet'
 const stale = (time: string | null) => !time || Date.now() - Date.parse(time) > 7 * 86_400_000
 const empty: Dashboard = { market: [], holdings: [], sources: [] }
+const marketSources: SourceName[] = ['dynasty-nerds', 'dynasty-calculator']
+type PlayerValues = { player: MarketRow; sources: Record<SourceName, MarketRow[]> }
 const today = () => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -45,7 +47,7 @@ export default function ValueTracker() {
     [position, setPosition] = useState('all'),
     [view, setView] = useState<'market' | 'portfolio'>('market')
   const [detail, setDetail] = useState<MarketRow | null>(null),
-    [acquire, setAcquire] = useState<MarketRow | null>(null),
+    [acquire, setAcquire] = useState<MarketRow[] | null>(null),
     [exit, setExit] = useState<HoldingView | null>(null)
   const [showImport, setShowImport] = useState(false),
     [sort, setSort] = useState('name'),
@@ -94,24 +96,42 @@ export default function ValueTracker() {
       setBusy(null)
     }
   }
-  const market = useMemo(
-    () =>
-      data.market
-        .filter(
-          (r) =>
-            (source === 'all' || r.source === source) &&
-            (position === 'all' || r.position === position) &&
-            r.playerName.toLowerCase().includes(search.toLowerCase()),
-        )
-        .sort((a, b) =>
-          sort === 'change'
-            ? (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity)
-            : sort === 'baseline'
-              ? (b.baselineChangePct ?? -Infinity) - (a.baselineChangePct ?? -Infinity)
-              : a.playerName.localeCompare(b.playerName),
-        ),
-    [data.market, source, position, search, sort],
-  )
+  const market = useMemo(() => {
+    const players = new Map<number, PlayerValues>()
+    // Group by database player identity, never by name. Keep every scoring context intact.
+    for (const row of [...data.market].sort(
+      (a, b) =>
+        Date.parse(b.capturedAt) - Date.parse(a.capturedAt) ||
+        a.contextKey.localeCompare(b.contextKey),
+    )) {
+      if (!players.has(row.playerId))
+        players.set(row.playerId, {
+          player: row,
+          sources: { 'dynasty-nerds': [], 'dynasty-calculator': [] },
+        })
+      players.get(row.playerId)!.sources[row.source].push(row)
+    }
+    const sortSource = sort.startsWith('dynasty-calculator:')
+      ? 'dynasty-calculator'
+      : 'dynasty-nerds'
+    const score = (row: PlayerValues) => {
+      const latest = row.sources[sortSource][0]
+      return (
+        (sort.endsWith(':baseline') ? latest?.baselineChangePct : latest?.changePct) ?? -Infinity
+      )
+    }
+    return [...players.values()]
+      .filter(
+        ({ player }) =>
+          (position === 'all' || player.position === position) &&
+          player.playerName.toLowerCase().includes(search.toLowerCase()),
+      )
+      .sort(
+        (a, b) =>
+          (sort === 'name' ? 0 : score(b) - score(a)) ||
+          a.player.playerName.localeCompare(b.player.playerName),
+      )
+  }, [data.market, position, search, sort])
   const holdings = data.holdings.filter(
     (h) =>
       (source === 'all' || h.sourceName === source) &&
@@ -302,7 +322,7 @@ export default function ValueTracker() {
         </div>
         <p className="workspace-hint">
           {view === 'market'
-            ? "Click a player's name for history. Compare each source with its own starting value; scroll the table sideways on a small screen."
+            ? 'One row per player. Click either value for its history; growth compares that source with its own starting value.'
             : 'These are the entries you recorded, not an automatic copy of your roster. Record an entry under Player values to start measuring return.'}
         </p>
         <div className="filters">
@@ -315,21 +335,23 @@ export default function ValueTracker() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-          <label>
-            <span>Source</span>
-            <select
-              className="select select-bordered select-sm"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-            >
-              <option value="all">Both sources</option>
-              {Object.entries(sourceLabels).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {view === 'portfolio' && (
+            <label>
+              <span>Source</span>
+              <select
+                className="select select-bordered select-sm"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+              >
+                <option value="all">Both sources</option>
+                {Object.entries(sourceLabels).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {view === 'market' ? (
             <>
               <label>
@@ -353,8 +375,10 @@ export default function ValueTracker() {
                   onChange={(e) => setSort(e.target.value)}
                 >
                   <option value="name">Player name</option>
-                  <option value="change">Largest % change</option>
-                  <option value="baseline">Growth since tracking began</option>
+                  <option value="dynasty-nerds:baseline">GM growth since start</option>
+                  <option value="dynasty-calculator:baseline">DTC growth since start</option>
+                  <option value="dynasty-nerds:change">GM change since last capture</option>
+                  <option value="dynasty-calculator:change">DTC change since last capture</option>
                 </select>
               </label>
             </>
@@ -381,41 +405,35 @@ export default function ValueTracker() {
         ) : view === 'market' ? (
           <>
             <div className="table-scroll">
-              <table className="table">
+              <table className="table player-values-table">
                 <caption className="sr-only">
-                  Latest values by player, source, and scoring context
+                  One row per player with Dynasty GM and DTC values side by side
                 </caption>
                 <thead>
                   <tr>
-                    <th>Player</th>
                     <th>
-                      Source / format{' '}
-                      <HelpTip label="source and format">{trackerHelp.source}</HelpTip>
+                      Player <HelpTip label="recording an entry">{trackerHelp.entry}</HelpTip>
                     </th>
                     <th className="numeric">
-                      Latest value <HelpTip label="latest value">{trackerHelp.latest}</HelpTip>
+                      Dynasty GM <HelpTip label="Dynasty GM values">{trackerHelp.values}</HelpTip>
                     </th>
                     <th className="numeric">
-                      Since last capture{' '}
-                      <HelpTip label="change since last capture">{trackerHelp.previous}</HelpTip>
-                    </th>
-                    <th className="numeric">
-                      Since tracking began{' '}
-                      <HelpTip label="growth since tracking began">{trackerHelp.baseline}</HelpTip>
-                    </th>
-                    <th>
-                      Captured <HelpTip label="capture time">{trackerHelp.captured}</HelpTip>
-                    </th>
-                    <th>
-                      Entry <HelpTip label="recording an entry">{trackerHelp.entry}</HelpTip>
+                      DTC <HelpTip label="DTC values">{trackerHelp.values}</HelpTip>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {market.map((r) => (
-                    <tr key={`${r.playerId}-${r.source}-${r.contextKey}`}>
+                  {market.map(({ player: r, sources }) => (
+                    <tr key={r.playerId}>
                       <td>
-                        <button className="player-name" onClick={() => setDetail(r)}>
+                        <button
+                          className="player-name"
+                          onClick={() =>
+                            setDetail(
+                              sources['dynasty-nerds'][0] ?? sources['dynasty-calculator'][0],
+                            )
+                          }
+                        >
                           {r.playerName}
                         </button>
                         <div className="player-meta">
@@ -427,46 +445,25 @@ export default function ValueTracker() {
                             <span className="badge badge-ghost badge-xs">Source identity</span>
                           )}
                         </div>
-                      </td>
-                      <td>
-                        <div className="font-medium">{sourceLabels[r.source]}</div>
-                        <div className="context-label">{r.contextLabel}</div>
-                      </td>
-                      <td className="numeric value-number">{number(r.value)}</td>
-                      <td
-                        className={`numeric ${r.changePct !== null ? (r.changePct >= 0 ? 'positive' : 'negative') : 'muted'}`}
-                      >
-                        {r.previousValue === null ? 'First capture' : percent(r.changePct)}
-                        <div className="text-xs muted">
-                          {r.observations} {r.observations === 1 ? 'observation' : 'observations'}
-                        </div>
-                      </td>
-                      <td
-                        className={`numeric ${r.baselineChangePct === null ? 'muted' : r.baselineChangePct >= 0 ? 'positive' : 'negative'}`}
-                      >
-                        {percent(r.baselineChangePct)}
-                        <div
-                          className="text-xs muted"
-                          title={`First observation: ${date(r.baselineAt)}`}
-                        >
-                          Baseline {number(r.baselineValue)}
-                        </div>
-                      </td>
-                      <td className="text-sm whitespace-nowrap">
-                        {date(r.capturedAt)}
-                        {stale(r.capturedAt) && (
-                          <div className="text-warning text-xs">Over 7 days old</div>
-                        )}
-                      </td>
-                      <td>
                         <button
-                          className="btn btn-sm btn-ghost"
-                          onClick={() => setAcquire(r)}
-                          aria-label={`Record acquisition of ${r.playerName} from ${sourceLabels[r.source]}`}
+                          className="btn btn-sm btn-ghost player-entry"
+                          onClick={() => setAcquire(marketSources.flatMap((s) => sources[s]))}
+                          aria-label={`Record entry for ${r.playerName}`}
                         >
                           Record entry +
                         </button>
                       </td>
+                      {marketSources.map((s) => (
+                        <td key={s} className="numeric" data-source={s}>
+                          {sources[s].length ? (
+                            sources[s].map((row) => (
+                              <SourceValue key={row.contextKey} row={row} onDetail={setDetail} />
+                            ))
+                          ) : (
+                            <span className="muted">No value yet</span>
+                          )}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -482,7 +479,7 @@ export default function ValueTracker() {
                 </h2>
                 <p>
                   {data.market.length
-                    ? 'Try another name, position, or source.'
+                    ? 'Try another name or position.'
                     : 'Capture a source above, or import an existing dated snapshot. Then record what you invested in a player.'}
                 </p>
               </div>
@@ -590,7 +587,11 @@ export default function ValueTracker() {
           </>
         )}
         <footer className="workspace-footer">
-          <span>{view === 'market' ? market.length : holdings.length} rows</span>
+          <span>
+            {view === 'market'
+              ? `${market.length} ${market.length === 1 ? 'player' : 'players'}`
+              : `${holdings.length} entries`}
+          </span>
           <span>Provider points stay separate. Target reached is an unrealized signal.</span>
         </footer>
       </section>
@@ -607,15 +608,23 @@ export default function ValueTracker() {
             {sourceLabels[detail.source]} / {detail.contextLabel}
           </p>
           <p className="text-sm mb-4">
-            Tracking baseline: {number(detail.baselineValue)} on {date(detail.baselineAt)}. Growth:{' '}
+            <HelpTip label="growth since tracking began">{trackerHelp.baseline}</HelpTip> Tracking
+            baseline: {number(detail.baselineValue)} on {date(detail.baselineAt)}. Growth:{' '}
             {percent(detail.baselineChangePct)}. This observation is separate from acquisition cost.
+          </p>
+          <p className="text-sm mb-4">
+            Since last capture:{' '}
+            {detail.previousValue === null ? 'First capture' : percent(detail.changePct)}{' '}
+            <HelpTip label="change since last capture">{trackerHelp.previous}</HelpTip>
           </p>
           <HistoryChart points={detail.history} label={detail.playerName} />
           <div className="mt-5 max-h-40 overflow-y-auto">
             <table className="table table-sm">
               <thead>
                 <tr>
-                  <th>Captured</th>
+                  <th>
+                    Captured <HelpTip label="capture time">{trackerHelp.captured}</HelpTip>
+                  </th>
                   <th className="numeric">Value</th>
                 </tr>
               </thead>
@@ -633,7 +642,7 @@ export default function ValueTracker() {
       )}
       {acquire && (
         <AcquisitionForm
-          row={acquire}
+          rows={acquire}
           onClose={() => setAcquire(null)}
           onSaved={async () => {
             setAcquire(null)
@@ -668,15 +677,43 @@ export default function ValueTracker() {
   )
 }
 
+function SourceValue({ row, onDetail }: { row: MarketRow; onDetail: (row: MarketRow) => void }) {
+  return (
+    <div className="source-value">
+      <button
+        className="value-number"
+        onClick={() => onDetail(row)}
+        aria-label={`View ${row.playerName} history from ${sourceLabels[row.source]}: ${row.contextLabel}`}
+      >
+        {number(row.value)}
+      </button>
+      <div
+        className={`text-xs ${row.baselineChangePct === null ? 'muted' : row.baselineChangePct >= 0 ? 'positive' : 'negative'}`}
+      >
+        {row.baselineChangePct === null ? 'Growth unavailable' : percent(row.baselineChangePct)}{' '}
+        <span className="muted">since start ({number(row.baselineValue)})</span>
+      </div>
+      <div className="context-label">{row.contextLabel}</div>
+      <div className="source-capture text-xs muted">
+        <time dateTime={row.capturedAt}>{date(row.capturedAt)}</time>
+        {row.observations === 1 && <span> / First capture</span>}
+      </div>
+      {stale(row.capturedAt) && <div className="text-warning text-xs">Over 7 days old</div>}
+    </div>
+  )
+}
+
 function AcquisitionForm({
-  row,
+  rows,
   onClose,
   onSaved,
 }: {
-  row: MarketRow
+  rows: MarketRow[]
   onClose: () => void
   onSaved: () => Promise<void>
 }) {
+  const [selected, setSelected] = useState(`${rows[0].source}:${rows[0].contextKey}`)
+  const row = rows.find((r) => `${r.source}:${r.contextKey}` === selected) ?? rows[0]
   const [cost, setCost] = useState(''),
     [target, setTarget] = useState('20'),
     [acquired, setAcquired] = useState(today()),
@@ -718,6 +755,29 @@ function AcquisitionForm({
         <HelpTip label="entry cost and starting benchmarks">{trackerHelp.entry}</HelpTip>
       </p>
       <form onSubmit={submit} className="tracker-form">
+        <label>
+          <span id="entry-source-label">Value source</span>
+          <select
+            className="select select-bordered"
+            aria-labelledby="entry-source-label"
+            aria-describedby="entry-source-help"
+            value={selected}
+            onChange={(e) => {
+              setSelected(e.target.value)
+              setCost('')
+            }}
+          >
+            {rows.map((r) => (
+              <option key={`${r.source}:${r.contextKey}`} value={`${r.source}:${r.contextKey}`}>
+                {sourceLabels[r.source]} / {r.contextLabel}
+              </option>
+            ))}
+          </select>
+          <span id="entry-source-help" className="field-hint">
+            Choose the source for this entry's cost and return. Changing source clears the cost
+            because the points use different scales.
+          </span>
+        </label>
         <label>
           Portfolio
           <input

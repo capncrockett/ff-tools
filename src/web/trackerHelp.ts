@@ -1,6 +1,6 @@
 export const trackerHelp = {
   players:
-    'Distinct player identities across saved history, not the number of rows. The same player can appear under both sources. Previously captured players stay in history after leaving the roster.',
+    'Each player appears once, with Dynasty GM and DTC values in separate columns. Previously captured players stay in history after leaving the roster.',
   investments:
     'Entries you have saved and have not exited. Capturing your roster does not create investment entries. One player can have separate entries for different sources or a later reacquisition.',
   targets:
@@ -8,7 +8,9 @@ export const trackerHelp = {
   exits:
     'Investment entries with saved exit proceeds. These use what you received, not the latest quote. One package trade may close several entries, so this is not a count of league trades.',
   source:
-    'One row is one player, provider, and scoring format. DTC and Dynasty GM use different value scales. Compare growth within a source. The Dynasty GM PPR approximation for this half-PPR league is intentional.',
+    'One row is one player, with a column for each provider. DTC and Dynasty GM use different value scales. Compare growth within a source. The Dynasty GM PPR approximation for this half-PPR league is intentional.',
+  values:
+    'Latest saved trade value, with growth since this source and format began tracking. Starting value is in parentheses, separate from entry cost. Click the value for dated history. Missing values are labeled; formats stay separate. Sorting uses the most recently captured format for that source.',
   latest:
     'The newest saved value for this player, source, and format. It is a calculator trade value, not fantasy points, dollars, or a guaranteed trade offer. A failed refresh leaves the last saved value available.',
   previous:

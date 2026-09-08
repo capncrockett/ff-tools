@@ -88,7 +88,7 @@ test('help supports hover, keyboard dismissal, and pointer movement into the too
   const trigger = page.getByRole('button', { name: 'About players observed', exact: true })
   await trigger.hover()
   const tip = page.getByRole('tooltip')
-  await expect(tip).toContainText('not the number of rows')
+  await expect(tip).toContainText('Each player appears once')
   await tip.hover()
   await page.waitForTimeout(200) // Longer than the pointer transit grace period.
   await expect(tip).toBeVisible()
@@ -109,7 +109,7 @@ test('tapped table help fits mobile and stays above the scrolling table', async 
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/')
   const trigger = page.getByRole('button', {
-    name: 'About growth since tracking began',
+    name: 'About Dynasty GM values',
     exact: true,
   })
   await trigger.tap()
@@ -137,7 +137,7 @@ test('help inside an entry dialog dismisses before the dialog and never submits 
   await page.goto('/')
   await page
     .getByRole('button', {
-      name: 'Record acquisition of Guide Example from Dynasty GM',
+      name: 'Record entry for Guide Example',
       exact: true,
     })
     .click()

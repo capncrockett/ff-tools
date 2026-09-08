@@ -45,7 +45,7 @@ The two chart definitions are titled `DTC Pos Totals` and `Nerds Pos Totals`. Th
 - Add a collapsible guide that maps Player values to the roster sheet and My investments to explicitly recorded entries/exits.
 - Explain the starting value, previous capture, latest value, source scales, capture time, targets, and realized return beside the corresponding controls.
 - Include an interactive example showing why change since the previous capture differs from growth since the baseline.
-- Explain why 29 player identities can produce 58 source rows and still produce zero investment entries before an entry is saved.
+- Show one row per player with Dynasty GM and DTC values side by side, as the user clarified after this review. The 58 saved source series appear across 29 player rows; investment entries still require an explicitly saved cost or benchmark.
 - Show the initial 20% target calculation and points still needed in the entry form. Preserve the distinction between historical cost and a deliberately chosen starting benchmark.
 - Flag the known DTC automatic-refresh issue and defer that capture control. Continue reading its saved observations.
 

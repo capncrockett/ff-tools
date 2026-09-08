@@ -483,6 +483,42 @@ a:focus-visible {
   font-weight: 650;
   color: #263f31;
 }
+.player-values-table {
+  table-layout: fixed;
+  min-width: 700px;
+}
+.player-values-table th:first-child {
+  width: 30%;
+}
+.player-values-table td {
+  vertical-align: top;
+}
+.player-entry {
+  display: block;
+  margin-top: 6px;
+  padding-left: 0;
+  font-size: 11px;
+}
+.source-value {
+  line-height: 1.6;
+}
+.source-value + .source-value {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8dd;
+}
+.source-value .value-number:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.source-value .context-label {
+  max-width: none;
+  white-space: normal;
+  margin: 2px 0;
+}
+.source-value > div {
+  white-space: normal;
+}
 .player-name {
   font-weight: 650;
   text-align: left;
@@ -820,6 +856,31 @@ a:focus-visible {
   .table th,
   .table td {
     padding: 13px 15px;
+  }
+  .player-values-table {
+    min-width: 0;
+  }
+  .player-values-table th:first-child {
+    width: 36%;
+  }
+  .player-values-table th,
+  .player-values-table td {
+    padding: 12px 8px;
+  }
+  .player-values-table th {
+    white-space: normal;
+    letter-spacing: 0;
+  }
+  .player-values-table .player-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .player-values-table .player-meta {
+    flex-wrap: wrap;
+  }
+  .player-values-table .source-capture,
+  .player-values-table .source-value:only-child .context-label {
+    display: none;
   }
   .workspace-footer {
     flex-direction: column;

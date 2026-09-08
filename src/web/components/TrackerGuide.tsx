@@ -20,17 +20,17 @@ export default function TrackerGuide() {
             <strong>1. Watch your roster's value</strong>
             <p>
               Player values is your old roster sheet: a starting value, a current value, and
-              percentage growth for each source. Click a player's name for dated history. A first
-              capture sets the baseline; the next one can show movement.
+              percentage growth for each source, side by side in one player row. Click either value
+              for dated history. A first capture sets the baseline; the next one can show movement.
             </p>
           </li>
           <li>
             <strong>2. Record an entry and target</strong>
             <p>
-              Use Record entry to choose the value you are measuring return against and a start
-              date. For a benchmark starting today, note that choice in Entry notes. My investments
-              starts empty until you save an entry. The initial target is 20%, editable before
-              saving.
+              Use Record entry to choose a source, the value you are measuring return against, and a
+              start date. For a benchmark starting today, note that choice in Entry notes. My
+              investments starts empty until you save an entry. The initial target is 20%, editable
+              before saving.
             </p>
           </li>
           <li>
@@ -92,9 +92,9 @@ export default function TrackerGuide() {
           </p>
         </div>
         <p className="guide-source-note">
-          Two sources can produce two rows for the same player. Each uses its own points and scoring
-          format: Dynasty GM uses PPR here; DTC uses half-PPR. Fantasy scoring points and calculator
-          trade-value points are different measurements.
+          Each player has one row with Dynasty GM and DTC value columns. Each source uses its own
+          points and scoring format: Dynasty GM uses PPR here; DTC uses half-PPR. Fantasy scoring
+          points and calculator trade-value points are different measurements.
         </p>
       </div>
     </details>

@@ -25,6 +25,8 @@ A `SyncRun` reserves an attempt before opening a browser, then records a control
 
 Keep provider scales and valuation contexts separate. A scoring change starts a distinct series. Context identity uses sorted scalar settings, not presentation labels. The capture time is when this tool observed a value, not a claim about when the provider changed it.
 
+The Player values table groups series by canonical database player ID into one row, with Dynasty GM and DTC columns. Multiple formats remain individually labeled inside their source column. Missing sources display no value. Growth sorting uses the named source's most recently captured format; source history, entry cost, and return still use their exact context.
+
 History is ordered by observation time even if old files arrive later. The table shows both change since the preceding observation and growth from the first saved value of that exact series. This implements the user's confirmed tracking baseline; it does not claim that value was the historical acquisition cost. Importing an earlier observation moves the tracking baseline earlier. A first observation has no preceding change, and zero baselines have undefined percentage growth.
 
 Unrealized return uses the latest observation at or after acquisition. Realized return uses explicit exit proceeds. Zero cost has a defined absolute gain and undefined percentage return. Target flags are advisory and stale quotes do not enter the fresh-target count.

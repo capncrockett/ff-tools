@@ -71,17 +71,23 @@ test('empty state and file import use the real isolated API and survive reload',
   await expect(page.getByRole('button', { name: 'E2E Imported', exact: true })).toBeVisible()
 })
 
-test('source filters preserve separate scales and dated history; failed capture preserves values', async ({
+test('one player row keeps both source values and histories separate; failed capture preserves values', async ({
   page,
   request,
 }) => {
   await seed(request)
   await page.goto('/')
   await page.getByLabel('Find a player').fill('E2E Alpha')
-  await expect(page.locator('.workspace tbody tr')).toHaveCount(2)
-  await page.getByRole('combobox', { name: 'Source', exact: true }).selectOption('dynasty-nerds')
-  await expect(page.locator('.workspace tbody tr')).toHaveCount(1)
-  await expect(page.locator('.workspace tbody tr')).toContainText('+50.0%')
+  const row = page.locator('.workspace tbody tr')
+  await expect(row).toHaveCount(1)
+  await expect(row.locator('td')).toHaveCount(3)
+  await expect(row.locator('[data-source="dynasty-nerds"] .value-number')).toHaveText('150')
+  await expect(row.locator('[data-source="dynasty-calculator"] .value-number')).toHaveText('12')
+  await expect(row.locator('[data-source="dynasty-nerds"]')).toContainText('+50.0%')
+  await expect(
+    row.getByRole('button', { name: 'Record entry for E2E Alpha', exact: true }),
+  ).toHaveCount(1)
+  await expect(page.locator('.workspace-footer')).toContainText('1 player')
   await page.getByRole('button', { name: 'E2E Alpha', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.locator('svg')).toBeVisible()
@@ -92,11 +98,11 @@ test('source filters preserve separate scales and dated history; failed capture 
   await page.getByRole('button', { name: 'Capture values', exact: true }).first().click()
   await expect(page.getByRole('alert')).toContainText('Fixture provider unavailable')
   await expect(page.locator('.workspace tbody tr')).toContainText('150')
-  await page
-    .getByRole('combobox', { name: 'Source', exact: true })
-    .selectOption('dynasty-calculator')
-  await expect(page.locator('.workspace tbody tr')).toContainText('12')
-  await expect(page.locator('.workspace tbody tr')).toContainText('First capture')
+  await row.locator('[data-source="dynasty-calculator"] .value-number').click()
+  await expect(dialog).toContainText('Dynasty Trade Calculator')
+  await expect(dialog.locator('tbody tr')).toHaveCount(1)
+  await expect(dialog.locator('tbody tr')).toContainText('12')
+  await expect(dialog).toContainText('First capture')
 })
 
 test('entry formula, target and realized exit persist without inferring the cost', async ({
@@ -106,12 +112,18 @@ test('entry formula, target and realized exit persist without inferring the cost
   await seed(request)
   await page.goto('/')
   await page.getByLabel('Find a player').fill('E2E Alpha')
-  await page.getByRole('combobox', { name: 'Source', exact: true }).selectOption('dynasty-nerds')
-  await page
-    .getByRole('button', { name: 'Record acquisition of E2E Alpha from Dynasty GM', exact: true })
-    .click()
+  await page.getByRole('button', { name: 'Record entry for E2E Alpha', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByLabel('Entry cost (provider points)')).toBeEmpty()
+  await dialog.getByLabel('Entry cost (provider points)').fill('100')
+  await dialog
+    .getByLabel('Value source', { exact: true })
+    .selectOption({ label: 'Dynasty Trade Calculator / Browser fixture / HALF PPR' })
+  await expect(dialog).toContainText('Latest observed value: 12.')
+  await expect(dialog.getByLabel('Entry cost (provider points)')).toBeEmpty()
+  await dialog
+    .getByLabel('Value source', { exact: true })
+    .selectOption({ label: 'Dynasty GM / Browser fixture / PPR / 1QB' })
   await dialog.getByLabel('Entry cost (provider points)').fill('100')
   await dialog.getByLabel('Acquisition date').fill('2026-01-01')
   await expect(dialog.locator('.calculation')).toContainText('120')
@@ -134,7 +146,9 @@ test('entry formula, target and realized exit persist without inferring the cost
   const exported = await request.get('/api/export')
   expect(exported.ok()).toBeTruthy()
   expect((await exported.json()).holdings).toEqual(
-    expect.arrayContaining([expect.objectContaining({ costBasis: 100, proceeds: 130 })]),
+    expect.arrayContaining([
+      expect.objectContaining({ costBasis: 100, proceeds: 130, sourceName: 'dynasty-nerds' }),
+    ]),
   )
 })
 
@@ -146,8 +160,8 @@ test('desktop and narrow mobile keep columns aligned and dialogs within the view
   for (const width of [1440, 390, 375]) {
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/')
-    await page.getByRole('combobox', { name: 'Source', exact: true }).selectOption('dynasty-nerds')
     await expect(page.getByRole('button', { name: 'E2E Alpha', exact: true })).toBeVisible()
+    await expect(page.locator('.workspace thead th')).toHaveCount(3)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     const scroll = page.locator('.table-scroll')
     await scroll.evaluate((el) => {
@@ -165,7 +179,11 @@ test('desktop and narrow mobile keep columns aligned and dialogs within the view
     })
     expect(alignment.left).toBeLessThan(2)
     expect(alignment.top).toBeLessThan(3)
-    if (width < 500) expect(alignment.horizontal).toBeGreaterThan(0)
+    if (width < 500) {
+      expect(alignment.horizontal).toBe(0)
+      const dtc = await page.locator('.workspace thead th').last().boundingBox()
+      expect(dtc!.x + dtc!.width).toBeLessThanOrEqual(width)
+    }
     await scroll.evaluate((el) => {
       el.scrollTop = 0
       el.scrollLeft = 0

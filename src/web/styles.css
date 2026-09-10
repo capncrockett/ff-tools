@@ -715,6 +715,13 @@ a:focus-visible {
 .trend-panel {
   padding: 2px 22px 24px;
 }
+.workspace .trend-chart {
+  display: block;
+  width: 100%;
+  margin: 0;
+  overflow: visible;
+  border-radius: 0;
+}
 .trend-heading {
   display: flex;
   align-items: flex-start;

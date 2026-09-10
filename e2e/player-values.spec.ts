@@ -127,6 +127,9 @@ test('value trends keep provider formats separate and filter player lines by pos
   await expect(page.locator('[data-trend-line]')).toHaveCount(3)
   await expect(page.getByRole('button', { name: 'View Trend Runner history' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Old Format Quarterback history/ })).toHaveCount(0)
+  const plotBox = await page.locator('.trend-chart-frame').boundingBox()
+  const legendBox = await page.locator('.trend-legend').boundingBox()
+  expect(legendBox!.y).toBeGreaterThanOrEqual(plotBox!.y + plotBox!.height)
 
   await page.getByLabel('Trend position').selectOption('RB')
   await expect(page.locator('[data-trend-line]')).toHaveCount(1)

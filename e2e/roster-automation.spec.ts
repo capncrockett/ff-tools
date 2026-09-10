@@ -87,6 +87,7 @@ test('roster review explains a stale exit and accepts the last known value expli
               playerName: 'Fixture Receiver',
               sleeperPlayerId: '101',
               direction: 'remove',
+              kind: 'trade',
               occurredAt: new Date().toISOString(),
               sourceName: 'dynasty-calculator',
               contextKey: 'half-ppr',

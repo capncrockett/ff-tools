@@ -74,7 +74,12 @@ export default function RosterAutomation({ roster, busy, clock, onCheck, onAccep
             <li key={review.id}>
               <div>
                 <strong>
-                  {review.playerName} / {review.direction === 'add' ? 'Added' : 'Removed'}
+                  {review.playerName} /{' '}
+                  {review.kind === 'baseline'
+                    ? 'Baseline'
+                    : review.direction === 'add'
+                      ? 'Added'
+                      : 'Removed'}
                 </strong>
                 <p>
                   {review.sourceName ? `${sourceLabels[review.sourceName]}: ` : ''}

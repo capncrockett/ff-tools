@@ -458,7 +458,9 @@ async function applyAddition(
     const expired = +now - +movement.occurredAt > trackerAlertThresholds.staleMs
     const message = tooLate
       ? `The first ${sourceLabels[context.sourceName]} value arrived more than 36 hours after the add.`
-      : `No ${sourceLabels[context.sourceName]} value was captured for this player after the add.`
+      : movement.kind === 'baseline'
+        ? `No ${sourceLabels[context.sourceName]} value was captured for this baseline player.`
+        : `No ${sourceLabels[context.sourceName]} value was captured for this player after the add.`
     await setResolution(db, movement.id, targetKey, context, {
       status: expired || tooLate ? 'needs_review' : 'pending',
       message,
@@ -734,6 +736,7 @@ async function reviewItems(db: PrismaClient): Promise<RosterReviewItem[]> {
       resolution.movement.player?.name ?? `Sleeper player ${resolution.movement.sleeperPlayerId}`,
     sleeperPlayerId: resolution.movement.sleeperPlayerId,
     direction: resolution.movement.direction === 'remove' ? 'remove' : 'add',
+    kind: resolution.movement.kind,
     occurredAt: resolution.movement.occurredAt.toISOString(),
     sourceName: sourceSchema.parse(resolution.sourceName),
     contextKey: resolution.contextKey,
@@ -757,6 +760,7 @@ async function reviewItems(db: PrismaClient): Promise<RosterReviewItem[]> {
       playerName: movement.player?.name ?? `Sleeper player ${movement.sleeperPlayerId}`,
       sleeperPlayerId: movement.sleeperPlayerId,
       direction: movement.direction === 'remove' ? ('remove' as const) : ('add' as const),
+      kind: movement.kind,
       occurredAt: movement.occurredAt.toISOString(),
       sourceName: null,
       contextKey: null,

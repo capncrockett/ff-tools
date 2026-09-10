@@ -99,6 +99,7 @@ export type RosterReviewItem = {
   playerName: string
   sleeperPlayerId: string
   direction: 'add' | 'remove'
+  kind: string
   occurredAt: string
   sourceName: SourceName | null
   contextKey: string | null

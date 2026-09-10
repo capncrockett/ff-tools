@@ -1,6 +1,6 @@
 # FF Tools - Dynasty Value Tracker
 
-A private dynasty portfolio for **A League For All Seasons**. Capture the values your subscriptions show, preserve observations over time, record what you invested, and record proceeds when you trade out.
+A private dynasty portfolio for **A League For All Seasons**. Capture the values your subscriptions show, preserve observations over time, record what you invested, and save each player's value when they leave your roster.
 
 The active MVP uses React, Vite, Tailwind/DaisyUI, Express, Zod, and Prisma/SQLite. Its repository workflow follows [Grundle Ball](https://github.com/capncrockett/grundle-ball); it does not copy that league's keeper rules.
 
@@ -29,12 +29,12 @@ The database is `prisma/dev.db`. Credentials live in ignored `.env.local`; brows
 Open **How to use this tracker** for a three-step guide and an example you can change without affecting your data. The **?** buttons beside headings explain each measure: hover, focus with the keyboard, or tap to read; press Escape or click outside to dismiss. Help also explains why captured roster players do not automatically become investment entries.
 
 1. Click **Capture values** for each source when you need a new observation. The API and CLI share a persisted one-hour minimum between attempts, including failures. There is no scheduler, background scraping, or capture on page reload.
-2. **Player values** shows one row per player with **Dynasty GM** and **DTC** columns. Each value includes growth from its own starting value. Click either value for that source's dated history. Search by name, filter by position, or sort growth for a specific source. **Value trends** draws one player line at a time within the selected provider and scoring format, with a position filter and links to exact observations. Use the player's single **Record entry** button, then choose a source for the acquisition cost and return.
+2. **Player values** shows one row per player with **Dynasty GM** and **DTC** columns. Each value includes growth from its own starting value. Click either value for that source's dated history. Search by name, filter by position, or sort growth for a specific source. **Value trends** draws one player line at a time within the selected provider and scoring format, with a position filter and links to exact observations. **Player alerts** identifies fresh target hits, changes of at least 10% since the previous capture, values older than 36 hours, and fresh provider trends moving in opposite directions. Use the player's single **Record entry** button, then choose a source for the acquisition cost and return.
 3. Review **My investments**. Return is `(value - cost) / cost * 100`; the editable initial target is 20%. A target hit is an unrealized signal, not proof that someone will accept the trade.
-4. Use **Record exit** with actual proceeds allocated in the same provider's points. Realized return uses those proceeds, not a later quote. Reacquiring a player creates a separate investment.
+4. Use **Record exit** with the player's value when they left the roster in the same provider's points. Realized player-level return uses that exit value, not a later quote. Reacquiring a player creates a separate investment. This form remains the fallback until automatic Sleeper transaction reconciliation is implemented.
 5. Export history periodically. The JSON export is a report of observations and holdings, not a one-click database restore. For a full backup, stop the app and copy the SQLite database to a private backup location.
 
-Zero cost produces absolute gain with undefined percentage ROI. Quotes older than an acquisition do not produce unrealized return. Values more than seven days old are visibly stale and excluded from the fresh-target count.
+Zero cost produces absolute gain with undefined percentage ROI. Quotes older than an acquisition do not produce unrealized return. Values more than 36 hours old are visibly stale and excluded from the fresh-target count.
 
 Each provider and scoring context keeps a separate series. DTC's imported league is half-PPR/1QB; Dynasty GM calls its valuation set PPR. Their numbers are never averaged. Current capture scope is the owned QB/RB/WR/TE roster, including supported bench/taxi/IR players. Both providers exposed 29 supported players while Sleeper listed 30 roster entries at verification. Missing players and draft picks do not become zero-valued observations.
 
@@ -99,6 +99,6 @@ For an existing database created with the original schema, make a private backup
 
 ## Product decisions
 
-The [initial Grill Me document](docs/archive/grill-me-dynasty-tracker-initial-2026-09-09.md) is complete and archived. Confirmed direction: this one dynasty team, tracking from current values forward, an initial editable 20% ROI target, and separate provider values. Dynasty GM's PPR approximation is accepted. FleaFlicker acquisition history exists, but no historical provider prices have been established. Package allocation, picks, mapping corrections, alerts, and the implementation of nightly hosted collection remain later slices. A first snapshot establishes a baseline, not a trend. Answer the [active follow-up questions](docs/grill-me-dynasty-tracker.md) as convenient.
+The [initial Grill Me document](docs/archive/grill-me-dynasty-tracker-initial-2026-09-09.md) and [first follow-up](docs/archive/grill-me-dynasty-tracker-follow-up-2026-09-09.md) are complete and archived. Confirmed direction: this one dynasty team, player-level tracking from current values forward, automatic Sleeper-driven updates with visible review for ambiguity, an initial editable 20% ROI target, separate provider values, private single-user hosting, one retry after a failed nightly capture, and visible session recovery. Dynasty GM's PPR approximation is accepted. FleaFlicker acquisition history exists, but no historical provider prices have been established. A first snapshot establishes a baseline, not a trend. Answer the focused [player automation follow-ups](docs/grill-me-dynasty-tracker.md) as convenient.
 
 Architecture: [docs/architecture.md](docs/architecture.md). Versioning: [docs/versioning.md](docs/versioning.md). Next work: [TODO.md](TODO.md).

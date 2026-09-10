@@ -1,85 +1,47 @@
-# Dynasty Value Tracker - Follow-up Grill Me
+# Dynasty Value Tracker - Player Automation Follow-up
 
-The [initial 20-question Grill Me](archive/grill-me-dynasty-tracker-initial-2026-09-09.md) is complete and archived. It established the current MVP: one owned dynasty roster, values tracked from the first capture forward, separate provider scales, an editable 20% initial target, explicit entries and exits, and position-filtered history.
+The [initial Grill Me](archive/grill-me-dynasty-tracker-initial-2026-09-09.md) and [first follow-up](archive/grill-me-dynasty-tracker-follow-up-2026-09-09.md) are complete and archived. The first follow-up confirmed that this product follows individual player and pick value, automates normal changes from Sleeper, and sends only ambiguous data to review.
 
-Answer any section by replacing `Answer: Pending`, then commit when convenient. Pending answers do not stop unrelated implementation. Start with questions 1-4 because they define the next ledger schema.
+The earlier package questions were trying to solve one technical problem: a single Sleeper transaction can add and remove several assets, so the tracker needs its transaction ID to avoid applying only half of an update or applying the same update twice. That ID can remain background provenance. The UI and return calculations do not need a package portfolio, package ROI, or trade-chain view.
 
-## 1. How should a package trade become a realized result?
+Answer by replacing `Answer: Pending`. Questions 1-3 define automatic player entries and exits. They do not block alerts, local capture, or other independent work.
 
-Question: If two players and a pick leave in one trade and three assets arrive, should the tracker report one result for the whole package, close each outgoing player separately, or do both?
+## 1. Confirm the automatic player-level lifecycle
 
-Recommended: Save one immutable trade event with every incoming and outgoing asset, one provider and scoring context, and the values observed for that trade. Report the package's total incoming value, total outgoing value, point gain, and percentage return. Mark outgoing holdings as transferred in that trade without inventing individual proceeds. Allow optional manual allocation later when you want player-level realized returns.
+Question: Does this rule match what you mean by player-level tracking?
 
-Answer: we really just want to focus on player-level values. So the concept of a package being separate isn't something I'm really understanding. Why would you want to do that?
+Recommended: When Sleeper adds a player, create a separate holding for each provider/context from the first fresh observation at or after the move. When Sleeper removes a player, close each open holding at that player's last observation at or before the move. Apply the same rule independently to every player in a multi-player trade. Keep the Sleeper transaction ID only for traceability and replay protection. If the required value is missing or more than 36 hours old, flag that player instead of inventing a value.
 
-## 2. What is the cost basis when a draft pick becomes a player?
+Answer: Pending
 
-Question: When the 1.05 becomes the selected rookie, should the player's starting cost be the pick's last value, the rookie's first value, or a manual number?
+## 2. What is the baseline for a waiver or free-agent addition?
 
-Recommended: Track the pick by season, round, and original team. At the draft, preserve an immutable conversion from that pick to the selected player. Use the pick's latest confirmed value from the same provider and scoring context as the player's initial cost, with an explicit manual override when that value is missing or misleading.
+Question: A waiver or free-agent addition has no outgoing player or pick. Should its entry basis be zero or the acquired player's first provider value?
 
-Answer: We should think of the pick as a trade for that player. So pick goes out, and player comes in. Picks latest confirmed value then that becomes the players confirmed value at the time of drafting.
+Recommended: Use the player's first fresh provider value after the acquisition. That creates the same editable 20% growth target as every other player. Keep FAAB separate because dollars and provider trade-value points are unrelated. Use zero only when a provider explicitly values the player at zero.
 
-## 3. Should Sleeper transactions create suggestions or ledger entries?
+Answer: Pending
 
-Question: Should the tracker read new Sleeper trades and waiver moves, then ask you to confirm them, or should every entry remain manual?
+## 3. How should a stale removal be finalized?
 
-Recommended: Import transactions from a chosen activation date into a pending review queue. Suggest the involved players and picks, but require confirmation of the provider, scoring context, cost, and package treatment before changing holdings. Do not reconstruct the seven-year FleaFlicker history unless you explicitly reopen that scope.
+Question: If a player leaves the Sleeper roster but the last provider value is older than 36 hours, should the tracker wait for your review or close the holding with a visible provisional value?
 
-Answer: Gods no. You're tracking all this! No more manual updates for me hopefully. Flag it if it's ambigious or there's an issue, otherwise this thing should just work.
+Recommended: Keep the holding open in `Needs review` state and show the last known value and its age. Let the next normal provider capture resolve it when possible. If the provider no longer returns the departed player, offer that last value as a one-click explicit correction rather than silently treating it as current.
 
-## 4. What does profit across a trade chain mean?
+Answer: Pending
 
-Question: When one acquired player later becomes several assets and those assets split across more trades, do you want one cumulative chain result, results per trade event, or both?
+## 4. How should future picks be valued before draft order is known?
 
-Recommended: Model the history as connected trade events because packages can split and merge. Show each event's result and a cumulative chain view containing total value sent, total value received, and the current value of assets still owned. Keep every calculation within one provider and scoring context.
+Question: Should a pick such as your 2027 first use the provider's generic first-round value until it becomes an exact slot, or remain unvalued until the slot is known?
 
-Answer: Again.. I'm not sure why you're trying to think of things in packages. Help me understand. I don't think it's warratned.
+Recommended: Preserve the real Sleeper identity by season, round, and original team. Attach the provider's explicitly labeled generic value while draft order is unknown and mark it provisional. Start a distinct exact-slot series once the order is set. When the pick is used, convert its latest confirmed value in each provider/context into the drafted player's entry basis, as you specified.
 
-## 5. Which corrections need an audit trail?
+Answer: Pending
 
-Question: Should you be able to correct acquisition date, cost, target, notes, player mapping, and trade membership? Should any record be permanently deleted?
+## 5. Where should the first scheduled browser worker run?
 
-Recommended: Append a correction record containing the prior value, replacement value, reason, and timestamp. Keep provider observations immutable. Permit an explicit void for a mistaken manual entry while retaining its audit record. Require review before moving observations from one player identity to another.
+Question: Can the first 4:00 AM capture worker run in a container on your computer or a self-hosted GitHub Actions runner, or must it run entirely on hosted infrastructure?
 
-Answer: Ideally the sources of truth are coming from the platforms. If there's an issue flag it and we can review.
+Recommended: Start with a local container or self-hosted runner that retains the authenticated browser sessions. Run at 4:00 AM Pacific, retry once at 4:30 AM, and upload only validated snapshots to the private hosted app. Your Eugene Art House workflow is a useful model for bounded Playwright execution, but its GitHub-hosted runner starts fresh and does not need to preserve a paid login session.
 
-## 6. Where should authenticated captures run after hosting?
-
-Question: When the UI moves to Vercel, should paid-provider browser sessions remain on your computer, move to a private hosted browser worker, or be captured manually and uploaded?
-
-Recommended: For the first hosted version, keep browser sessions and provider credentials in a small local capture agent and send only validated snapshots to the private hosted app. This keeps the already-working normal browser flow while the hosted database and authentication settle. Consider a private hosted browser worker as a separate later migration.
-
-Answer: While getting this to work that sounds great. I guess we'd need a containerized run of some sort? Here's an example of how I've scraped pages in the past: https://github.com/capncrockett/eugene-arthouse-tickets.
-
-## 7. What should the nightly capture schedule do after a failure?
-
-Question: What local time should the nightly attempt run, and should a failed provider try again before the following night?
-
-Recommended: Attempt each provider once at 4:00 AM `America/Los_Angeles`. Preserve the last good snapshot and display the failure. Wait until the following night for the next automatic attempt; a deliberate manual capture remains available under the shared one-hour guard.
-
-Answer: That all sounds good. Allow for one retry if the 4am window fails.
-
-## 8. What access and recovery does the hosted version need?
-
-Question: Is this strictly one-user private access, and should the phone experience be fully editable or primarily for checking values and trades?
-
-Recommended: Authorize one exact user account, keep the complete tracker available on phone and desktop, and require a fresh confirmation for provider session recovery. Store data in a durable hosted database with encrypted daily backups and a tested restore path before relying on nightly collection.
-
-Answer: totally. This is JUST FOR ME. So things should be private and secure.
-
-## 9. Which alert thresholds are actually useful?
-
-Question: What should count as a sharp drop, stale data, or meaningful disagreement between providers?
-
-Recommended: Start with in-app alerts only. Use the holding's configured target for target alerts, 36 hours for stale nightly data, and a 10% change since the previous observation for a sharp move. Compare provider percentage movement from each provider's own baseline only when both observations are fresh; never compare their raw point scales.
-
-Answer: sounds good.
-
-## 10. How should expired provider sessions be recovered?
-
-Question: When a normal login expires, should the app open a visible local browser flow for you to complete, or should recovery remain a developer command?
-
-Recommended: Show a clear `Sign-in required` capture status and provide an explicit action that opens the normal visible browser flow. Save the refreshed session locally, record no credentials or page bodies, and resume scheduled captures only after the session has been verified.
-
-Answer: let's try this first and if there's still issues we'll work it from there.
+Answer: Pending

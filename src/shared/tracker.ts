@@ -92,6 +92,109 @@ export type SourceStatus = {
 }
 export type Dashboard = { market: MarketRow[]; holdings: HoldingView[]; sources: SourceStatus[] }
 
+export const trackerAlertThresholds = {
+  staleMs: 36 * 60 * 60 * 1000,
+  sharpMovePct: 10,
+} as const
+
+export type TrackerAlert = {
+  id: string
+  kind: 'target' | 'movement' | 'divergence' | 'stale'
+  tone: 'success' | 'warning' | 'info'
+  title: string
+  detail: string
+  playerId?: number
+}
+
+export function isTrackerValueFresh(time: string | null, now = Date.now()) {
+  if (!time) return false
+  const capturedAt = Date.parse(time)
+  return Number.isFinite(capturedAt) && now - capturedAt <= trackerAlertThresholds.staleMs
+}
+
+const signedPercent = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
+
+export function buildTrackerAlerts(dashboard: Dashboard, now = Date.now()): TrackerAlert[] {
+  const targets: TrackerAlert[] = dashboard.holdings
+    .filter(
+      (holding) =>
+        !holding.closedAt && holding.targetReached && isTrackerValueFresh(holding.capturedAt, now),
+    )
+    .map((holding) => ({
+      id: `target:${holding.id}`,
+      kind: 'target',
+      tone: 'success',
+      title: `${holding.playerName} reached the ${holding.targetRoi}% target`,
+      detail: `${sourceLabels[holding.sourceName]} return is ${holding.roi === null ? 'unavailable' : signedPercent(holding.roi)} using a fresh value.`,
+      playerId: holding.playerId,
+    }))
+
+  const movements: Array<TrackerAlert & { magnitude: number }> = dashboard.market
+    .filter(
+      (row) =>
+        row.changePct !== null &&
+        Math.abs(row.changePct) >= trackerAlertThresholds.sharpMovePct &&
+        isTrackerValueFresh(row.capturedAt, now),
+    )
+    .map((row) => ({
+      id: `movement:${row.playerId}:${row.source}:${row.contextKey}`,
+      kind: 'movement',
+      tone: row.changePct! < 0 ? 'warning' : 'info',
+      title: `${row.playerName} ${row.changePct! < 0 ? 'fell' : 'rose'} ${Math.abs(row.changePct!).toFixed(1)}%`,
+      detail: `${sourceLabels[row.source]} / ${row.contextLabel} since the previous capture.`,
+      playerId: row.playerId,
+      magnitude: Math.abs(row.changePct!),
+    }))
+  movements.sort((a, b) => b.magnitude - a.magnitude || a.title.localeCompare(b.title))
+
+  const latestByPlayer = new Map<number, Partial<Record<SourceName, MarketRow>>>()
+  for (const row of dashboard.market) {
+    if (!isTrackerValueFresh(row.capturedAt, now) || row.baselineChangePct === null) continue
+    const sources = latestByPlayer.get(row.playerId) ?? {}
+    const current = sources[row.source]
+    if (!current || Date.parse(row.capturedAt) > Date.parse(current.capturedAt))
+      sources[row.source] = row
+    latestByPlayer.set(row.playerId, sources)
+  }
+  const divergences: TrackerAlert[] = []
+  for (const [playerId, sources] of latestByPlayer) {
+    const nerds = sources['dynasty-nerds']
+    const calculator = sources['dynasty-calculator']
+    if (!nerds || !calculator) continue
+    const nerdsGrowth = nerds.baselineChangePct!
+    const calculatorGrowth = calculator.baselineChangePct!
+    const oppositeDirections = nerdsGrowth * calculatorGrowth < 0
+    if (
+      !oppositeDirections ||
+      Math.abs(nerdsGrowth - calculatorGrowth) < trackerAlertThresholds.sharpMovePct
+    )
+      continue
+    divergences.push({
+      id: `divergence:${playerId}`,
+      kind: 'divergence',
+      tone: 'info',
+      title: `${nerds.playerName} is moving in opposite directions`,
+      detail: `Growth from each source's own baseline: GM ${signedPercent(nerdsGrowth)}, DTC ${signedPercent(calculatorGrowth)}.`,
+      playerId,
+    })
+  }
+  divergences.sort((a, b) => a.title.localeCompare(b.title))
+
+  const stale: TrackerAlert[] = dashboard.sources
+    .filter((source) => source.configured && !isTrackerValueFresh(source.lastSuccess, now))
+    .map((source) => ({
+      id: `stale:${source.source}`,
+      kind: 'stale',
+      tone: 'warning',
+      title: `${source.label} values need a fresh capture`,
+      detail: source.lastSuccess
+        ? `The last successful browser capture was more than 36 hours ago.`
+        : `No successful browser capture is recorded yet.`,
+    }))
+
+  return [...targets, ...movements, ...divergences, ...stale]
+}
+
 export function percentageChange(current: number, basis: number): number | null {
   return basis > 0 ? ((current - basis) / basis) * 100 : null
 }

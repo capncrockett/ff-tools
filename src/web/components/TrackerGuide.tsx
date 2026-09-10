@@ -23,7 +23,8 @@ export default function TrackerGuide() {
               percentage growth for each source, side by side in one player row. Click either value
               for dated history. Value trends compares player lines within one source and scoring
               format and can filter them by position. A first capture sets the baseline; the next
-              one can show movement.
+              one can show movement. Player alerts call out fresh targets, sharp moves, stale
+              sources, and providers moving in opposite directions.
             </p>
           </li>
           <li>
@@ -39,8 +40,8 @@ export default function TrackerGuide() {
             <strong>3. Record an exit after a trade</strong>
             <p>
               A target reached is a reason to consider selling. After a completed trade, enter the
-              value you actually received using the same provider's points. That records realized
-              return. A hold/sell idea alone is not an exit.
+              player's value when it left using the same provider's points. That records realized
+              player-level return. A hold/sell idea alone is not an exit.
             </p>
           </li>
         </ol>
@@ -89,8 +90,8 @@ export default function TrackerGuide() {
             </div>
           </dl>
           <p className="guide-example-exit">
-            If you later trade out for 115 points, the realized return is (115 - 100) / 100 = +15%,
-            whatever the latest quote says.
+            If the player's provider value is 115 when they leave your roster, the realized return
+            is (115 - 100) / 100 = +15%, whatever a later quote says.
           </p>
         </div>
         <p className="guide-source-note">

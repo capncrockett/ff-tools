@@ -17,7 +17,7 @@ A `Player` is canonical when it has a Sleeper ID. A `Mapping` binds a provider's
 
 A `Snapshot` stores source, capture time, stable settings hash, minimal settings JSON, checksum, row count, and capture method. Its `Valuation` rows are immutable observations. A source/settings/capture-time identity prevents conflicting duplicate captures; reimporting an identical observation batch is harmless. Inserts and identity resolution share one transaction.
 
-A `Holding` is one acquisition lot with portfolio, date, manual cost, source/context, target, and optional exit date/proceeds. Reacquisition is another lot. Closed lots retain their realized proceeds even as market values change. This is an investment ledger, not yet a full package-trade or pick ledger.
+A `Holding` is one player acquisition lot with portfolio, date, source/context, cost basis, target, and optional exit date/value. Reacquisition is another lot. Closed lots retain their realized player-level exit value even as market values change. Sleeper transaction IDs may provide idempotency and traceability, but package ROI and trade-chain accounting are outside the confirmed product model. The exact automatic basis and exit rules remain in the active follow-up document.
 
 A `SyncRun` reserves an attempt before opening a browser, then records a controlled success/failure message. All processes consult the same SQLite record. No attempt starts within one hour of the previous source attempt, including interrupted or failed runs. A crashed run becomes eligible after the hour; there is no automatic retry.
 
@@ -31,7 +31,9 @@ The Value trends chart selects exactly one source and scoring context, then draw
 
 History is ordered by observation time even if old files arrive later. The table shows both change since the preceding observation and growth from the first saved value of that exact series. This implements the user's confirmed tracking baseline; it does not claim that value was the historical acquisition cost. Importing an earlier observation moves the tracking baseline earlier. A first observation has no preceding change, and zero baselines have undefined percentage growth.
 
-Unrealized return uses the latest observation at or after acquisition. Realized return uses explicit exit proceeds. Zero cost has a defined absolute gain and undefined percentage return. Target flags are advisory and stale quotes do not enter the fresh-target count.
+Unrealized return uses the latest observation at or after acquisition. Realized return uses the saved player exit value. Zero cost has a defined absolute gain and undefined percentage return. Target flags are advisory. Values older than 36 hours are stale and do not enter the fresh-target count.
+
+In-app alerts use saved data only. Sharp movement means at least 10% since the preceding observation in the same series. Provider disagreement requires fresh observations, opposite baseline-growth directions, and at least a 10 percentage-point spread. Raw provider point values are never compared.
 
 Only the provider-supported owned roster is captured today. DTC refreshes the current roster from Sleeper and filters its position exports before persistence. A missing row is never filled with zero. Departed players keep their prior history and become stale unless another valid observation is imported; whole-market scouting is future scope.
 

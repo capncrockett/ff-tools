@@ -77,6 +77,10 @@ test('one player row keeps both source values and histories separate; failed cap
 }) => {
   await seed(request)
   await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Player alerts' })).toBeVisible()
+  await expect(
+    page.locator('.tracker-alert').filter({ hasText: 'E2E Alpha rose 50.0%' }),
+  ).toBeVisible()
   await page.getByLabel('Find a player').fill('E2E Alpha')
   const row = page.locator('.workspace tbody tr')
   await expect(row).toHaveCount(1)
@@ -129,10 +133,13 @@ test('entry formula, target and realized exit persist without inferring the cost
   await expect(dialog.locator('.calculation')).toContainText('120')
   await dialog.getByRole('button', { name: 'Save acquisition' }).click()
   await expect(dialog).not.toBeVisible()
+  await expect(
+    page.locator('.tracker-alert').filter({ hasText: 'E2E Alpha reached the 20% target' }),
+  ).toBeVisible()
   await expect(page.locator('.workspace tbody tr')).toContainText('+50.0%')
   await expect(page.locator('.workspace tbody tr')).toContainText('Target reached')
   await page.getByRole('button', { name: 'Record exit', exact: true }).click()
-  await page.getByRole('dialog').getByLabel('Exit proceeds (provider points)').fill('130')
+  await page.getByRole('dialog').getByLabel('Player exit value (provider points)').fill('130')
   await page.getByRole('dialog').getByRole('button', { name: 'Save exit' }).click()
   await expect(page.getByRole('dialog')).not.toBeVisible()
   await expect(page.locator('.workspace tbody tr')).toContainText('+30.0%')

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { api } from '../api'
 import {
   calculateReturn,
+  buildTrackerAlerts,
+  isTrackerValueFresh,
   sourceLabels,
   type Dashboard,
   type MarketRow,
@@ -13,6 +15,7 @@ import ValueTrendChart from './ValueTrendChart'
 import Modal from './Modal'
 import HelpTip from './HelpTip'
 import TrackerGuide from './TrackerGuide'
+import TrackerAlerts from './TrackerAlerts'
 import { trackerHelp } from '../trackerHelp'
 
 const number = (n: number | null | undefined) =>
@@ -28,7 +31,6 @@ const date = (value: string | null) =>
         minute: '2-digit',
       })
     : 'No capture yet'
-const stale = (time: string | null) => !time || Date.now() - Date.parse(time) > 7 * 86_400_000
 const empty: Dashboard = { market: [], holdings: [], sources: [] }
 const marketSources: SourceName[] = ['dynasty-nerds', 'dynasty-calculator']
 type PlayerValues = { player: MarketRow; sources: Record<SourceName, MarketRow[]> }
@@ -142,7 +144,8 @@ export default function ValueTracker() {
       h.playerName.toLowerCase().includes(search.toLowerCase()),
   )
   const open = data.holdings.filter((h) => !h.closedAt),
-    targets = open.filter((h) => h.targetReached && !stale(h.capturedAt))
+    targets = open.filter((h) => h.targetReached && isTrackerValueFresh(h.capturedAt, clock))
+  const alerts = useMemo(() => buildTrackerAlerts(data, clock), [data, clock])
   const portfolios = [...new Set(data.holdings.map((h) => h.portfolio))]
   const trendContexts = useMemo(() => {
     const contexts = new Map<string, MarketRow>()
@@ -232,6 +235,7 @@ export default function ValueTracker() {
           {notice}
         </div>
       )}
+      <TrackerAlerts alerts={alerts} />
       <section className="source-grid" aria-label="Value sources">
         {data.sources.map((s) => (
           <article key={s.source} className="source-card">
@@ -653,11 +657,11 @@ export default function ValueTracker() {
                       </td>
                       <td>
                         <span
-                          className={`badge ${h.closedAt ? 'badge-neutral' : h.targetReached && !stale(h.capturedAt) ? 'badge-success' : 'badge-ghost'}`}
+                          className={`badge ${h.closedAt ? 'badge-neutral' : h.targetReached && isTrackerValueFresh(h.capturedAt, clock) ? 'badge-success' : 'badge-ghost'}`}
                         >
                           {h.closedAt
                             ? 'Realized'
-                            : stale(h.capturedAt)
+                            : !isTrackerValueFresh(h.capturedAt, clock)
                               ? 'Needs fresh value'
                               : h.targetReached
                                 ? 'Target reached'
@@ -702,7 +706,7 @@ export default function ValueTracker() {
         <span className="eyebrow">HOW RETURN IS MEASURED</span>
         <p>
           <strong>(Value - entry cost) / entry cost x 100.</strong> Use the same source and format
-          for both. Enter the proceeds when you exit to record realized return.
+          for both. Save the player's value when they leave to record realized return.
         </p>
       </div>
       {detail && (
@@ -801,7 +805,9 @@ function SourceValue({ row, onDetail }: { row: MarketRow; onDetail: (row: Market
         <time dateTime={row.capturedAt}>{date(row.capturedAt)}</time>
         {row.observations === 1 && <span> / First capture</span>}
       </div>
-      {stale(row.capturedAt) && <div className="text-warning text-xs">Over 7 days old</div>}
+      {!isTrackerValueFresh(row.capturedAt) && (
+        <div className="text-warning text-xs">Over 36 hours old</div>
+      )}
     </div>
   )
 }
@@ -1024,12 +1030,12 @@ function ExitForm({
   return (
     <Modal title={`Record exit: ${holding.playerName}`} onClose={onClose}>
       <p className="text-sm muted mb-4">
-        Enter what you received, valued in {sourceLabels[holding.sourceName]} points using the entry
-        format. For package trades, enter only the proceeds allocated to this player.
+        Enter this player's value when it left your roster, using {sourceLabels[holding.sourceName]}{' '}
+        points in the entry format.
       </p>
       <form className="tracker-form" onSubmit={submit}>
         <label>
-          Exit proceeds (provider points)
+          Player exit value (provider points)
           <input
             autoFocus
             className="input input-bordered"
@@ -1043,8 +1049,8 @@ function ExitForm({
             required
           />
           <span id="exit-proceeds-help" className="field-hint">
-            Enter only this player's share of a package trade. Saving closes this entry; a later
-            reacquisition is a new entry.
+            This manual value is the fallback until Sleeper transaction automation is implemented.
+            Saving closes this entry; a later reacquisition is a new entry.
           </span>
         </label>
         <label>

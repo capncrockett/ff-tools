@@ -99,6 +99,6 @@ For an existing database created with the original schema, make a private backup
 
 ## Product decisions
 
-Answer and commit [the Grill Me document](docs/grill-me-dynasty-tracker.md) as convenient. Confirmed direction: this one dynasty team, tracking from current values forward, an initial editable 20% ROI target, and separate provider values. Dynasty GM's PPR approximation is accepted. FleaFlicker acquisition history exists, but no historical provider prices have been established. Package allocation, picks, mapping corrections, alerts, and the implementation of nightly hosted collection remain later slices. A first snapshot establishes a baseline, not a trend.
+The [initial Grill Me document](docs/archive/grill-me-dynasty-tracker-initial-2026-09-09.md) is complete and archived. Confirmed direction: this one dynasty team, tracking from current values forward, an initial editable 20% ROI target, and separate provider values. Dynasty GM's PPR approximation is accepted. FleaFlicker acquisition history exists, but no historical provider prices have been established. Package allocation, picks, mapping corrections, alerts, and the implementation of nightly hosted collection remain later slices. A first snapshot establishes a baseline, not a trend. Answer the [active follow-up questions](docs/grill-me-dynasty-tracker.md) as convenient.
 
 Architecture: [docs/architecture.md](docs/architecture.md). Versioning: [docs/versioning.md](docs/versioning.md). Next work: [TODO.md](TODO.md).

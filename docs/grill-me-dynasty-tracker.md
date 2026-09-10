@@ -1,163 +1,85 @@
-# Dynasty Value Tracker - Grill Me
+# Dynasty Value Tracker - Follow-up Grill Me
 
-Answer any section by replacing `Answer: Pending`, then commit when convenient. Recommendations below are reversible implementation defaults, not decisions you have already approved. Start with questions 1-5; they have the greatest effect on the next slice.
+The [initial 20-question Grill Me](archive/grill-me-dynasty-tracker-initial-2026-09-09.md) is complete and archived. It established the current MVP: one owned dynasty roster, values tracked from the first capture forward, separate provider scales, an editable 20% initial target, explicit entries and exits, and position-filtered history.
 
-## 1. What counts as profit?
+Answer any section by replacing `Answer: Pending`, then commit when convenient. Pending answers do not stop unrelated implementation. Start with questions 1-4 because they define the next ledger schema.
 
-Question: Is success a higher calculator value, a completed trade returning more value, or a chain of trades that grows your assets?
+## 1. How should a package trade become a realized result?
 
-Recommended: Track both unrealized value growth and realized return on completed exits. Eventually track trade chains separately. A target hit means it is time to consider an exit; it does not mean a league mate will pay that value.
+Question: If two players and a pick leave in one trade and three assets arrive, should the tracker report one result for the whole package, close each outgoing player separately, or do both?
 
-Answer: Yes I think you got it here. We clearly have a baseline and that is the current value of all players on my team. From this point we want to track their value over time so we can determine when to "exit" on a player. Of course the perceived value of a player by another manager (league mate) could differ, but the growth has happened and it's probably time to sell. Then yes we'd also want to track the realized return on a completed trade (exit).
+Recommended: Save one immutable trade event with every incoming and outgoing asset, one provider and scoring context, and the values observed for that trade. Report the package's total incoming value, total outgoing value, point gain, and percentage return. Mark outgoing holdings as transferred in that trade without inventing individual proceeds. Allow optional manual allocation later when you want player-level realized returns.
 
-## 2. Confirm the trading direction
+Answer: Pending
 
-Question: You wrote "trade high sell low." Did you mean buy low and sell high, including selling after your ROI target even if the player could rise further?
+## 2. What is the cost basis when a draft pick becomes a player?
 
-Recommended: Buy low, sell once the target return is available. Do not try to predict the absolute peak.
+Question: When the 1.05 becomes the selected rookie, should the player's starting cost be the pick's last value, the rookie's first value, or a manual number?
 
-Answer: whoops! Yes. of course buy low sell high. My bad. Also yes, we're not trying to chase the absolute peak, we just want some value returned over time and that value to be consistent. Predicting a peak in fantasy football is a fools errand.
+Recommended: Track the pick by season, round, and original team. At the draft, preserve an immutable conversion from that pick to the selected player. Use the pick's latest confirmed value from the same provider and scoring context as the player's initial cost, with an explicit manual override when that value is missing or misleading.
 
-## 3. Which league and whose roster?
+Answer: Pending
 
-Question: Which roster ID represents your team, and should other leagues join later?
+## 3. Should Sleeper transactions create suggestions or ledger entries?
 
-Recommended: Start with that analyzer, one explicitly selected team, and a league-scoped portfolio. Do not assume Grundle League is this dynasty league or infer a team from its manager's name.
+Question: Should the tracker read new Sleeper trades and waiver moves, then ask you to confirm them, or should every entry remain manual?
 
-Answer: Confirmed by user: Sleeper league `1378427936817815552` ([league](https://sleeper.com/leagues/1378427936817815552)). Live provider metadata identifies Cascadia Corsairs as the owned team, Dynasty GM analyzer `273947`, and canonical Sleeper roster `7`. Sleeper's actual settings are 12 teams, 1QB, half-PPR, no TE premium, and eight starters. Dynasty GM labels its value set PPR; keep that provider label distinct. Additional leagues: This is my only dynasty league but you got it right. Dyn GM doesn't have 0.5ppr which is lame so ya, we just settle for 1ppr.
+Recommended: Import transactions from a chosen activation date into a pending review queue. Suggest the involved players and picks, but require confirmation of the provider, scoring context, cost, and package treatment before changing holdings. Do not reconstruct the seven-year FleaFlicker history unless you explicitly reopen that scope.
 
-## 4. What is the cost basis?
+Answer: Pending
 
-Question: For existing players, should entry cost mean value on acquisition day, value when tracking begins, or your manual allocation of the assets you traded away?
+## 4. What does profit across a trade chain mean?
 
-Recommended: Enter a source-specific cost once, with acquisition date and notes. Label the first observed value separately from cost. Never invent historical values. A later slice can suggest acquisition lots from Sleeper trades.
+Question: When one acquired player later becomes several assets and those assets split across more trades, do you want one cumulative chain result, results per trade event, or both?
 
-Answer: we can explore this. I don't believe those platforms go back 7 years which is how long we've been playing. Though they might. One thing I forgot to mention, this league migrated from FleaFlicker actually so there's plenty of historical data there in terms of acquisitions of players. I'm of a mind to just set everything from today moving forward though. Especially if there's no historical data on DGM or DTC.
+Recommended: Model the history as connected trade events because packages can split and merge. Show each event's result and a cumulative chain view containing total value sent, total value received, and the current value of assets still owned. Keep every calculation within one provider and scoring context.
 
-## 5. What is the exit target?
+Answer: Pending
 
-Question: Is a fixed percentage return enough, or do targets vary by player, holding period, or roster role?
+## 5. Which corrections need an audit trail?
 
-Recommended: Editable target per acquisition, initially 20%. Show current return, target value, and points still needed beside the formula. Zero-cost pickups use absolute gain because percentage ROI is undefined.
+Question: Should you be able to correct acquisition date, cost, target, notes, player mapping, and trade membership? Should any record be permanently deleted?
 
-Answer: I think 20% to start in reasonable. We'll defintely want to tweak it and track it.
+Recommended: Append a correction record containing the prior value, replacement value, reason, and timestamp. Keep provider observations immutable. Permit an explicit void for a mistaken manual entry while retaining its audit record. Require review before moving observations from one player identity to another.
 
-## 6. Which scoring settings must match?
+Answer: Pending
 
-Question: Confirm team count, 1QB/SF/2QB, PPR, TE premium, starters, IDP, devy, and any custom valuation settings for the target league.
+## 6. Where should authenticated captures run after hosting?
 
-Recommended: Preserve each provider's actual settings in every snapshot. New settings begin a separate series. Do not label unverified defaults as league-adjusted values.
+Question: When the UI moves to Vercel, should paid-provider browser sessions remain on your computer, move to a private hosted browser worker, or be captured manually and uploaded?
 
-Answer: Verified from Sleeper on 2026-09-05: `scoring_settings.rec = 0.5`, TE reception bonus absent/zero, and starters QB/RB/RB/WR/WR/TE/FLEX/FLEX. DTC import displays HALF PPR, STANDARD, 12 teams, no TE premium, no RB PPC. Dynasty GM displays its PPR valuation set. Confirm any desired valuation overrides separately.
+Recommended: For the first hosted version, keep browser sessions and provider credentials in a small local capture agent and send only validated snapshots to the private hosted app. This keeps the already-working normal browser flow while the hosted database and authentication settle. Consider a private hosted browser worker as a separate later migration.
 
-## 7. What if the providers disagree?
+Answer: Pending
 
-Question: Should an exit signal require either source, both sources, or a preferred source to hit its target?
+## 7. What should the nightly capture schedule do after a failure?
 
-Recommended: Show source-specific results side by side and let you choose which basis you are acting on. Do not average their raw values.
+Question: What local time should the nightly attempt run, and should a failed provider try again before the following night?
 
-Answer: You got it. Side by side.
+Recommended: Attempt each provider once at 4:00 AM `America/Los_Angeles`. Preserve the last good snapshot and display the failure. Wait until the following night for the next automatic attempt; a deliberate manual capture remains available under the shared one-hour guard.
 
-## 8. How much data should we collect?
+Answer: Pending
 
-Question: Track the whole player pool already delivered by each page, only rostered players, or a watchlist?
+## 8. What access and recovery does the hosted version need?
 
-Recommended: Save only player ID, name, position/team, numeric trade value, settings, and timestamps from the selected view. Avoid per-player page crawls and paid articles/projections. Filter your portfolio in the app.
+Question: Is this strictly one-user private access, and should the phone experience be fully editable or primarily for checking values and trades?
 
-Answer: Yes this is correct. Let's not worry about the whole player pool just yet. Maybe in the future. Right now just concerned with my team.
+Recommended: Authorize one exact user account, keep the complete tracker available on phone and desktop, and require a fresh confirmation for provider session recovery. Store data in a durable hosted database with encrypted daily backups and a tested restore path before relying on nightly collection.
 
-## 9. How often should values refresh?
+Answer: Pending
 
-Question: Is a manual snapshot before trade decisions sufficient, or would you eventually want scheduled collection?
+## 9. Which alert thresholds are actually useful?
 
-Recommended: Manual only for the MVP. Never scrape on page load. Show source-specific freshness and failures.
+Question: What should count as a sharp drop, stale data, or meaningful disagreement between providers?
 
-Answer: User confirmed on 2026-09-05: refresh the roster as needed, no more than once per hour. Enforce a persisted one-hour minimum between source attempts, including failures. No scheduler is enabled. We should schedule a refresh nightly though to be respectful of their servers. That once per hour is more like a guideline for you during development. The golden rule is don't be an asshole to these platforms we love. Perhaps a worker or a serverless function. We'll host this on Vercel and I believe they allow that? We'll have to decide.
+Recommended: Start with in-app alerts only. Use the holding's configured target for target alerts, 36 hours for stale nightly data, and a 10% change since the previous observation for a sharp move. Compare provider percentage movement from each provider's own baseline only when both observations are fresh; never compare their raw point scales.
 
-## 10. What should happen when login changes?
+Answer: Pending
 
-Question: Would you prefer opening a local browser to sign in again or updating ignored local credentials?
+## 10. How should expired provider sessions be recovered?
 
-Recommended: Support local session reuse and normal sign-in. Stop on MFA, CAPTCHA, subscription errors, and rate limits. A failed capture keeps the previous history intact. No bypass service.
+Question: When a normal login expires, should the app open a visible local browser flow for you to complete, or should recovery remain a developer command?
 
-Answer: User explicitly approved importing/connecting A League For All Seasons into their DTC account on 2026-09-05. Do not ask for this permission again. Local sign-in preference remains pending; existing credentials and sessions are authorized for development.
+Recommended: Show a clear `Sign-in required` capture status and provide an explicit action that opens the normal visible browser flow. Save the refreshed session locally, record no credentials or page bodies, and resume scheduled captures only after the session has been verified.
 
-## 11. How should package trades be allocated?
-
-Question: When two players and a pick buy three assets, should cost be allocated proportionally, manually, or kept only at the trade/package level?
-
-Recommended: Manual allocation until we agree on an auditable package ledger. Never count the full outgoing package as the cost of every incoming player.
-
-Answer: Package trades should be considered the same as a one for one swap on a player. I'm not really sure what you're after here? Like the cost of getting apackage discount or something? If players go out we lose that value, when players come in we gain that value.
-
-## 12. Are draft picks part of the first milestone?
-
-Question: Do you need owned picks with year/round/original-team identity, or just generic early/mid/late pick values?
-
-Recommended: Player tracking first; then real pick identity with explicitly provisional slot estimates. Do not match a pick label to a player.
-
-Answer: I mean yes we want to track players coverted pick value when we draft them in the end. If I have the 1.05 and draft a player the value gets converted, almost like a trade, into the new value. Am I answering the right question?
-
-## 13. Is this a portfolio or also a market watchlist?
-
-Question: Do you want separate owned holdings and acquisition targets, including free agents?
-
-Recommended: A market table for all captured players and an explicit portfolio for acquired players. Add saved buy targets after the ownership/cost workflow is settled.
-
-Answer: let's just start with the tracking. Targets can come layer.
-
-## 14. What is a useful alert?
-
-Question: Target reached, source divergence, sharp drops, or stale data? Should alerts stay in the app or be sent elsewhere?
-
-Recommended: Visible target and freshness badges first. No email, push, or chat delivery in this slice.
-
-Answer: Exactly. Put those things on the roadmap though.
-
-## 15. How do we handle reacquisition?
-
-Question: If you sell and later buy the same player again, should those be independent investments?
-
-Recommended: Separate acquisition lots with their own costs and exits. Preserve the closed lot even while a new one is open.
-
-Answer: agreed.
-
-## 16. Do fantasy points count toward ROI?
-
-Question: Does starting a player for a productive season reduce the return you require when trading him away?
-
-Recommended: Keep roster utility separate from trade-value ROI until you define a conversion. No implicit points-to-value formula.
-
-Answer: Oh ya we're not doing that. We're just using the values from those two platforms.
-
-## 17. Which historical data exists already?
-
-Question: Do your old CSVs contain source, capture date, scoring format, and acquisitions, or only current values?
-
-Recommended: Import dated observations under their original source/settings, retaining gaps. Reject malformed rows visibly. Never backfill using today's values.
-
-Answer: No need to import that. It's 3 years old. It was really just so you could get an idea of how I USED to track things manually. We're building it's replacement and values will come from scratch.
-
-## 18. Where will this run?
-
-Question: Is this a private tool on your Windows computer, or do you need phone access away from home?
-
-Recommended: Local-only Express + SQLite + Vite for this MVP. Hosted access requires its own authentication, secret storage, backups, and provider-permission decisions.
-
-Answer: Ya it will get hosted on Vercel, but for now we'll just be running locally.
-
-## 19. How should corrections work?
-
-Question: If an acquisition cost, player mapping, or observation is wrong, do you need an audit log or is an explicit correction enough?
-
-Recommended: Immutable source observations; explicit acquisition corrections and mapping review. Export history before major data changes. Do not silently rewrite old provider values.
-
-Answer: you got it.
-
-## 20. What would make this useful enough to replace CSV entry?
-
-Question: Name one real player and acquisition/exit scenario we should use as the acceptance example, including source, cost, and target.
-
-Recommended: One real league, both sources captured with verified formats, one acquisition, two dated observations, a visible ROI calculation, and a recorded exit that survives restart.
-
-Answer: There is only one league we're tracking. We'll track this over time so having some sort of graph will be really helpful, just a line graph that can be filered to position.
+Answer: Pending

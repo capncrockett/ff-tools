@@ -18,7 +18,7 @@ The active MVP is the dynasty value tracker. Other experiments remain parked.
 
 ## Confirmed next directions
 
-The completed [Grill Me document](docs/grill-me-dynasty-tracker.md) establishes one owned dynasty roster, tracking from current values, an initial 20% target, separate source scales, and nightly collection after hosting. The old workbook is reference material only; its values will not be imported.
+The completed [initial Grill Me document](docs/archive/grill-me-dynasty-tracker-initial-2026-09-09.md) establishes one owned dynasty roster, tracking from current values, an initial 20% target, separate source scales, and nightly collection after hosting. The old workbook is reference material only; its values will not be imported. The [active follow-up questions](docs/grill-me-dynasty-tracker.md) cover decisions that can still change the next ledger and hosting slices.
 
 - [ ] Add a package-trade ledger that compares total outgoing value with total incoming value. Do not assign the full package cost to every incoming player.
 - [ ] Track owned draft picks, then convert a used pick holding into the drafted player's holding while preserving the transaction history.

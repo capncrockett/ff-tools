@@ -616,9 +616,10 @@ export async function applyRosterMovements(db: PrismaClient, now = new Date()) {
     }
     await summarizeMovement(db, movement.id, now)
   }
-  const [pending, needsReview] = await Promise.all([
+  const [pending, needsReview, providerReviews] = await Promise.all([
     db.rosterMovement.count({ where: { status: 'pending' } }),
     db.rosterMovement.count({ where: { status: 'needs_review' } }),
+    db.movementResolution.count({ where: { status: 'needs_review' } }),
   ])
   const state = await db.rosterSyncState.findUnique({ where: { id: stateId() } })
   if (state)
@@ -627,9 +628,9 @@ export async function applyRosterMovements(db: PrismaClient, now = new Date()) {
       data: {
         status: needsReview ? 'needs_review' : pending ? 'pending' : 'success',
         message: needsReview
-          ? `${needsReview} roster movement${needsReview === 1 ? '' : 's'} need review.`
+          ? `${needsReview} roster movement${needsReview === 1 ? ' needs' : 's need'} review${providerReviews ? ` across ${providerReviews} provider value${providerReviews === 1 ? '' : 's'}` : ''}.`
           : pending
-            ? `${pending} roster movement${pending === 1 ? '' : 's'} await a fresh value.`
+            ? `${pending} roster movement${pending === 1 ? ' awaits' : 's await'} a fresh value.`
             : `Watching ${savedPlayerIds(state.playerIdsJson).length} roster players.`,
       },
     })

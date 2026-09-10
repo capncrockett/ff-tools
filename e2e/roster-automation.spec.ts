@@ -60,6 +60,16 @@ test('one automated acquisition row keeps both provider returns side by side', a
   await expect(rows.locator('[data-source="dynasty-calculator"]')).toContainText('10')
   await expect(rows.locator('[data-source="dynasty-calculator"]')).toContainText('13')
   await expect(page.getByText('OPEN INVESTMENTS').locator('..')).toContainText('1')
+  await page.setViewportSize({ width: 375, height: 812 })
+  await expect(rows.locator('[data-source="dynasty-nerds"]')).toHaveAttribute(
+    'data-label',
+    'Dynasty GM',
+  )
+  expect(
+    await page
+      .locator('.investment-table')
+      .evaluate((table) => table.scrollWidth <= table.clientWidth),
+  ).toBe(true)
 })
 
 test('roster review explains a stale exit and accepts the last known value explicitly', async ({
@@ -108,7 +118,7 @@ test('roster review explains a stale exit and accepts the last known value expli
   await page.goto('/')
 
   const panel = page.getByRole('region', { name: 'Sleeper roster automation' })
-  await expect(panel).toContainText('1 need review')
+  await expect(panel).toContainText('1 move needs review')
   await expect(panel).toContainText('Fixture Receiver / Removed')
   await expect(panel).toContainText('Last known: 42 points')
   await expect(panel.getByRole('button', { name: 'Check roster now' })).toBeDisabled()

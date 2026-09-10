@@ -734,7 +734,12 @@ export default function ValueTracker() {
                         </div>
                       </td>
                       {marketSources.map((sourceName) => (
-                        <td key={sourceName} className="numeric" data-source={sourceName}>
+                        <td
+                          key={sourceName}
+                          className="numeric"
+                          data-source={sourceName}
+                          data-label={sourceLabels[sourceName]}
+                        >
                           <InvestmentValue
                             holdings={group.holdings.filter(
                               (holding) => holding.sourceName === sourceName,

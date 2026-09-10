@@ -1163,6 +1163,55 @@ a:focus-visible {
   .player-values-table .source-value:only-child .context-label {
     display: none;
   }
+  .investment-table,
+  .investment-table tbody,
+  .investment-table tr,
+  .investment-table td {
+    display: block;
+    width: 100%;
+  }
+  .investment-table {
+    min-width: 0;
+  }
+  .investment-table thead {
+    display: none;
+  }
+  .investment-table tr {
+    padding: 15px;
+    border-bottom: 1px solid #dfe5da;
+  }
+  .investment-table td {
+    padding: 7px 0;
+    border: 0;
+    white-space: normal;
+  }
+  .investment-table td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(76px, 0.7fr) minmax(0, 1.3fr);
+    gap: 10px;
+    align-items: start;
+    text-align: right;
+    border-top: 1px solid #eef0e9;
+  }
+  .investment-table td[data-label]::before {
+    content: attr(data-label);
+    color: #778372;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 0.5px;
+    text-align: left;
+    text-transform: uppercase;
+  }
+  .investment-table .investment-value strong {
+    white-space: normal;
+  }
+  .investment-table .investment-status {
+    padding-top: 10px;
+    border-top: 1px solid #eef0e9;
+  }
+  .investment-table .investment-status-item {
+    min-width: 0;
+  }
   .workspace-footer {
     flex-direction: column;
     padding: 15px;

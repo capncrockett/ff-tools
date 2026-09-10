@@ -23,6 +23,7 @@ const shownDate = (value: string | null) =>
 export default function RosterAutomation({ roster, busy, clock, onCheck, onAccept, help }: Props) {
   if (!roster) return null
   const coolingDown = Boolean(roster.nextAllowedAt && Date.parse(roster.nextAllowedAt) > clock)
+  const reviewMoves = new Set(roster.reviews.map((review) => review.movementId)).size
   const badge =
     roster.status === 'needs_review' || roster.status === 'failed'
       ? 'badge-warning'
@@ -41,8 +42,8 @@ export default function RosterAutomation({ roster, busy, clock, onCheck, onAccep
           </p>
         </div>
         <span className={`badge badge-sm ${badge}`}>
-          {roster.reviews.length
-            ? `${roster.reviews.length} need review`
+          {reviewMoves
+            ? `${reviewMoves} move${reviewMoves === 1 ? '' : 's'} need${reviewMoves === 1 ? 's' : ''} review`
             : roster.pending
               ? `${roster.pending} pending`
               : roster.status === 'idle'

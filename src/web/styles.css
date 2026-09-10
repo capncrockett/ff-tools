@@ -712,6 +712,83 @@ a:focus-visible {
   height: auto;
   max-height: 260px;
 }
+.trend-panel {
+  padding: 2px 22px 24px;
+}
+.trend-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.trend-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 16px;
+  font-weight: 650;
+  color: #304838;
+}
+.trend-heading p,
+.trend-chart figcaption {
+  margin-top: 4px;
+  color: #7c8778;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.trend-chart-frame {
+  overflow-x: auto;
+  border: 1px solid #e0e7da;
+  border-radius: 10px;
+  background: #fbfcf9;
+}
+.trend-chart-frame svg {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+  color: #687665;
+}
+.trend-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 12px;
+  max-height: 154px;
+  margin-top: 12px;
+  padding: 4px;
+  overflow-y: auto;
+}
+.trend-legend button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: 5px;
+  color: #435443;
+  font-size: 11px;
+  text-align: left;
+}
+.trend-legend button:hover,
+.trend-legend button:focus-visible {
+  background: #f0f4ec;
+}
+.trend-legend button:focus-visible {
+  outline: 2px solid #27816b;
+  outline-offset: 1px;
+}
+.trend-legend button span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trend-swatch {
+  width: 18px;
+  height: 3px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+}
 .empty-chart {
   border: 1px dashed #cdd9c0;
   border-radius: 10px;
@@ -852,6 +929,15 @@ a:focus-visible {
   .filters select {
     max-width: 100%;
     width: 100%;
+  }
+  .trend-panel {
+    padding: 2px 12px 20px;
+  }
+  .trend-heading {
+    padding: 0 2px;
+  }
+  .trend-chart-frame svg {
+    min-width: 620px;
   }
   .table th,
   .table td {

@@ -82,3 +82,68 @@ test('player identity, missing values, zero values and alternate formats survive
   await page.getByLabel('Find a player').fill('Zero')
   await expect(rows).toHaveCount(1)
 })
+
+test('value trends keep provider formats separate and filter player lines by position', async ({
+  page,
+}) => {
+  const receiver = series(11, 'Trend Receiver', 'dynasty-calculator', 'Half PPR', 24, 20)
+  const runner = {
+    ...series(12, 'Trend Runner', 'dynasty-calculator', 'Half PPR', 30, 25),
+    position: 'RB',
+  }
+  const tightEnd = {
+    ...series(13, 'Trend Tight End', 'dynasty-calculator', 'Half PPR', 16, 15),
+    position: 'TE',
+  }
+  const data: Dashboard = {
+    market: [
+      receiver,
+      runner,
+      tightEnd,
+      series(11, 'Trend Receiver', 'dynasty-nerds', 'PPR', 2400, 2000),
+      {
+        ...series(
+          14,
+          'Old Format Quarterback',
+          'dynasty-calculator',
+          'Old Superflex',
+          40,
+          30,
+          '2025-06-01T00:00:00Z',
+        ),
+        position: 'QB',
+      },
+    ],
+    holdings: [],
+    sources: [],
+  }
+  await page.route('**/api/tracker', (route) => route.fulfill({ json: data }))
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto('/')
+  await page.getByRole('tab', { name: 'Value trends', exact: true }).click()
+
+  const chart = page.getByRole('img', { name: /Dynasty Trade Calculator value trends/ })
+  await expect(chart).toHaveAttribute('aria-label', /3 players/)
+  await expect(page.locator('[data-trend-line]')).toHaveCount(3)
+  await expect(page.getByRole('button', { name: 'View Trend Runner history' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Old Format Quarterback history/ })).toHaveCount(0)
+
+  await page.getByLabel('Trend position').selectOption('RB')
+  await expect(page.locator('[data-trend-line]')).toHaveCount(1)
+  await expect(chart).toHaveAttribute('aria-label', /1 player$/)
+  await page.getByRole('button', { name: 'View Trend Runner history' }).click()
+  await expect(page.getByRole('dialog')).toContainText('Trend Runner - value history')
+  await page.keyboard.press('Escape')
+
+  await page.getByLabel('Trend position').selectOption('all')
+  await page.getByLabel('Trend source').selectOption('dynasty-nerds')
+  await expect(page.getByLabel('Trend scoring format')).toHaveValue('PPR')
+  await expect(page.locator('[data-trend-line]')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'View Trend Receiver history' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(
+    await page
+      .locator('.trend-chart-frame')
+      .evaluate((element) => element.scrollWidth > element.clientWidth),
+  ).toBe(true)
+})

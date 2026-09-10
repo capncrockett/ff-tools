@@ -11,6 +11,8 @@ export const trackerHelp = {
     'One row is one player, with a column for each provider. DTC and Dynasty GM use different value scales. Compare growth within a source. The Dynasty GM PPR approximation for this half-PPR league is intentional.',
   values:
     'Latest saved trade value, with growth since this source and format began tracking. Starting value is in parentheses, separate from entry cost. Click the value for dated history. Missing values are labeled; formats stay separate. Sorting uses the most recently captured format for that source.',
+  trends:
+    'One line per player using a single provider and scoring format. Filter by position to compare similar players. Click a player in the legend for exact dated observations. Provider scales are never combined.',
   latest:
     'The newest saved value for this player, source, and format. It is a calculator trade value, not fantasy points, dollars, or a guaranteed trade offer. A failed refresh leaves the last saved value available.',
   previous:

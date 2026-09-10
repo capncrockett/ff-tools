@@ -21,7 +21,9 @@ export default function TrackerGuide() {
             <p>
               Player values is your old roster sheet: a starting value, a current value, and
               percentage growth for each source, side by side in one player row. Click either value
-              for dated history. A first capture sets the baseline; the next one can show movement.
+              for dated history. Value trends compares player lines within one source and scoring
+              format and can filter them by position. A first capture sets the baseline; the next
+              one can show movement.
             </p>
           </li>
           <li>

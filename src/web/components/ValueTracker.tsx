@@ -9,6 +9,7 @@ import {
   type SourceName,
 } from '../../shared/tracker'
 import HistoryChart from './HistoryChart'
+import ValueTrendChart from './ValueTrendChart'
 import Modal from './Modal'
 import HelpTip from './HelpTip'
 import TrackerGuide from './TrackerGuide'
@@ -45,7 +46,7 @@ export default function ValueTracker() {
     [search, setSearch] = useState('')
   const [source, setSource] = useState('all'),
     [position, setPosition] = useState('all'),
-    [view, setView] = useState<'market' | 'portfolio'>('market')
+    [view, setView] = useState<'market' | 'trends' | 'portfolio'>('market')
   const [detail, setDetail] = useState<MarketRow | null>(null),
     [acquire, setAcquire] = useState<MarketRow[] | null>(null),
     [exit, setExit] = useState<HoldingView | null>(null)
@@ -53,6 +54,8 @@ export default function ValueTracker() {
     [sort, setSort] = useState('name'),
     [portfolio, setPortfolio] = useState('all')
   const [clock, setClock] = useState(Date.now())
+  const [trendSource, setTrendSource] = useState<SourceName>('dynasty-calculator'),
+    [trendContextKey, setTrendContextKey] = useState('')
   useEffect(() => {
     // Only update the local countdown. This never fetches data or contacts a provider.
     const timer = window.setInterval(() => setClock(Date.now()), 15_000)
@@ -141,6 +144,27 @@ export default function ValueTracker() {
   const open = data.holdings.filter((h) => !h.closedAt),
     targets = open.filter((h) => h.targetReached && !stale(h.capturedAt))
   const portfolios = [...new Set(data.holdings.map((h) => h.portfolio))]
+  const trendContexts = useMemo(() => {
+    const contexts = new Map<string, MarketRow>()
+    for (const row of data.market.filter((candidate) => candidate.source === trendSource)) {
+      const current = contexts.get(row.contextKey)
+      if (!current || Date.parse(row.capturedAt) > Date.parse(current.capturedAt))
+        contexts.set(row.contextKey, row)
+    }
+    return [...contexts.values()].sort(
+      (a, b) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt),
+    )
+  }, [data.market, trendSource])
+  const trendContext =
+    trendContexts.find((context) => context.contextKey === trendContextKey) ?? trendContexts[0]
+  const trendSeries = data.market
+    .filter(
+      (row) =>
+        row.source === trendSource &&
+        row.contextKey === trendContext?.contextKey &&
+        (position === 'all' || row.position === position),
+    )
+    .sort((a, b) => a.playerName.localeCompare(b.playerName))
   return (
     <>
       <section className="hero-row">
@@ -292,6 +316,14 @@ export default function ValueTracker() {
             </button>
             <button
               role="tab"
+              aria-selected={view === 'trends'}
+              className={`tab ${view === 'trends' ? 'tab-active' : ''}`}
+              onClick={() => setView('trends')}
+            >
+              Value trends
+            </button>
+            <button
+              role="tab"
               aria-selected={view === 'portfolio'}
               className={`tab ${view === 'portfolio' ? 'tab-active' : ''}`}
               onClick={() => setView('portfolio')}
@@ -313,18 +345,22 @@ export default function ValueTracker() {
         <p className="workspace-hint">
           {view === 'market'
             ? 'One row per player. Click either value for its history; growth compares that source with its own starting value.'
-            : 'These are the entries you recorded, not an automatic copy of your roster. Record an entry under Player values to start measuring return.'}
+            : view === 'trends'
+              ? 'Compare saved player histories within one provider and scoring format. Filter the chart by position; click a player in the legend for exact observations.'
+              : 'These are the entries you recorded, not an automatic copy of your roster. Record an entry under Player values to start measuring return.'}
         </p>
         <div className="filters">
-          <label className="search-field">
-            <span>Find a player</span>
-            <input
-              className="input input-bordered input-sm"
-              placeholder="Search player names..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
+          {view !== 'trends' && (
+            <label className="search-field">
+              <span>Find a player</span>
+              <input
+                className="input input-bordered input-sm"
+                placeholder="Search player names..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+          )}
           {view === 'portfolio' && (
             <label>
               <span>Source</span>
@@ -369,6 +405,58 @@ export default function ValueTracker() {
                   <option value="dynasty-calculator:baseline">DTC growth since start</option>
                   <option value="dynasty-nerds:change">GM change since last capture</option>
                   <option value="dynasty-calculator:change">DTC change since last capture</option>
+                </select>
+              </label>
+            </>
+          ) : view === 'trends' ? (
+            <>
+              <label>
+                <span>Source</span>
+                <select
+                  className="select select-bordered select-sm"
+                  aria-label="Trend source"
+                  value={trendSource}
+                  onChange={(e) => {
+                    setTrendSource(e.target.value as SourceName)
+                    setTrendContextKey('')
+                  }}
+                >
+                  {marketSources.map((id) => (
+                    <option key={id} value={id}>
+                      {sourceLabels[id]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="trend-format-filter">
+                <span>Scoring format</span>
+                <select
+                  className="select select-bordered select-sm"
+                  aria-label="Trend scoring format"
+                  value={trendContext?.contextKey ?? ''}
+                  onChange={(e) => setTrendContextKey(e.target.value)}
+                  disabled={!trendContexts.length}
+                >
+                  {!trendContexts.length && <option value="">No saved formats</option>}
+                  {trendContexts.map((context) => (
+                    <option key={context.contextKey} value={context.contextKey}>
+                      {context.contextLabel}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Position</span>
+                <select
+                  className="select select-bordered select-sm"
+                  aria-label="Trend position"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                >
+                  <option value="all">All positions</option>
+                  {['QB', 'RB', 'WR', 'TE'].map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
                 </select>
               </label>
             </>
@@ -475,6 +563,29 @@ export default function ValueTracker() {
               </div>
             )}
           </>
+        ) : view === 'trends' ? (
+          <section className="trend-panel" aria-labelledby="value-trends-heading">
+            <div className="trend-heading">
+              <div>
+                <h2 id="value-trends-heading">
+                  Player value trends{' '}
+                  <HelpTip label="value trend chart">{trackerHelp.trends}</HelpTip>
+                </h2>
+                <p>
+                  {sourceLabels[trendSource]}
+                  {trendContext ? ` / ${trendContext.contextLabel}` : ''}
+                </p>
+              </div>
+              <span className="badge badge-ghost">
+                {position === 'all' ? 'All positions' : position}
+              </span>
+            </div>
+            <ValueTrendChart
+              series={trendSeries}
+              sourceLabel={sourceLabels[trendSource]}
+              onSelect={setDetail}
+            />
+          </section>
         ) : (
           <>
             <div className="table-scroll">
@@ -580,7 +691,9 @@ export default function ValueTracker() {
           <span>
             {view === 'market'
               ? `${market.length} ${market.length === 1 ? 'player' : 'players'}`
-              : `${holdings.length} entries`}
+              : view === 'trends'
+                ? `${trendSeries.length} ${trendSeries.length === 1 ? 'player trend' : 'player trends'}`
+                : `${holdings.length} entries`}
           </span>
           <span>Provider points stay separate. Target reached is an unrealized signal.</span>
         </footer>

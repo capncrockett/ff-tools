@@ -14,6 +14,7 @@ The active MVP is the dynasty value tracker. Other experiments remain parked.
 - [x] One row per player with Dynasty GM and DTC value columns and one entry action.
 - [x] Fix DTC's hidden Connect a League control for already-connected leagues; cover both connection states in browser fixtures.
 - [x] Replace DTC's hidden-table capture with validated official position exports, force `.5 PPR`, and filter to the current Sleeper roster.
+- [x] Add source-specific player value trend lines with scoring-format and position filters.
 
 ## Confirmed next directions
 
@@ -21,7 +22,6 @@ The completed [Grill Me document](docs/grill-me-dynasty-tracker.md) establishes 
 
 - [ ] Add a package-trade ledger that compares total outgoing value with total incoming value. Do not assign the full package cost to every incoming player.
 - [ ] Track owned draft picks, then convert a used pick holding into the drafted player's holding while preserving the transaction history.
-- [ ] Add a line graph that can filter tracked value history by position.
 - [ ] Add acquisition targets later; current scope remains the owned roster.
 - [ ] Define explicit mapping and acquisition-correction workflows.
 - [ ] Decide whether Sleeper transaction import should suggest acquisition lots.

@@ -1,6 +1,7 @@
 import type { Page } from 'playwright'
 import { z } from 'zod'
 import type { SnapshotInput, Observation } from '../../shared/tracker.js'
+import { sleeperLeagueId } from '../config.js'
 import { checkAccess, credentials, withProviderPage } from './browser.js'
 import { ProviderError, type ValueProvider } from './types.js'
 
@@ -78,7 +79,7 @@ export function parseNerdsRows(
       'configuration',
       'Configured Dynasty GM league is not available to this account.',
     )
-  if (league.extId !== (process.env.SLEEPER_LEAGUE_ID || '1378427936817815552'))
+  if (league.extId !== sleeperLeagueId)
     throw new ProviderError(
       'configuration',
       'Dynasty GM returned another Sleeper league. No snapshot saved.',
@@ -151,6 +152,7 @@ export function parseNerdsRows(
 
 export const dynastyNerdsProvider: ValueProvider = {
   name: 'dynasty-nerds',
+  tracksSleeperRoster: true,
   async run(options = {}) {
     const leagueId = process.env.DYNASTY_NERDS_LEAGUE_ID || '273947'
     if (!/^\d+$/.test(leagueId))

@@ -39,6 +39,9 @@ app.use('/api/sync', (_req, res) =>
 app.use('/api/players/seed', (_req, res) =>
   res.status(403).json({ error: 'External fetches are disabled in browser tests.' }),
 )
+app.use('/api/roster/reconcile', (_req, res) =>
+  res.status(403).json({ error: 'External fetches are disabled in browser tests.' }),
+)
 app.use(createApp(prisma))
 const vite = await createServer({
   configFile: 'vite.config.ts',

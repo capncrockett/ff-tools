@@ -52,6 +52,7 @@ const data: Dashboard = {
       nextAllowedAt: null,
     },
   ],
+  roster: null,
 }
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/tracker', (route) => route.fulfill({ json: data }))

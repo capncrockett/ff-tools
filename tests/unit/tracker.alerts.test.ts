@@ -39,6 +39,7 @@ function marketRow(source: SourceName, values: Partial<MarketRow> = {}): MarketR
 function holding(values: Partial<HoldingView> = {}): HoldingView {
   return {
     id: 'holding-1',
+    acquisitionKey: 'manual:holding-1',
     playerId: 1,
     playerName: 'Example Receiver',
     sourceName: 'dynasty-nerds',
@@ -51,6 +52,8 @@ function holding(values: Partial<HoldingView> = {}): HoldingView {
     notes: '',
     closedAt: null,
     proceeds: null,
+    automated: false,
+    reviewReason: null,
     currentValue: 120,
     capturedAt: freshAt,
     gain: 20,
@@ -110,6 +113,7 @@ test('builds target, sharp-move, divergence, and stale alerts without mixing raw
       sourceStatus('dynasty-nerds', { lastSuccess: staleAt }),
       sourceStatus('dynasty-calculator'),
     ],
+    roster: null,
   }
 
   const alerts = buildTrackerAlerts(dashboard, now)
@@ -139,6 +143,7 @@ test('does not flag an unconfigured source with no successful capture', () => {
         status: 'idle',
       }),
     ],
+    roster: null,
   }
 
   expect(buildTrackerAlerts(dashboard, now)).toEqual([])

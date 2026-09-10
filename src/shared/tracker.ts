@@ -61,6 +61,7 @@ export type MarketRow = {
 }
 export type HoldingView = {
   id: string
+  acquisitionKey: string
   playerId: number
   playerName: string
   sourceName: SourceName
@@ -73,6 +74,8 @@ export type HoldingView = {
   notes: string
   closedAt: string | null
   proceeds: number | null
+  automated: boolean
+  reviewReason: string | null
   currentValue: number | null
   capturedAt: string | null
   gain: number | null
@@ -90,7 +93,36 @@ export type SourceStatus = {
   message: string
   nextAllowedAt: string | null
 }
-export type Dashboard = { market: MarketRow[]; holdings: HoldingView[]; sources: SourceStatus[] }
+export type RosterReviewItem = {
+  id: string
+  movementId: string
+  playerName: string
+  sleeperPlayerId: string
+  direction: 'add' | 'remove'
+  occurredAt: string
+  sourceName: SourceName | null
+  contextKey: string | null
+  message: string
+  suggestedValue: number | null
+  suggestedCapturedAt: string | null
+  canAcceptLastValue: boolean
+}
+export type RosterAutomationView = {
+  leagueName: string
+  status: string
+  message: string
+  lastCheckedAt: string | null
+  nextAllowedAt: string | null
+  rosterPlayers: number
+  pending: number
+  reviews: RosterReviewItem[]
+}
+export type Dashboard = {
+  market: MarketRow[]
+  holdings: HoldingView[]
+  sources: SourceStatus[]
+  roster: RosterAutomationView | null
+}
 
 export const trackerAlertThresholds = {
   staleMs: 36 * 60 * 60 * 1000,

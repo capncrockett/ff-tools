@@ -6,7 +6,9 @@ Verified against authenticated subscription views on 2026-09-05. User approved D
 
 League: [1378427936817815552](https://sleeper.com/leagues/1378427936817815552), A League For All Seasons. Cascadia Corsairs is roster 7. The observed settings are 12 teams, half-PPR (reception 0.5), no TE reception premium, with QB/RB/RB/WR/WR/TE/FLEX/FLEX starters.
 
-The canonical player catalog uses the [public Sleeper API](https://docs.sleeper.com/). It is cached locally for 24 hours and seeded explicitly with `npm run players:seed`. Each DTC capture reads the current configured owner's roster from Sleeper, then matches only those QB/RB/WR/TE players against the downloaded DTC rankings. The shared DTC refresh interval limits this roster request to at most once per hour. Transaction history and automatic acquisition-cost inference are not implemented.
+The canonical player catalog uses the [public Sleeper API](https://docs.sleeper.com/). It is cached locally for 24 hours and seeded explicitly with `npm run players:seed`. A persisted league check reads the configured owner's roster and completed transactions at most once per hour. DTC reuses that saved roster to match only its QB/RB/WR/TE exports, and the other provider capture can reuse the same check within the hour.
+
+The first check baselines the current roster from each provider's first saved browser observation. Later completed trades, waivers, and free-agent moves create independent player additions and removals. Additions use the first provider value within 36 hours after the move. Removals use the last provider value within 36 hours before the move. Transaction IDs prevent replay but do not create package returns. Missing canonical identities, unexplained roster differences, and stale values remain in the app's review panel. Tests use synthetic responses and never call Sleeper or either paid provider.
 
 ## Dynasty GM / Dynasty Nerds
 

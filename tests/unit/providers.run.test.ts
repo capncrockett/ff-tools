@@ -1,4 +1,5 @@
 import request from 'supertest'
+import type { AxiosInstance } from 'axios'
 import { PrismaClient } from '@prisma/client'
 import { syncSource, getSourceStatuses } from '../../src/server/services/sync'
 import { ProviderError, type ValueProvider } from '../../src/server/providers/types'
@@ -14,6 +15,9 @@ const provider: ValueProvider = {
   })),
 }
 beforeEach(async () => {
+  await db.movementResolution.deleteMany()
+  await db.rosterMovement.deleteMany()
+  await db.rosterSyncState.deleteMany()
   await db.holding.deleteMany()
   await db.valuation.deleteMany()
   await db.snapshot.deleteMany()
@@ -23,7 +27,12 @@ beforeEach(async () => {
   await db.syncRun.deleteMany()
   jest.clearAllMocks()
 })
-afterAll(() => db.$disconnect())
+afterAll(async () => {
+  await db.movementResolution.deleteMany()
+  await db.rosterMovement.deleteMany()
+  await db.rosterSyncState.deleteMany()
+  await db.$disconnect()
+})
 test('persisted success cache prevents a second browser call, including another process connection', async () => {
   await syncSource(db, 'dynasty-nerds', provider)
   const other = new PrismaClient()
@@ -123,4 +132,64 @@ test('reading the dashboard and dry-run never invokes a provider', async () => {
     .send({})
     .expect(200)
   expect(provider.run).not.toHaveBeenCalled()
+})
+
+test('tracked providers share the persisted Sleeper roster with the capture', async () => {
+  await db.player.create({
+    data: { sleeperId: '123', name: 'Sync Player', position: 'WR', team: 'SEA' },
+  })
+  const http = {
+    get: jest.fn(async (url: string) => {
+      if (url.endsWith('/state/nfl')) return { data: { week: 1 } }
+      if (url.endsWith('/rosters'))
+        return {
+          data: [
+            {
+              roster_id: 7,
+              owner_id: '82289736559247360',
+              players: ['123'],
+              taxi: [],
+              reserve: [],
+            },
+          ],
+        }
+      if (url.includes('/transactions/')) return { data: [] }
+      return { data: { name: 'A League For All Seasons', season: '2026' } }
+    }),
+  } as unknown as AxiosInstance
+  const tracked: ValueProvider = {
+    name: 'dynasty-calculator',
+    tracksSleeperRoster: true,
+    needsSleeperRoster: true,
+    run: jest.fn(async (options) => ({
+      source: 'dynasty-calculator',
+      capturedAt: new Date().toISOString(),
+      context: {
+        label: 'Fixture half-PPR',
+        settings: {
+          leagueId: '1378427936817815552',
+          scope: 'owned-roster',
+          scoring: 'half_ppr',
+        },
+      },
+      records: [
+        {
+          sourceKey: 'sleeper:123',
+          sleeperId: '123',
+          playerName: options?.sleeperRoster?.[0]?.name ?? 'Missing Roster',
+          position: 'WR',
+          value: 50,
+        },
+      ],
+    })),
+  }
+  await syncSource(db, 'dynasty-calculator', tracked, { rosterHttp: http })
+  expect(tracked.run).toHaveBeenCalledWith(
+    expect.objectContaining({
+      sleeperRoster: [
+        expect.objectContaining({ sleeperId: '123', name: 'Sync Player', position: 'WR' }),
+      ],
+    }),
+  )
+  expect(await db.holding.count()).toBe(1)
 })

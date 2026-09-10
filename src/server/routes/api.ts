@@ -10,6 +10,11 @@ import { listPlayers, seedPlayersFromSleeper } from '../services/players.js'
 import { DataError, getMarket, parseCsvSnapshot, saveSnapshot } from '../services/valuations.js'
 import { addHolding, closeHolding, getHoldings } from '../services/holdings.js'
 import { getSourceStatuses, syncSource } from '../services/sync.js'
+import {
+  acceptLastRemovalValue,
+  getRosterAutomation,
+  reconcileSleeperRoster,
+} from '../services/rosterAutomation.js'
 
 const route =
   (handler: RequestHandler): RequestHandler =>
@@ -35,11 +40,24 @@ export function registerApiRoutes(app: Express, injected?: PrismaClient) {
     route(async (_req, res) => {
       const db = await database()
       const market = await getMarket(db)
-      const [holdings, sources] = await Promise.all([
+      const [holdings, sources, roster] = await Promise.all([
         getHoldings(db, market),
         getSourceStatuses(db),
+        getRosterAutomation(db),
       ])
-      res.json({ market, holdings, sources })
+      res.json({ market, holdings, sources, roster })
+    }),
+  )
+  app.post(
+    '/api/roster/reconcile',
+    route(async (_req, res) => {
+      res.json(await reconcileSleeperRoster(await database()))
+    }),
+  )
+  app.post(
+    '/api/roster/reviews/:id/accept-last-value',
+    route(async (req, res) => {
+      res.json(await acceptLastRemovalValue(await database(), req.params.id))
     }),
   )
   app.post(

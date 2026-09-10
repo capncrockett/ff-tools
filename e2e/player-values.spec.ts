@@ -47,6 +47,7 @@ test('player identity, missing values, zero values and alternate formats survive
     ],
     holdings: [],
     sources: [],
+    roster: null,
   }
   await page.route('**/api/tracker', (route) => route.fulfill({ json: data }))
   await page.goto('/')
@@ -116,6 +117,7 @@ test('value trends keep provider formats separate and filter player lines by pos
     ],
     holdings: [],
     sources: [],
+    roster: null,
   }
   await page.route('**/api/tracker', (route) => route.fulfill({ json: data }))
   await page.setViewportSize({ width: 375, height: 900 })

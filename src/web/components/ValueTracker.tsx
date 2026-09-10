@@ -16,6 +16,7 @@ import Modal from './Modal'
 import HelpTip from './HelpTip'
 import TrackerGuide from './TrackerGuide'
 import TrackerAlerts from './TrackerAlerts'
+import RosterAutomation from './RosterAutomation'
 import { trackerHelp } from '../trackerHelp'
 
 const number = (n: number | null | undefined) =>
@@ -31,12 +32,59 @@ const date = (value: string | null) =>
         minute: '2-digit',
       })
     : 'No capture yet'
-const empty: Dashboard = { market: [], holdings: [], sources: [] }
+const empty: Dashboard = { market: [], holdings: [], sources: [], roster: null }
 const marketSources: SourceName[] = ['dynasty-nerds', 'dynasty-calculator']
 type PlayerValues = { player: MarketRow; sources: Record<SourceName, MarketRow[]> }
+type InvestmentGroup = {
+  key: string
+  playerId: number
+  playerName: string
+  portfolio: string
+  acquiredAt: string
+  automated: boolean
+  holdings: HoldingView[]
+}
 const today = () => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+function investmentStatus(holding: HoldingView, clock: number) {
+  if (holding.reviewReason) return 'Needs review'
+  if (holding.closedAt) return 'Realized'
+  if (!isTrackerValueFresh(holding.capturedAt, clock)) return 'Needs fresh value'
+  return holding.targetReached ? 'Target reached' : 'Holding'
+}
+
+function InvestmentValue({ holdings }: { holdings: HoldingView[] }) {
+  if (!holdings.length) return <span className="muted">No entry</span>
+  return (
+    <div className="investment-values">
+      {holdings.map((holding) => {
+        const shown = holding.closedAt ? holding.proceeds : holding.currentValue
+        return (
+          <div key={holding.id} className="investment-value">
+            <strong>
+              {number(holding.costBasis)} <span aria-hidden="true">-&gt;</span> {number(shown)}
+            </strong>
+            <span
+              className={
+                holding.gain === null ? 'muted' : holding.gain >= 0 ? 'positive' : 'negative'
+              }
+            >
+              {holding.costBasis === 0 ? 'ROI undefined' : percent(holding.roi)}
+            </span>
+            <span className="text-xs muted">
+              {holding.contextLabel} /{' '}
+              {holding.targetValue === null
+                ? 'absolute gain'
+                : `${number(holding.targetValue)} target`}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function ValueTracker() {
@@ -137,14 +185,49 @@ export default function ValueTracker() {
           a.player.playerName.localeCompare(b.player.playerName),
       )
   }, [data.market, position, search, sort])
-  const holdings = data.holdings.filter(
-    (h) =>
-      (source === 'all' || h.sourceName === source) &&
-      (portfolio === 'all' || h.portfolio === portfolio) &&
-      h.playerName.toLowerCase().includes(search.toLowerCase()),
+  const investmentGroups = useMemo(() => {
+    const groups = new Map<string, InvestmentGroup>()
+    for (const holding of data.holdings) {
+      const group = groups.get(holding.acquisitionKey)
+      if (group) {
+        group.holdings.push(holding)
+        if (Date.parse(holding.acquiredAt) < Date.parse(group.acquiredAt))
+          group.acquiredAt = holding.acquiredAt
+        group.automated ||= holding.automated
+      } else
+        groups.set(holding.acquisitionKey, {
+          key: holding.acquisitionKey,
+          playerId: holding.playerId,
+          playerName: holding.playerName,
+          portfolio: holding.portfolio,
+          acquiredAt: holding.acquiredAt,
+          automated: holding.automated,
+          holdings: [holding],
+        })
+    }
+    return [...groups.values()].sort(
+      (a, b) =>
+        Date.parse(b.acquiredAt) - Date.parse(a.acquiredAt) ||
+        a.playerName.localeCompare(b.playerName),
+    )
+  }, [data.holdings])
+  const investments = investmentGroups.filter(
+    (group) =>
+      (source === 'all' || group.holdings.some((holding) => holding.sourceName === source)) &&
+      (portfolio === 'all' || group.portfolio === portfolio) &&
+      group.playerName.toLowerCase().includes(search.toLowerCase()),
   )
-  const open = data.holdings.filter((h) => !h.closedAt),
-    targets = open.filter((h) => h.targetReached && isTrackerValueFresh(h.capturedAt, clock))
+  const open = investmentGroups.filter((group) =>
+      group.holdings.some((holding) => !holding.closedAt),
+    ),
+    targets = open.filter((group) =>
+      group.holdings.some(
+        (holding) =>
+          !holding.closedAt &&
+          holding.targetReached &&
+          isTrackerValueFresh(holding.capturedAt, clock),
+      ),
+    )
   const alerts = useMemo(() => buildTrackerAlerts(data, clock), [data, clock])
   const portfolios = [...new Set(data.holdings.map((h) => h.portfolio))]
   const trendContexts = useMemo(() => {
@@ -214,7 +297,12 @@ export default function ValueTracker() {
           <span className="eyebrow help-label">
             RECORDED EXITS <HelpTip label="recorded exits">{trackerHelp.exits}</HelpTip>
           </span>
-          <strong>{data.holdings.filter((h) => h.closedAt).length}</strong>
+          <strong>
+            {
+              investmentGroups.filter((group) => group.holdings.some((holding) => holding.closedAt))
+                .length
+            }
+          </strong>
           <span>Realized returns kept in your ledger</span>
         </div>
       </div>
@@ -236,6 +324,26 @@ export default function ValueTracker() {
         </div>
       )}
       <TrackerAlerts alerts={alerts} />
+      <RosterAutomation
+        roster={data.roster}
+        busy={busy}
+        clock={clock}
+        help={trackerHelp.roster}
+        onCheck={() =>
+          action(
+            'roster',
+            () => api('/api/roster/reconcile', {}),
+            'Sleeper roster checked and saved movements applied.',
+          )
+        }
+        onAccept={(id) =>
+          action(
+            `review:${id}`,
+            () => api(`/api/roster/reviews/${id}/accept-last-value`, {}),
+            'Last known value accepted for the roster exit.',
+          )
+        }
+      />
       <section className="source-grid" aria-label="Value sources">
         {data.sources.map((s) => (
           <article key={s.source} className="source-card">
@@ -332,7 +440,7 @@ export default function ValueTracker() {
               className={`tab ${view === 'portfolio' ? 'tab-active' : ''}`}
               onClick={() => setView('portfolio')}
             >
-              My investments <span className="ml-2 opacity-60">{data.holdings.length}</span>
+              My investments <span className="ml-2 opacity-60">{investmentGroups.length}</span>
             </button>
           </div>
           <div className="button-help">
@@ -351,7 +459,7 @@ export default function ValueTracker() {
             ? 'One row per player. Click either value for its history; growth compares that source with its own starting value.'
             : view === 'trends'
               ? 'Compare saved player histories within one provider and scoring format. Filter the chart by position; click a player in the legend for exact observations.'
-              : 'These are the entries you recorded, not an automatic copy of your roster. Record an entry under Player values to start measuring return.'}
+              : 'Sleeper creates normal entries and exits automatically. Manual entry and exit remain available for corrections or older acquisitions.'}
         </p>
         <div className="filters">
           {view !== 'trends' && (
@@ -593,99 +701,80 @@ export default function ValueTracker() {
         ) : (
           <>
             <div className="table-scroll">
-              <table className="table">
-                <caption className="sr-only">Acquisitions and returns</caption>
+              <table className="table investment-table">
+                <caption className="sr-only">
+                  Player acquisitions with Dynasty GM and DTC returns side by side
+                </caption>
                 <thead>
                   <tr>
                     <th>Investment</th>
                     <th className="numeric">
-                      Cost / current{' '}
-                      <HelpTip label="cost and current value">{trackerHelp.cost}</HelpTip>
+                      Dynasty GM{' '}
+                      <HelpTip label="Dynasty GM investment values">{trackerHelp.cost}</HelpTip>
                     </th>
                     <th className="numeric">
-                      Return <HelpTip label="investment return">{trackerHelp.roi}</HelpTip>
-                    </th>
-                    <th>
-                      Target <HelpTip label="target value">{trackerHelp.target}</HelpTip>
+                      DTC <HelpTip label="DTC investment values">{trackerHelp.roi}</HelpTip>
                     </th>
                     <th>
                       Status <HelpTip label="investment status">{trackerHelp.status}</HelpTip>
                     </th>
-                    <th>
-                      <span className="sr-only">Exit action</span>
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {holdings.map((h) => (
-                    <tr key={h.id}>
+                  {investments.map((group) => (
+                    <tr key={group.key}>
                       <td>
-                        <strong>{h.playerName}</strong>
+                        <strong>{group.playerName}</strong>
                         <div className="context-label">
-                          {h.portfolio} / {sourceLabels[h.sourceName]}
+                          {group.portfolio}
+                          {group.automated ? ' / Sleeper' : ' / Manual'}
                         </div>
                         <div className="text-xs muted">
-                          Acquired {new Date(h.acquiredAt).toLocaleDateString()}
+                          Acquired {new Date(group.acquiredAt).toLocaleDateString()}
                         </div>
                       </td>
-                      <td className="numeric">
-                        {number(h.costBasis)}
-                        <div className="text-sm muted">
-                          {h.closedAt ? 'Exit' : 'Latest'}{' '}
-                          {number(h.closedAt ? h.proceeds : h.currentValue)}
-                        </div>
-                      </td>
-                      <td
-                        className={`numeric ${h.gain === null ? 'muted' : h.gain >= 0 ? 'positive' : 'negative'}`}
-                      >
-                        {h.costBasis === 0 ? 'ROI undefined' : percent(h.roi)}
-                        <div className="text-xs">
-                          {h.gain === null
-                            ? 'No post-entry value'
-                            : `${h.gain >= 0 ? '+' : ''}${number(h.gain)} points`}
-                        </div>
-                      </td>
-                      <td>
-                        <div>
-                          {h.targetValue === null
-                            ? 'Absolute gain only'
-                            : `${number(h.targetValue)} points`}
-                        </div>
-                        <div className="text-xs muted">
-                          {h.targetValue === null ? 'Zero-cost entry' : `${h.targetRoi}% target`}
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`badge ${h.closedAt ? 'badge-neutral' : h.targetReached && isTrackerValueFresh(h.capturedAt, clock) ? 'badge-success' : 'badge-ghost'}`}
-                        >
-                          {h.closedAt
-                            ? 'Realized'
-                            : !isTrackerValueFresh(h.capturedAt, clock)
-                              ? 'Needs fresh value'
-                              : h.targetReached
-                                ? 'Target reached'
-                                : 'Holding'}
-                        </span>
-                      </td>
-                      <td>
-                        {!h.closedAt && (
-                          <button className="btn btn-sm btn-outline" onClick={() => setExit(h)}>
-                            Record exit
-                          </button>
-                        )}
+                      {marketSources.map((sourceName) => (
+                        <td key={sourceName} className="numeric" data-source={sourceName}>
+                          <InvestmentValue
+                            holdings={group.holdings.filter(
+                              (holding) => holding.sourceName === sourceName,
+                            )}
+                          />
+                        </td>
+                      ))}
+                      <td className="investment-status">
+                        {group.holdings.map((holding) => (
+                          <div key={holding.id} className="investment-status-item">
+                            <span
+                              className={`badge ${holding.reviewReason ? 'badge-warning' : holding.closedAt ? 'badge-neutral' : holding.targetReached && isTrackerValueFresh(holding.capturedAt, clock) ? 'badge-success' : 'badge-ghost'}`}
+                            >
+                              {sourceLabels[holding.sourceName]}: {investmentStatus(holding, clock)}
+                            </span>
+                            {holding.reviewReason && (
+                              <div className="text-xs muted">{holding.reviewReason}</div>
+                            )}
+                            {!holding.closedAt && !holding.reviewReason && (
+                              <button
+                                className="btn btn-xs btn-outline"
+                                onClick={() => setExit(holding)}
+                              >
+                                Record exit
+                              </button>
+                            )}
+                          </div>
+                        ))}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {!holdings.length && (
+            {!investments.length && (
               <div className="empty-state">
                 <h2>No investments recorded yet</h2>
                 <p>
-                  Choose a player under Player values and record an entry cost. Your holdings and
-                  exits will stay here.
+                  Capture a provider and check Sleeper to start the current roster automatically.
+                  Manual entry remains available under Player values.
                 </p>
               </div>
             )}
@@ -697,7 +786,7 @@ export default function ValueTracker() {
               ? `${market.length} ${market.length === 1 ? 'player' : 'players'}`
               : view === 'trends'
                 ? `${trendSeries.length} ${trendSeries.length === 1 ? 'player trend' : 'player trends'}`
-                : `${holdings.length} entries`}
+                : `${investments.length} entries`}
           </span>
           <span>Provider points stay separate. Target reached is an unrealized signal.</span>
         </footer>

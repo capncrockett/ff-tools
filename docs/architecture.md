@@ -17,7 +17,9 @@ A `Player` is canonical when it has a Sleeper ID. A `Mapping` binds a provider's
 
 A `Snapshot` stores source, capture time, stable settings hash, minimal settings JSON, checksum, row count, and capture method. Its `Valuation` rows are immutable observations. A source/settings/capture-time identity prevents conflicting duplicate captures; reimporting an identical observation batch is harmless. Inserts and identity resolution share one transaction.
 
-A `Holding` is one player acquisition lot with portfolio, date, source/context, cost basis, target, and optional exit date/value. Reacquisition is another lot. Closed lots retain their realized player-level exit value even as market values change. Sleeper transaction IDs may provide idempotency and traceability, but package ROI and trade-chain accounting are outside the confirmed product model. The exact automatic basis and exit rules remain in the active follow-up document.
+A `Holding` is one source/context side of a player acquisition, with portfolio, date, cost basis, target, and optional exit date/value. Holdings created from the same Sleeper movement share an acquisition key and render as one player row with separate Dynasty GM and DTC columns. Reacquisition creates a new acquisition. Closed holdings retain their realized player-level exit value even as market values change. Package ROI and trade-chain accounting are outside the confirmed product model.
+
+`RosterSyncState` enforces one Sleeper roster and transaction refresh per hour across both paid-provider captures. `RosterMovement` stores one add or removal per player, with the Sleeper transaction ID used only for traceability and replay protection. `MovementResolution` applies each provider/context independently. Current players begin at the first saved browser observation. Later additions use the first observation within 36 hours after the move. Removals use the last observation within 36 hours before the move. Missing, stale, unmatched, or unexplained changes stay visible for review. An explicit action can accept a stale last-known removal value.
 
 A `SyncRun` reserves an attempt before opening a browser, then records a controlled success/failure message. All processes consult the same SQLite record. No attempt starts within one hour of the previous source attempt, including interrupted or failed runs. A crashed run becomes eligible after the hour; there is no automatic retry.
 
@@ -35,7 +37,7 @@ Unrealized return uses the latest observation at or after acquisition. Realized 
 
 In-app alerts use saved data only. Sharp movement means at least 10% since the preceding observation in the same series. Provider disagreement requires fresh observations, opposite baseline-growth directions, and at least a 10 percentage-point spread. Raw provider point values are never compared.
 
-Only the provider-supported owned roster is captured today. DTC refreshes the current roster from Sleeper and filters its position exports before persistence. A missing row is never filled with zero. Departed players keep their prior history and become stale unless another valid observation is imported; whole-market scouting is future scope.
+Only the provider-supported owned roster is captured today. The persisted Sleeper check supplies DTC's roster filter, so DTC does not make a second roster request. A second provider capture within the hour reuses saved roster state while applying any newly available values. A missing row is never filled with zero. Departed players keep their prior history after their tracked acquisition is closed; whole-market scouting is future scope.
 
 ## Operational properties
 

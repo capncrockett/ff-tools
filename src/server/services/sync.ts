@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import type { AxiosInstance } from 'axios'
 import type { PrismaClient } from '@prisma/client'
 import {
   sourceLabels,
@@ -10,6 +11,11 @@ import {
 import { localDir, syncFailureMs, syncSuccessMs } from '../config.js'
 import { ProviderError, type ValueProvider } from '../providers/types.js'
 import { DataError, saveSnapshot } from './valuations.js'
+import {
+  applyRosterMovements,
+  loadReconciledRosterPlayers,
+  reconcileSleeperRoster,
+} from './rosterAutomation.js'
 
 export function sourceConfigured(source: SourceName) {
   const prefix = source === 'dynasty-nerds' ? 'DYNASTY_NERDS' : 'DYNASTY_CALC'
@@ -50,7 +56,7 @@ export async function syncSource(
   db: PrismaClient,
   source: SourceName,
   provider: ValueProvider,
-  options?: { headless?: boolean },
+  options?: { headless?: boolean; rosterHttp?: AxiosInstance },
 ) {
   // Reserve in SQLite, so a CLI and API process cannot both launch the same provider.
   const run = await db.$transaction(async (tx) => {
@@ -75,15 +81,40 @@ export async function syncSource(
     })
   })
   try {
-    const snapshot = await provider.run(options)
+    let sleeperRoster
+    let rosterMessage = ''
+    if (provider.tracksSleeperRoster) {
+      try {
+        const roster = await reconcileSleeperRoster(db, {
+          allowCached: true,
+          http: options?.rosterHttp,
+        })
+        const canonicalRoster = await loadReconciledRosterPlayers(db, roster.playerIds)
+        if (provider.needsSleeperRoster) sleeperRoster = canonicalRoster
+        rosterMessage = ` ${roster.message}`
+      } catch (error) {
+        if (provider.needsSleeperRoster) throw error
+        rosterMessage = ' Sleeper roster check needs attention.'
+      }
+    }
+    const snapshot = await provider.run({ headless: options?.headless, sleeperRoster })
     if (snapshot.source !== source)
       throw new ProviderError('format', 'Provider returned the wrong source. No values saved.')
     const result = await saveSnapshot(db, snapshot, 'browser')
+    if (provider.tracksSleeperRoster) {
+      try {
+        const applied = await applyRosterMovements(db)
+        if (applied.needsReview)
+          rosterMessage = ` ${applied.needsReview} roster movement${applied.needsReview === 1 ? '' : 's'} need review.`
+      } catch {
+        rosterMessage = ' Values were saved, but Sleeper movement application needs attention.'
+      }
+    }
     await db.syncRun.update({
       where: { id: run.id },
       data: {
         status: 'success',
-        message: `Saved ${result.saved} player observations.`,
+        message: `Saved ${result.saved} player observations.${rosterMessage}`,
         saved: result.saved,
         finishedAt: new Date(),
       },

@@ -28,20 +28,21 @@ export default function TrackerGuide() {
             </p>
           </li>
           <li>
-            <strong>2. Record an entry and target</strong>
+            <strong>2. Let Sleeper start each entry</strong>
             <p>
-              Use Record entry to choose a source, the value you are measuring return against, and a
-              start date. For a benchmark starting today, note that choice in Entry notes. My
-              investments starts empty until you save an entry. The initial target is 20%, editable
-              before saving.
+              The roster check starts current players from their first saved values. A later add
+              uses the first value captured within 36 hours for each provider. My investments groups
+              those provider records into one player row. Record entry remains available for a
+              correction or an older acquisition. The initial target is 20%.
             </p>
           </li>
           <li>
-            <strong>3. Record an exit after a trade</strong>
+            <strong>3. Review the automatic exit</strong>
             <p>
-              A target reached is a reason to consider selling. After a completed trade, enter the
-              player's value when it left using the same provider's points. That records realized
-              player-level return. A hold/sell idea alone is not an exit.
+              A target reached is a reason to consider selling. A completed Sleeper removal closes
+              each provider record at its last fresh value before the move. A value older than 36
+              hours stays open in Needs review, where you can explicitly accept the last known
+              value. Record exit remains the manual fallback.
             </p>
           </li>
         </ol>

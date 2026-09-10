@@ -232,6 +232,67 @@ a:focus-visible {
 .tracker-alert-empty {
   padding: 15px 20px;
 }
+.roster-automation {
+  background: #fff;
+  border: 1px solid #e0e5dc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.roster-automation-heading,
+.roster-automation-status,
+.roster-review-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.roster-automation-heading {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eef0e9;
+}
+.roster-automation-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 750;
+}
+.roster-automation-heading p,
+.roster-automation-status p,
+.roster-review-list p {
+  color: #6c796a;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.roster-automation-heading > .badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.roster-automation-status {
+  padding: 13px 20px;
+}
+.roster-automation-status strong,
+.roster-review-list strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.roster-review-list {
+  border-top: 1px solid #eef0e9;
+}
+.roster-review-list li {
+  align-items: flex-start;
+  padding: 13px 20px;
+  background: #fcf6e9;
+  border-bottom: 1px solid #eee4d1;
+}
+.roster-review-list li:last-child {
+  border-bottom: 0;
+}
+.roster-review-list .btn {
+  flex: 0 0 auto;
+}
 .source-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -305,6 +366,37 @@ a:focus-visible {
 }
 .source-issue strong {
   display: block;
+}
+.investment-values,
+.investment-status {
+  display: grid;
+  gap: 10px;
+}
+.investment-value {
+  display: grid;
+  gap: 2px;
+}
+.investment-value + .investment-value,
+.investment-status-item + .investment-status-item {
+  border-top: 1px solid #eef0e9;
+  padding-top: 9px;
+}
+.investment-value strong {
+  white-space: nowrap;
+}
+.investment-status-item {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  min-width: 175px;
+}
+.investment-status-item .badge {
+  height: auto;
+  min-height: 1.25rem;
+  max-width: 100%;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  white-space: normal;
 }
 .help-label,
 .button-help {
@@ -995,6 +1087,17 @@ a:focus-visible {
   .tracker-alert {
     padding: 13px 16px;
     border-right: 0;
+  }
+  .roster-automation-heading,
+  .roster-automation-status,
+  .roster-review-list li {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .roster-automation-heading > .badge {
+    margin-left: 0;
   }
   .source-grid {
     grid-template-columns: 1fr;

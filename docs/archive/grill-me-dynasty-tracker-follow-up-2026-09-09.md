@@ -1,6 +1,6 @@
 # Dynasty Value Tracker - Follow-up Grill Me Archive
 
-Archived on 2026-09-09 after all 10 questions were answered. These answers confirmed player-level tracking, automatic Sleeper updates with visible ambiguity review, one nightly retry, private single-user access, in-app alert thresholds, and visible session recovery. Remaining implementation details are in the [active player automation follow-up](../grill-me-dynasty-tracker.md).
+Archived on 2026-09-09 after all 10 questions were answered. These answers confirmed player-level tracking, automatic Sleeper updates with visible ambiguity review, one nightly retry, private single-user access, in-app alert thresholds, and visible session recovery. The later [player automation follow-up](grill-me-dynasty-tracker-player-automation-2026-09-10.md) completed the lifecycle details.
 
 The [initial 20-question Grill Me](archive/grill-me-dynasty-tracker-initial-2026-09-09.md) is complete and archived. It established the current MVP: one owned dynasty roster, values tracked from the first capture forward, separate provider scales, an editable 20% initial target, explicit entries and exits, and position-filtered history.
 

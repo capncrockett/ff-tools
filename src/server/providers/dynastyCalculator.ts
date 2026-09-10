@@ -3,13 +3,11 @@ import axios from 'axios'
 import type { Download, Locator, Page } from 'playwright'
 import { z } from 'zod'
 import type { SnapshotInput } from '../../shared/tracker.js'
+import { sleeperLeagueId, sleeperLeagueName, sleeperOwnerId } from '../config.js'
 import { loadSleeperPlayers, type CanonicalPlayer } from '../services/players.js'
 import { checkAccess, credentials, withProviderPage } from './browser.js'
 import { ProviderError, type ValueProvider } from './types.js'
 
-const leagueIdDefault = '1378427936817815552'
-const ownerIdDefault = '82289736559247360'
-const leagueNameDefault = 'A League For All Seasons'
 const supportedPositions = ['QB', 'RB', 'WR', 'TE'] as const
 type SupportedPosition = (typeof supportedPositions)[number]
 
@@ -178,17 +176,14 @@ export function buildDtcSnapshot(
       `DTC rankings matched ${records.length} of ${eligibleRoster.length} owned players. No snapshot saved.`,
     )
 
-  const leagueId = process.env.SLEEPER_LEAGUE_ID || leagueIdDefault
-  const ownerId = process.env.SLEEPER_USER_ID || ownerIdDefault
-  const leagueName = process.env.SLEEPER_LEAGUE_NAME || leagueNameDefault
   return {
     source: 'dynasty-calculator',
     capturedAt: now.toISOString(),
     context: {
-      label: `${leagueName} / HALF_PPR / STANDARD`,
+      label: `${sleeperLeagueName} / HALF_PPR / STANDARD`,
       settings: {
-        leagueId,
-        ownerId,
+        leagueId: sleeperLeagueId,
+        ownerId: sleeperOwnerId,
         team_size: '12',
         team_type: 'half_ppr',
         team_format: 'standard',
@@ -374,12 +369,13 @@ async function signInIfNeeded(page: Page) {
 
 export const dynastyCalculatorProvider: ValueProvider = {
   name: 'dynasty-calculator',
+  tracksSleeperRoster: true,
+  needsSleeperRoster: true,
   async run(options = {}) {
-    const leagueId = process.env.SLEEPER_LEAGUE_ID || leagueIdDefault
-    const ownerId = process.env.SLEEPER_USER_ID || ownerIdDefault
-    if (!/^\d+$/.test(leagueId) || !/^\d+$/.test(ownerId))
+    if (!/^\d+$/.test(sleeperLeagueId) || !/^\d+$/.test(sleeperOwnerId))
       throw new ProviderError('configuration', 'Sleeper league and owner IDs must be numeric.')
-    const roster = await fetchOwnedSleeperRoster(leagueId, ownerId)
+    const roster =
+      options.sleeperRoster ?? (await fetchOwnedSleeperRoster(sleeperLeagueId, sleeperOwnerId))
     return withProviderPage('dynasty-calculator', options.headless !== false, async (page) => {
       let stage = 'opening the rankings page'
       try {

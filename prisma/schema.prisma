@@ -8,38 +8,39 @@ datasource db {
 }
 
 model Player {
-  id         Int      @id @default(autoincrement())
-  sleeperId  String?  @unique
-  name       String
-  position   String?
-  team       String?
-  createdAt  DateTime @default(now())
-  valuations Valuation[]
-  mappings   Mapping[]
-  holdings   Holding[]
+  id              Int              @id @default(autoincrement())
+  sleeperId       String?          @unique
+  name            String
+  position        String?
+  team            String?
+  createdAt       DateTime         @default(now())
+  valuations      Valuation[]
+  mappings        Mapping[]
+  holdings        Holding[]
+  rosterMovements RosterMovement[]
 }
 
 model Source {
-  id    Int      @id @default(autoincrement())
-  name  String   @unique
-  notes String?
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  notes      String?
   valuations Valuation[]
   mappings   Mapping[]
   snapshots  Snapshot[]
 }
 
 model Valuation {
-  id         Int      @id @default(autoincrement())
-  player     Player   @relation(fields: [playerId], references: [id])
+  id         Int       @id @default(autoincrement())
+  player     Player    @relation(fields: [playerId], references: [id])
   playerId   Int
-  source     Source   @relation(fields: [sourceId], references: [id])
+  source     Source    @relation(fields: [sourceId], references: [id])
   sourceId   Int
   value      Float
-  unit       String   @default("index")
-  capturedAt DateTime @default(now())
+  unit       String    @default("index")
+  capturedAt DateTime  @default(now())
   snapshot   Snapshot? @relation(fields: [snapshotId], references: [id])
   snapshotId String?
-  contextKey String @default("legacy-unverified")
+  contextKey String    @default("legacy-unverified")
   sourceKey  String?
 
   @@unique([snapshotId, playerId])
@@ -47,23 +48,24 @@ model Valuation {
 }
 
 model Mapping {
-  id            Int     @id @default(autoincrement())
-  source        Source  @relation(fields: [sourceId], references: [id])
-  sourceId      Int
-  sourceKey     String  // e.g., name or ID used by the source
-  player        Player  @relation(fields: [playerId], references: [id])
-  playerId      Int
+  id        Int    @id @default(autoincrement())
+  source    Source @relation(fields: [sourceId], references: [id])
+  sourceId  Int
+  sourceKey String // e.g., name or ID used by the source
+  player    Player @relation(fields: [playerId], references: [id])
+  playerId  Int
+
   @@unique([sourceId, sourceKey])
 }
 
 model Snapshot {
-  id          String @id @default(cuid())
-  source      Source @relation(fields: [sourceId], references: [id])
+  id          String      @id @default(cuid())
+  source      Source      @relation(fields: [sourceId], references: [id])
   sourceId    Int
   contextKey  String
   contextJson String
   capturedAt  DateTime
-  importedAt  DateTime @default(now())
+  importedAt  DateTime    @default(now())
   checksum    String
   rowCount    Int
   method      String
@@ -74,32 +76,96 @@ model Snapshot {
 }
 
 model Holding {
-  id           String @id @default(cuid())
-  player       Player @relation(fields: [playerId], references: [id])
-  playerId     Int
-  sourceName   String
-  contextKey   String
-  portfolio    String
-  acquiredAt   DateTime
-  costBasis    Float
-  targetRoi    Float @default(20)
-  notes        String @default("")
-  closedAt     DateTime?
-  proceeds     Float?
-  createdAt    DateTime @default(now())
+  id               String    @id @default(cuid())
+  player           Player    @relation(fields: [playerId], references: [id])
+  playerId         Int
+  sourceName       String
+  contextKey       String
+  portfolio        String
+  acquiredAt       DateTime
+  costBasis        Float
+  targetRoi        Float     @default(20)
+  notes            String    @default("")
+  closedAt         DateTime?
+  proceeds         Float?
+  originMovementId String?
+  exitMovementId   String?
+  reviewReason     String?
+  createdAt        DateTime  @default(now())
 
+  @@unique([originMovementId, sourceName, contextKey])
   @@index([playerId, sourceName, contextKey])
 }
 
 model SyncRun {
-  id          String @id @default(cuid())
-  sourceName  String
-  startedAt   DateTime @default(now())
-  finishedAt  DateTime?
-  status      String
-  message     String
-  saved       Int @default(0)
+  id         String    @id @default(cuid())
+  sourceName String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  status     String
+  message    String
+  saved      Int       @default(0)
 
   @@index([sourceName, startedAt])
 }
 
+model RosterSyncState {
+  id                String           @id
+  leagueId          String
+  ownerId           String
+  leagueName        String
+  rosterId          Int?
+  playerIdsJson     String           @default("[]")
+  trackingStartedAt DateTime
+  initializedAt     DateTime?
+  lastCheckedAt     DateTime?
+  lastWeek          Int              @default(0)
+  status            String           @default("idle")
+  message           String           @default("No Sleeper roster check yet.")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  movements         RosterMovement[]
+
+  @@unique([leagueId, ownerId])
+}
+
+model RosterMovement {
+  id                   String               @id
+  rosterSyncState      RosterSyncState      @relation(fields: [rosterSyncStateId], references: [id], onDelete: Cascade)
+  rosterSyncStateId    String
+  sleeperTransactionId String?
+  sleeperPlayerId      String
+  player               Player?              @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  playerId             Int?
+  direction            String
+  kind                 String
+  occurredAt           DateTime
+  status               String               @default("pending")
+  message              String               @default("")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  resolvedAt           DateTime?
+  resolutions          MovementResolution[]
+
+  @@index([rosterSyncStateId, occurredAt])
+  @@index([sleeperPlayerId, occurredAt])
+}
+
+model MovementResolution {
+  id                  String         @id @default(cuid())
+  movement            RosterMovement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  movementId          String
+  targetKey           String
+  sourceName          String
+  contextKey          String
+  status              String         @default("pending")
+  holdingId           String?
+  suggestedValue      Float?
+  suggestedCapturedAt DateTime?
+  message             String         @default("")
+  createdAt           DateTime       @default(now())
+  resolvedAt          DateTime?
+
+  @@unique([movementId, targetKey])
+  @@index([status, createdAt])
+}

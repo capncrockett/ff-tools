@@ -2,7 +2,7 @@ export const trackerHelp = {
   players:
     'Each player appears once, with Dynasty GM and DTC values in separate columns. Previously captured players stay in history after leaving the roster.',
   investments:
-    'Entries you have saved and have not exited. Capturing your roster does not create investment entries. One player can have separate entries for different sources or a later reacquisition.',
+    'Player acquisitions that have not fully exited. Sleeper creates normal entries automatically. Each acquisition appears once even though GM and DTC keep separate cost and return records. A later reacquisition is a new entry.',
   targets:
     'Open entries whose latest value meets their chosen target, using the same source and format. Only observations from the last 36 hours count here. This is potential return, not a completed trade.',
   alerts:
@@ -29,6 +29,8 @@ export const trackerHelp = {
     'Reads history already saved on this computer. It does not visit either provider or consume the hourly capture allowance. Capture values is the separate action that requests a new observation.',
   capture:
     'Visits the selected provider and saves a dated observation of its supported roster values. There is at least one hour between attempts, even failures. Page loads and saved-data reloads do not capture values. Nightly collection is not enabled yet.',
+  roster:
+    'Reads completed Sleeper moves at most once per hour. Current players start at their first saved provider values. Later adds use the first value within 36 hours; removals use the last value within 36 hours. Missing, stale, or unexplained changes wait for review.',
   cost: 'Your recorded entry value and the latest saved quote in the same source and format. After an exit, this shows the saved player exit value instead. An observation from before your entry date cannot establish your current return.',
   roi: 'Return is (value - entry cost) / entry cost x 100. Open entries use the latest eligible quote; closed entries use the saved player exit value. A zero-cost entry has absolute gain but no percentage ROI.',
   target:

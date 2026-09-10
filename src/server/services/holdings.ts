@@ -71,6 +71,7 @@ export async function getHoldings(db: PrismaClient, market: MarketRow[]): Promis
     const basisValue = h.closedAt ? h.proceeds : (current?.value ?? null)
     return {
       id: h.id,
+      acquisitionKey: h.originMovementId ?? `manual:${h.id}`,
       playerId: h.playerId,
       playerName: h.player.name,
       sourceName: sourceSchema.parse(h.sourceName),
@@ -83,6 +84,8 @@ export async function getHoldings(db: PrismaClient, market: MarketRow[]): Promis
       notes: h.notes,
       closedAt: h.closedAt?.toISOString() ?? null,
       proceeds: h.proceeds,
+      automated: h.originMovementId !== null,
+      reviewReason: h.reviewReason,
       currentValue: current?.value ?? null,
       capturedAt: current?.capturedAt ?? null,
       ...calculateReturn(h.costBasis, basisValue, h.targetRoi),

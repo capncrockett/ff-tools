@@ -12,7 +12,7 @@ Question: Does this rule match what you mean by player-level tracking?
 
 Recommended: When Sleeper adds a player, create a separate holding for each provider/context from the first fresh observation at or after the move. When Sleeper removes a player, close each open holding at that player's last observation at or before the move. Apply the same rule independently to every player in a multi-player trade. Keep the Sleeper transaction ID only for traceability and replay protection. If the required value is missing or more than 36 hours old, flag that player instead of inventing a value.
 
-Answer: Pending
+Answer: yes
 
 ## 2. What is the baseline for a waiver or free-agent addition?
 
@@ -20,7 +20,7 @@ Question: A waiver or free-agent addition has no outgoing player or pick. Should
 
 Recommended: Use the player's first fresh provider value after the acquisition. That creates the same editable 20% growth target as every other player. Keep FAAB separate because dollars and provider trade-value points are unrelated. Use zero only when a provider explicitly values the player at zero.
 
-Answer: Pending
+Answer: yes to all that.
 
 ## 3. How should a stale removal be finalized?
 
@@ -28,7 +28,7 @@ Question: If a player leaves the Sleeper roster but the last provider value is o
 
 Recommended: Keep the holding open in `Needs review` state and show the last known value and its age. Let the next normal provider capture resolve it when possible. If the provider no longer returns the departed player, offer that last value as a one-click explicit correction rather than silently treating it as current.
 
-Answer: Pending
+Answer: that sounds good.
 
 ## 4. How should future picks be valued before draft order is known?
 
@@ -36,7 +36,7 @@ Question: Should a pick such as your 2027 first use the provider's generic first
 
 Recommended: Preserve the real Sleeper identity by season, round, and original team. Attach the provider's explicitly labeled generic value while draft order is unknown and mark it provisional. Start a distinct exact-slot series once the order is set. When the pick is used, convert its latest confirmed value in each provider/context into the drafted player's entry basis, as you specified.
 
-Answer: Pending
+Answer: You got it. It would be good to also project the pick cause these platforms differeneitate early, mid, late round picks. Sleeper will always forecast the playoff bracket. In this league we do a style of playoffs that can be seen https://github.com/capncrockett/league-for-all-seasons and here if it's helpful https://league-for-all-seasons.vercel.app/playoffs/live
 
 ## 5. Where should the first scheduled browser worker run?
 
@@ -44,4 +44,4 @@ Question: Can the first 4:00 AM capture worker run in a container on your comput
 
 Recommended: Start with a local container or self-hosted runner that retains the authenticated browser sessions. Run at 4:00 AM Pacific, retry once at 4:30 AM, and upload only validated snapshots to the private hosted app. Your Eugene Art House workflow is a useful model for bounded Playwright execution, but its GitHub-hosted runner starts fresh and does not need to preserve a paid login session.
 
-Answer: Pending
+Answer: As long as Github or Vercel can offer it for free we'll do it that way. For now yes, since we're still in MVP, we can just run it locally.

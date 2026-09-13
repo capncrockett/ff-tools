@@ -15,6 +15,7 @@ Adapted from Grundle Ball's current AGENTS.md and docs/agent-workflow.md (2026-0
 7. Commit, push, merge, or deploy only when asked. Feature branches use `feat/<scope>`. Releases use `release/MAJOR.MINOR.PATCH` with the root package version as canonical. See [versioning](docs/versioning.md).
    User authorized frequent implementation checkpoints on 2026-09-05. Commit each working, verified slice during this MVP; do not wait for another permission question. Push/merge/deploy remain separate actions.
 8. Never use Unicode em dashes or en dashes in maintained files or responses. Use ASCII hyphen-minus.
+9. Claude and Codex share this working tree. Read [the agent channel](docs/agent-channel.md) before your first edit, claim the paths you will touch, and answer questions addressed to you there. Prefer a separate `git worktree` for anything beyond a couple of files.
 
 Use `rg` for exact names, paths, keys, and exhaustive matches. When the wording or location is unknown, or the answer depends on relationships across files, use the local zvec-grep index for one focused semantic search and verify the result with `rg` or direct file reads. Run `npm run search:index` to create or refresh the ignored local index. Do not use remote embeddings for this repository without explicit user approval.
 

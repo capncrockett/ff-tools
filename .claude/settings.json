@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.local/**)",
+      "Read(./prisma/*.db)",
+      "Read(./prisma/*.db-journal)",
+      "Read(./prisma/*.db-wal)",
+      "Read(./prisma/*.db-shm)",
+      "Bash(cat .env*)",
+      "Bash(cat ./.env*)",
+      "Bash(type .env*)",
+      "Bash(sed:* .env*)",
+      "Bash(grep:* .env*)",
+      "Bash(head .env*)",
+      "Bash(tail .env*)",
+      "Bash(Get-Content .env*)",
+      "Bash(cat .local/*)",
+      "Bash(cat ./.local/*)",
+      "Bash(node -e:*)",
+      "Bash(node --eval:*)",
+      "Bash(node -p:*)",
+      "Bash(python -c:*)",
+      "Bash(python3 -c:*)"
+    ]
+  }
+}

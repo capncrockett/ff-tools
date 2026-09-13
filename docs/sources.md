@@ -36,7 +36,7 @@ On 2026-09-08, authenticated live checks verified the rankings controls and offi
 
 MVP acceptance on 2026-09-05: a complete Dynasty GM CLI capture and the approved DTC browser import each saved 29 players. The official DTC export flow preserves those canonical Sleeper identities and the existing DTC valuation context. This MVP does not invent a value for the unsupported roster entry or for picks. A whole-market watchlist is a pending decision.
 
-Use the UI or `npm run sync:nerds` / `npm run sync:calc`. A shared SQLite reservation enforces at least 60 minutes between attempts per source, including failures, CLI calls, and app restarts. There is no force-refresh bypass. The user now prefers nightly collection for the hosted product; that scheduler and hosting transition are recorded in the next slice, not enabled in this local MVP.
+Use the UI, `npm run sync:nerds` / `npm run sync:calc`, or the optional [local nightly worker](local-capture-worker.md). A shared SQLite reservation enforces at least 60 minutes between attempts per source, including failures, CLI calls, and app restarts. There is no force-refresh bypass. The worker attempts at 04:00 Pacific and permits one temporary-unavailability retry after the full hour, within a 04:00-06:00 window. Access and parser failures pause automatic collection until a successful manual capture. Hosted collection remains future work.
 
 Login, MFA/challenges, rate limits, subscription problems, and parser changes stop capture. Previously saved history remains available. There is no stealth/proxy/challenge-bypass service. The UI shows the controlled failure and next eligible time.
 

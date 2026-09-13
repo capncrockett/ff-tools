@@ -17,6 +17,7 @@ The active MVP is the dynasty value tracker. Other experiments remain parked.
 - [x] Add source-specific player value trend lines with scoring-format and position filters.
 - [x] Reconcile Sleeper additions and removals into player holdings, with provider-specific fresh-value rules, replay protection, and stale-value review.
 - [x] Group each acquisition into one player row with separate Dynasty GM and DTC return columns.
+- [x] Add an optional local 04:00 Pacific capture worker, bounded retry, persisted scheduling guards, and read-only planning command.
 
 ## Confirmed next directions
 
@@ -25,7 +26,7 @@ The completed [initial Grill Me document](docs/archive/grill-me-dynasty-tracker-
 - [ ] Track owned draft picks, then convert a used pick holding into the drafted player's holding while preserving the transaction history.
 - [ ] Add acquisition targets later; current scope remains the owned roster.
 - [ ] Add a source-truth review queue for ambiguous player mappings and acquisition corrections. Continue unambiguous automation without manual confirmation.
-- [ ] Design nightly capture and Vercel hosting with durable storage, exact-user access, and a stateful browser worker. Attempt at 4:00 AM Pacific and retry once after failure.
+- [ ] Design Vercel hosting with durable storage, exact-user access, and upload from the local browser worker. Local nightly execution is implemented; hosted collection and service installation remain separate.
 - [x] Add in-app target, opposite-provider-trend, 10% sharp-move, and 36-hour stale-data alerts. Decide later whether any should be delivered elsewhere.
 - [ ] Define backup/restore UX.
 

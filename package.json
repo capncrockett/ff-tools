@@ -19,6 +19,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "sync:nerds": "tsx src/server/jobs/manualSync.ts dynasty-nerds",
     "sync:calc": "tsx src/server/jobs/manualSync.ts dynasty-calculator",
+    "capture:worker": "tsx src/server/jobs/captureWorker.ts",
+    "capture:plan": "tsx src/server/jobs/captureWorker.ts --dry-run",
     "players:seed": "tsx src/server/jobs/seedPlayers.ts",
     "db:deploy": "node scripts/db-deploy.mjs",
     "browser:install": "playwright install chromium",

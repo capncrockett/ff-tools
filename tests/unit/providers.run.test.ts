@@ -4,6 +4,8 @@ import { PrismaClient } from '@prisma/client'
 import { syncSource, getSourceStatuses } from '../../src/server/services/sync'
 import { ProviderError, type ValueProvider } from '../../src/server/providers/types'
 import { createApp } from '../../src/server/app'
+import { runCaptureWorkerTick } from '../../src/server/services/captureWorker'
+import * as syncService from '../../src/server/services/sync'
 const db = new PrismaClient()
 const provider: ValueProvider = {
   name: 'dynasty-nerds',
@@ -192,4 +194,117 @@ test('tracked providers share the persisted Sleeper roster with the capture', as
     }),
   )
   expect(await db.holding.count()).toBe(1)
+})
+
+describe('local scheduled worker', () => {
+  const morning = new Date('2026-09-12T11:00:00Z')
+  const providers = {
+    'dynasty-nerds': provider,
+    'dynasty-calculator': {
+      name: 'dynasty-calculator',
+      run: jest.fn(async () => ({ ...(await provider.run()), source: 'dynasty-calculator' })),
+    } as ValueProvider,
+  }
+  beforeEach(() => {
+    jest.useFakeTimers({
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'clearImmediate',
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'performance',
+        'queueMicrotask',
+        'hrtime',
+      ],
+    })
+    jest.setSystemTime(morning)
+    jest.spyOn(syncService, 'sourceConfigured').mockReturnValue(true)
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+    jest.useRealTimers()
+  })
+
+  test('dry-run has no writes or provider calls; repeated ticks and restarts do not repeat success', async () => {
+    const plan = await runCaptureWorkerTick(db, providers, { dryRun: true })
+    expect(plan.map((report) => report.status)).toEqual(['due', 'due'])
+    expect(await db.syncRun.count()).toBe(0)
+    expect(provider.run).not.toHaveBeenCalled()
+    expect((await runCaptureWorkerTick(db, providers)).map((report) => report.status)).toEqual([
+      'saved',
+      'saved',
+    ])
+    jest.setSystemTime(new Date(+morning + 3_600_000))
+    const restarted = new PrismaClient()
+    try {
+      expect(
+        (await runCaptureWorkerTick(restarted, providers)).every(
+          (report) => report.status === 'waiting',
+        ),
+      ).toBe(true)
+    } finally {
+      await restarted.$disconnect()
+    }
+    expect(await db.syncRun.count()).toBe(2)
+    // Direct scheduled calls enforce the same policy inside the reservation transaction.
+    await expect(
+      syncSource(db, 'dynasty-nerds', provider, { scheduled: true }),
+    ).rejects.toMatchObject({ status: 429 })
+  })
+
+  test('one provider failure does not block the other; transient failure gets only one retry', async () => {
+    const failing: ValueProvider = {
+      name: 'dynasty-nerds',
+      run: jest.fn(async () => {
+        throw new ProviderError('unavailable', 'Provider is temporarily unavailable.')
+      }),
+    }
+    const sources = { ...providers, 'dynasty-nerds': failing }
+    expect((await runCaptureWorkerTick(db, sources)).map((report) => report.status)).toEqual([
+      'failed',
+      'saved',
+    ])
+    expect((await runCaptureWorkerTick(db, sources))[0].status).toBe('waiting')
+    jest.setSystemTime(new Date(+morning + 3_600_000))
+    expect((await runCaptureWorkerTick(db, sources))[0].status).toBe('failed')
+    expect((await runCaptureWorkerTick(db, sources))[0].status).toBe('waiting')
+    expect(failing.run).toHaveBeenCalledTimes(2)
+    expect(await db.syncRun.count({ where: { sourceName: 'dynasty-nerds' } })).toBe(2)
+  })
+
+  test('challenge stays paused across nights until a manual capture verifies recovery', async () => {
+    const failing: ValueProvider = {
+      name: 'dynasty-nerds',
+      run: jest.fn(async () => {
+        throw new ProviderError('challenge', 'Resolve the browser challenge manually.')
+      }),
+    }
+    await runCaptureWorkerTick(db, { ...providers, 'dynasty-nerds': failing })
+    expect(await db.syncRun.findFirst({ where: { sourceName: 'dynasty-nerds' } })).toMatchObject({
+      failureCode: 'challenge',
+    })
+    jest.setSystemTime(new Date(+morning + 24 * 3_600_000))
+    expect((await runCaptureWorkerTick(db, providers))[0].status).toBe('waiting')
+    await syncSource(db, 'dynasty-nerds', provider)
+    jest.setSystemTime(new Date(+morning + 48 * 3_600_000))
+    expect((await runCaptureWorkerTick(db, providers))[0].status).toBe('saved')
+  })
+
+  test('unconfigured sources, shutdown, and daytime checks never launch a browser', async () => {
+    jest.mocked(syncService.sourceConfigured).mockReturnValue(false)
+    expect(
+      (await runCaptureWorkerTick(db, providers)).every((report) => report.status === 'waiting'),
+    ).toBe(true)
+    jest.mocked(syncService.sourceConfigured).mockReturnValue(true)
+    expect(await runCaptureWorkerTick(db, providers, { stopped: () => true })).toEqual([])
+    jest.setSystemTime(new Date('2026-09-12T20:00:00Z'))
+    expect(
+      (await runCaptureWorkerTick(db, providers)).every((report) => report.status === 'waiting'),
+    ).toBe(true)
+    expect(await db.syncRun.count()).toBe(0)
+    expect(provider.run).not.toHaveBeenCalled()
+  })
 })

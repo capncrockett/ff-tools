@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { AxiosInstance } from 'axios'
 import type { PrismaClient } from '@prisma/client'
+import { captureWindowStart, decideScheduledCapture } from '../../shared/captureSchedule.js'
 import {
   sourceLabels,
   sourceSchema,
@@ -56,7 +57,7 @@ export async function syncSource(
   db: PrismaClient,
   source: SourceName,
   provider: ValueProvider,
-  options?: { headless?: boolean; rosterHttp?: AxiosInstance },
+  options?: { headless?: boolean; rosterHttp?: AxiosInstance; scheduled?: boolean },
 ) {
   // Reserve in SQLite, so a CLI and API process cannot both launch the same provider.
   const run = await db.$transaction(async (tx) => {
@@ -64,6 +65,15 @@ export async function syncSource(
       where: { sourceName: source },
       orderBy: { startedAt: 'desc' },
     })
+    if (options?.scheduled) {
+      const now = new Date()
+      const start = captureWindowStart(now)
+      const attempts = start
+        ? await tx.syncRun.findMany({ where: { sourceName: source, startedAt: { gte: start } } })
+        : []
+      const decision = decideScheduledCapture(now, last, attempts, syncSuccessMs)
+      if (!decision.due) throw new DataError(decision.reason, 429)
+    }
     const until = last
       ? +last.startedAt + (last.status === 'success' ? syncSuccessMs : syncFailureMs)
       : 0
@@ -75,6 +85,7 @@ export async function syncSource(
     return tx.syncRun.create({
       data: {
         sourceName: source,
+        startedAt: new Date(),
         status: 'running',
         message: 'Reading the selected provider view.',
       },
@@ -128,7 +139,12 @@ export async function syncSource(
         : 'Capture failed validation or the browser was unavailable. No snapshot was saved.'
     await db.syncRun.update({
       where: { id: run.id },
-      data: { status: 'failed', message, finishedAt: new Date() },
+      data: {
+        status: 'failed',
+        message,
+        failureCode: error instanceof ProviderError ? error.code : 'validation',
+        finishedAt: new Date(),
+      },
     })
     throw new DataError(message, 502)
   }

@@ -105,6 +105,7 @@ model SyncRun {
   status     String
   message    String
   saved      Int       @default(0)
+  failureCode String?
 
   @@index([sourceName, startedAt])
 }

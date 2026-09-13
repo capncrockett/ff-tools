@@ -21,7 +21,9 @@ A `Holding` is one source/context side of a player acquisition, with portfolio, 
 
 `RosterSyncState` enforces one Sleeper roster and transaction refresh per hour across both paid-provider captures. `RosterMovement` stores one add or removal per player, with the Sleeper transaction ID used only for traceability and replay protection. `MovementResolution` applies each provider/context independently. Current players begin at the first saved browser observation. Later additions use the first observation within 36 hours after the move. Removals use the last observation within 36 hours before the move. Missing, stale, unmatched, or unexplained changes stay visible for review. An explicit action can accept a stale last-known removal value.
 
-A `SyncRun` reserves an attempt before opening a browser, then records a controlled success/failure message. All processes consult the same SQLite record. No attempt starts within one hour of the previous source attempt, including interrupted or failed runs. A crashed run becomes eligible after the hour; there is no automatic retry.
+A `SyncRun` reserves an attempt before opening a browser, then records a controlled success/failure message and nullable failure classification. All processes consult the same SQLite record. No attempt starts within one hour of the previous source attempt, including interrupted or failed runs. A crashed run becomes eligible for manual recovery after the hour.
+
+The optional [local worker](local-capture-worker.md) polls eligibility once per minute during 04:00-06:00 Pacific. Scheduling policy is pure code in `src/shared/captureSchedule.ts`; orchestration is in `src/server/services/captureWorker.ts`. Eligibility is rechecked inside the existing reservation transaction. All source attempts in the window consume a two-attempt nightly budget; any success finishes that night's work. Only classified temporary unavailability gets one retry after the shared cooldown. Other failures require a successful manual capture before automatic collection resumes. Worker execution is explicitly started through its CLI, never through app startup or page requests.
 
 ## Value semantics
 

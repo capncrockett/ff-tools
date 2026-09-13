@@ -40,7 +40,7 @@ Each provider and scoring context keeps a separate series. DTC's imported league
 
 See [source behavior and limitations](docs/sources.md).
 
-DTC capture opens its official rankings page, explicitly selects and verifies 12-team `.5 PPR` Standard/1QB settings, and downloads the QB, RB, WR, and TE exports in memory. It matches those rows to the current Sleeper roster before saving. The deeper position exports cover 29 of the current 30 players; Jacob Saylors is absent from DTC and keeps a missing DTC value. Saved history remains available if a later download or match fails. The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
+DTC capture opens its official rankings page, explicitly selects and verifies 12-team `.5 PPR` Standard/1QB settings, and downloads the QB, RB, WR, and TE exports in memory. It matches those rows to the current Sleeper roster before saving. The September 8 live check covered 29 of 30 players; Jacob Saylors was absent from DTC. Known export absences can be explicitly configured by canonical ID using `DTC_ALLOWED_MISSING_SLEEPER_IDS` in ignored `.env.local`. Every allowed omission appears in the capture status; any unexpected missing player stops the snapshot. Saved history remains available if a later download or match fails. See [source limits](docs/sources.md#limits-and-failures). The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
 
 ## Import existing observations
 

@@ -101,7 +101,9 @@ test('DTC capture obeys cooldown and clears its failure flag after a successful 
                 ...s,
                 nextAllowedAt,
                 status: recovered ? 'success' : 'failed',
-                message: recovered ? 'Saved 29 player observations.' : s.message,
+                message: recovered
+                  ? 'Saved 29 player observations. DTC coverage: 29 of 30 owned players. Missing DTC values (configured exceptions): Fixture Runner (RB, Sleeper 999). No values were invented for these players.'
+                  : s.message,
               }
             : s,
         ),
@@ -120,8 +122,14 @@ test('DTC capture obeys cooldown and clears its failure flag after a successful 
   await expect(dtc).toContainText('Connected')
   await expect(dtc).not.toContainText('Last DTC capture failed.')
   await expect(dtc).not.toContainText('Fixture failure')
+  await expect(dtc).toContainText('DTC coverage: 29 of 30 owned players.')
+  await expect(dtc).toContainText('Missing DTC values (configured exceptions): Fixture Runner')
   await expect(dtc).toContainText('Next capture')
   await expect(dtc.getByRole('button', { name: 'Capture values', exact: true })).toBeDisabled()
+  await page.setViewportSize({ width: 375, height: 812 })
+  await expect(dtc.getByRole('status')).toBeVisible()
+  await expect(dtc.getByRole('status')).toContainText('Fixture Runner')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 })
 
 test('help supports hover, keyboard dismissal, and pointer movement into the tooltip', async ({

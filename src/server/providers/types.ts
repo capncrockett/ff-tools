@@ -7,11 +7,14 @@ export type ProviderRunOptions = {
   sleeperRoster?: CanonicalPlayer[]
 }
 
+// Capture diagnostics are saved with the run, never mixed into valuation identity.
+export type ProviderSnapshot = SnapshotInput & { warnings?: string[] }
+
 export interface ValueProvider {
   name: SourceName
   tracksSleeperRoster?: boolean
   needsSleeperRoster?: boolean
-  run(options?: ProviderRunOptions): Promise<SnapshotInput>
+  run(options?: ProviderRunOptions): Promise<ProviderSnapshot>
 }
 
 export class ProviderError extends Error {

@@ -373,6 +373,11 @@ export default function ValueTracker() {
                 latest error and next attempt time are below.
               </p>
             )}
+            {s.status === 'success' && (
+              <p className="mt-3 break-words text-xs leading-relaxed" role="status">
+                {s.message}
+              </p>
+            )}
             <div className="source-card-bottom">
               <p>
                 {s.status === 'failed'

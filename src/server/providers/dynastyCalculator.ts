@@ -2,11 +2,10 @@ import type { AxiosInstance } from 'axios'
 import axios from 'axios'
 import type { Download, Locator, Page } from 'playwright'
 import { z } from 'zod'
-import type { SnapshotInput } from '../../shared/tracker.js'
 import { sleeperLeagueId, sleeperLeagueName, sleeperOwnerId } from '../config.js'
 import { loadSleeperPlayers, type CanonicalPlayer } from '../services/players.js'
 import { checkAccess, credentials, withProviderPage } from './browser.js'
-import { ProviderError, type ValueProvider } from './types.js'
+import { ProviderError, type ProviderSnapshot, type ValueProvider } from './types.js'
 
 const supportedPositions = ['QB', 'RB', 'WR', 'TE'] as const
 type SupportedPosition = (typeof supportedPositions)[number]
@@ -119,11 +118,23 @@ function playerKey(name: string, position: string, removeSuffix = false) {
   return `${normalized}:${position}`
 }
 
+export function parseDtcAllowedMissingIds(raw = ''): string[] {
+  if (!raw.trim()) return []
+  const ids = raw.split(',').map((id) => id.trim())
+  if (ids.length > 10 || ids.some((id) => !/^\d+$/.test(id)))
+    throw new ProviderError(
+      'configuration',
+      'DTC_ALLOWED_MISSING_SLEEPER_IDS must contain at most 10 comma-separated numeric Sleeper IDs.',
+    )
+  return [...new Set(ids)]
+}
+
 export function buildDtcSnapshot(
   rankings: DtcRankingRow[],
   roster: CanonicalPlayer[],
   now = new Date(),
-): SnapshotInput {
+  allowedMissingSleeperIds: readonly string[] = [],
+): ProviderSnapshot {
   const eligibleRoster = roster.filter((player) =>
     supportedPositions.includes(player.position as SupportedPosition),
   )
@@ -141,6 +152,7 @@ export function buildDtcSnapshot(
   }
 
   const matchedRows = new Set<DtcRankingRow>()
+  const missing: CanonicalPlayer[] = []
   const records = eligibleRoster.flatMap((player) => {
     const exact = rankingsByPlayer.get(playerKey(player.name, player.position ?? '')) ?? []
     const candidates = exact.length
@@ -156,6 +168,7 @@ export function buildDtcSnapshot(
         `DTC matched more than one roster player to ${row.playerName}.`,
       )
     if (row) matchedRows.add(row)
+    else missing.push(player)
     return row
       ? [
           {
@@ -169,11 +182,16 @@ export function buildDtcSnapshot(
         ]
       : []
   })
-  const missing = eligibleRoster.length - records.length
-  if (missing > 1)
+  const allowed = new Set(allowedMissingSleeperIds)
+  const unexpected = missing.filter((player) => !allowed.has(player.sleeperId))
+  const describe = (players: CanonicalPlayer[]) =>
+    players
+      .map((player) => `${player.name} (${player.position}, Sleeper ${player.sleeperId})`)
+      .join('; ')
+  if (unexpected.length || !records.length)
     throw new ProviderError(
       'format',
-      `DTC rankings matched ${records.length} of ${eligibleRoster.length} owned players. No snapshot saved.`,
+      `DTC rankings matched ${records.length} of ${eligibleRoster.length} owned players. No snapshot saved. Missing: ${describe(missing)}. Review the export and player mapping before allowing a known absence.`,
     )
 
   return {
@@ -199,6 +217,13 @@ export function buildDtcSnapshot(
       },
     },
     records,
+    ...(missing.length
+      ? {
+          warnings: [
+            `DTC coverage: ${records.length} of ${eligibleRoster.length} owned players. Missing DTC values (configured exceptions): ${describe(missing)}. No values were invented for these players.`,
+          ],
+        }
+      : {}),
   }
 }
 
@@ -372,6 +397,7 @@ export const dynastyCalculatorProvider: ValueProvider = {
   tracksSleeperRoster: true,
   needsSleeperRoster: true,
   async run(options = {}) {
+    const allowedMissingIds = parseDtcAllowedMissingIds(process.env.DTC_ALLOWED_MISSING_SLEEPER_IDS)
     if (!/^\d+$/.test(sleeperLeagueId) || !/^\d+$/.test(sleeperOwnerId))
       throw new ProviderError('configuration', 'Sleeper league and owner IDs must be numeric.')
     const roster =
@@ -399,7 +425,7 @@ export const dynastyCalculatorProvider: ValueProvider = {
         stage = 'downloading the position rankings'
         const rankings = await downloadDtcRankingExports(page)
         stage = 'matching rankings to the Sleeper roster'
-        return buildDtcSnapshot(rankings, roster)
+        return buildDtcSnapshot(rankings, roster, new Date(), allowedMissingIds)
       } catch (error) {
         if (error instanceof ProviderError) throw error
         throw new ProviderError(

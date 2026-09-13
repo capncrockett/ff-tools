@@ -108,7 +108,10 @@ export async function syncSource(
         rosterMessage = ' Sleeper roster check needs attention.'
       }
     }
-    const snapshot = await provider.run({ headless: options?.headless, sleeperRoster })
+    const { warnings = [], ...snapshot } = await provider.run({
+      headless: options?.headless,
+      sleeperRoster,
+    })
     if (snapshot.source !== source)
       throw new ProviderError('format', 'Provider returned the wrong source. No values saved.')
     const result = await saveSnapshot(db, snapshot, 'browser')
@@ -125,12 +128,14 @@ export async function syncSource(
       where: { id: run.id },
       data: {
         status: 'success',
-        message: `Saved ${result.saved} player observations.${rosterMessage}`,
+        message: [`Saved ${result.saved} player observations.${rosterMessage}`, ...warnings].join(
+          ' ',
+        ),
         saved: result.saved,
         finishedAt: new Date(),
       },
     })
-    return result
+    return warnings.length ? { ...result, warnings } : result
   } catch (error) {
     // Browser exceptions can contain URLs with tokens or filled field values. Store only controlled messages.
     const message =

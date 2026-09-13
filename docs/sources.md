@@ -32,7 +32,11 @@ Each snapshot records the configured Sleeper league/owner identity and the verif
 
 ## Limits and failures
 
-On 2026-09-08, authenticated live checks verified the rankings controls and official CSV downloads. Overall Top 300 covered only 21 of 30 owned players. The deeper position exports recovered eight more and cover 29 of 30. Jacob Saylors is absent from all five checked exports. The adapter uses the four position exports and fails the entire snapshot if more than one eligible roster player is missing or a name-plus-position match is ambiguous.
+On 2026-09-08, authenticated live checks verified the rankings controls and official CSV downloads. Overall Top 300 covered only 21 of 30 owned players. The deeper position exports recovered eight more and cover 29 of 30. Jacob Saylors was absent from all five checked exports.
+
+The adapter uses the four position exports and requires every eligible roster player to match unless that exact canonical Sleeper ID is explicitly listed in `DTC_ALLOWED_MISSING_SLEEPER_IDS` in ignored `.env.local`. The optional setting accepts up to 10 comma-separated numeric IDs and defaults to no exceptions. Configure it only after reviewing an actual export absence; it is not a name-matching override. An ambiguous match, an unexpected absence, or an entirely empty match stops the snapshot. Failure messages identify the missing players for review without changing saved history. A successful partial capture names every allowed omission in the persisted source status and CLI/API result. Allowed players are still captured when they appear in a later export. Coverage warnings never change the scoring context or create zero-valued observations.
+
+On 2026-09-13, the normal guarded DTC CLI capture saved 29 fresh observations using the existing scoring context. The known unavailable player remained absent and was explicitly identified in the saved source status. The official position-export flow completed successfully; no cooldown bypass or speculative endpoint access was used.
 
 MVP acceptance on 2026-09-05: a complete Dynasty GM CLI capture and the approved DTC browser import each saved 29 players. The official DTC export flow preserves those canonical Sleeper identities and the existing DTC valuation context. This MVP does not invent a value for the unsupported roster entry or for picks. A whole-market watchlist is a pending decision.
 

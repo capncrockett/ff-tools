@@ -6,6 +6,7 @@ import { ProviderError, type ValueProvider } from '../../src/server/providers/ty
 import { createApp } from '../../src/server/app'
 import { runCaptureWorkerTick } from '../../src/server/services/captureWorker'
 import * as syncService from '../../src/server/services/sync'
+import { buildDtcSnapshot } from '../../src/server/providers/dynastyCalculator'
 const db = new PrismaClient()
 const provider: ValueProvider = {
   name: 'dynasty-nerds',
@@ -134,6 +135,63 @@ test('reading the dashboard and dry-run never invokes a provider', async () => {
     .send({})
     .expect(200)
   expect(provider.run).not.toHaveBeenCalled()
+})
+
+test('DTC coverage warnings persist across reloads and failed captures preserve saved values', async () => {
+  const rankings = [
+    {
+      rank: 1,
+      playerName: 'Fixture Receiver',
+      position: 'WR' as const,
+      team: 'FA',
+      age: '25',
+      value: 0,
+    },
+  ]
+  const roster = [
+    { sleeperId: '1', name: 'Fixture Receiver', position: 'WR' },
+    { sleeperId: '2', name: 'Fixture Missing', position: 'RB' },
+  ]
+  const partial: ValueProvider = {
+    name: 'dynasty-calculator',
+    run: async () => buildDtcSnapshot(rankings, roster, new Date(), ['2']),
+  }
+  const result = await syncSource(db, 'dynasty-calculator', partial)
+  expect(result).toMatchObject({ saved: 1, warnings: [expect.stringContaining('Fixture Missing')] })
+  const first = await db.valuation.findMany()
+  expect(first).toHaveLength(1)
+  expect(first[0].value).toBe(0)
+  const dashboard = (await request(createApp(db)).get('/api/tracker').expect(200)).body
+  expect(
+    dashboard.sources.find((s: { source: string }) => s.source === 'dynasty-calculator'),
+  ).toMatchObject({
+    status: 'success',
+    message: expect.stringContaining('Missing DTC values (configured exceptions): Fixture Missing'),
+  })
+  const snapshot = await db.snapshot.findFirstOrThrow()
+  expect(snapshot.contextJson).not.toContain('Fixture Missing')
+  await db.syncRun.updateMany({ data: { startedAt: new Date(Date.now() - 3_600_001) } })
+  const unexpected: ValueProvider = {
+    ...partial,
+    run: async () =>
+      buildDtcSnapshot(
+        rankings,
+        [...roster, { sleeperId: '3', name: 'Fixture New Missing', position: 'TE' }],
+        new Date(),
+        ['2'],
+      ),
+  }
+  await expect(syncSource(db, 'dynasty-calculator', unexpected)).rejects.toThrow(
+    'Fixture New Missing',
+  )
+  expect(await db.valuation.findMany()).toEqual(first)
+  expect(await db.snapshot.count()).toBe(1)
+  const status = (await getSourceStatuses(db)).find((s) => s.source === 'dynasty-calculator')!
+  expect(status).toMatchObject({
+    status: 'failed',
+    message: expect.stringContaining('No snapshot saved'),
+    nextAllowedAt: expect.any(String),
+  })
 })
 
 test('tracked providers share the persisted Sleeper roster with the capture', async () => {

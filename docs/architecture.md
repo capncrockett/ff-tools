@@ -39,7 +39,7 @@ Unrealized return uses the latest observation at or after acquisition. Realized 
 
 In-app alerts use saved data only. Sharp movement means at least 10% since the preceding observation in the same series. Provider disagreement requires fresh observations, opposite baseline-growth directions, and at least a 10 percentage-point spread. Raw provider point values are never compared.
 
-Only the provider-supported owned roster is captured today. The persisted Sleeper check supplies DTC's roster filter, so DTC does not make a second roster request. A second provider capture within the hour reuses saved roster state while applying any newly available values. A missing row is never filled with zero. Departed players keep their prior history after their tracked acquisition is closed; whole-market scouting is future scope.
+Only the provider-supported owned roster is captured today. The persisted Sleeper check supplies DTC's roster filter, so DTC does not make a second roster request. A second provider capture within the hour reuses saved roster state while applying any newly available values. DTC requires a complete match except for explicitly configured canonical IDs of known export absences. Provider warnings are stored in the sync-run message and returned with the capture result, separately from immutable snapshot identity. A missing row is never filled with zero. Departed players keep their prior history after their tracked acquisition is closed; whole-market scouting is future scope.
 
 ## Operational properties
 

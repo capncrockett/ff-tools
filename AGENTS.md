@@ -11,7 +11,7 @@ Adapted from Grundle Ball's current AGENTS.md and docs/agent-workflow.md (2026-0
 3. Keep pure calculations in `src/shared`, provider access in `src/server/providers`, persistence in services, and rendering in `src/web`.
 4. Prefer DaisyUI and accessible, dense, responsive interfaces. Label data freshness, missing observations, and provisional interpretations.
 5. Use fixture-based tests while developing. Never contact paid providers from tests, builds, doctor, or page reloads.
-6. Run `npm run verify` before handoff; include `npm run test:e2e` for visible UI changes. Do not bypass checks or hooks.
+6. Run `npm run verify -- --e2e` before every commit and handoff. The user asked on 2026-09-13 for e2e runs early and often, not only for visible UI changes. Do not bypass checks or hooks.
 7. Commit, push, merge, or deploy only when asked. Feature branches use `feat/<scope>`. Releases use `release/MAJOR.MINOR.PATCH` with the root package version as canonical. See [versioning](docs/versioning.md).
    User authorized frequent implementation checkpoints on 2026-09-05. Commit each working, verified slice during this MVP; do not wait for another permission question. Push/merge/deploy remain separate actions.
 8. Never use Unicode em dashes or en dashes in maintained files or responses. Use ASCII hyphen-minus.
@@ -21,6 +21,7 @@ Use `rg` for exact names, paths, keys, and exhaustive matches. When the wording 
 
 ## Data boundaries
 
+- `prisma/dev.db` is the user's real tracker database, and it has no backup. Run tests only through `npm test`, `npm run verify`, or `npm run test:e2e`, which create throwaway databases. Never run jest or another test runner directly; pass file arguments through the wrapper (`npm test -- tests/unit/foo.test.ts`). Never reset, push, migrate, seed, capture into, or delete the local database unless the user asks. On 2026-09-13 a direct jest run wiped it (S14). Jest and test-mode config guards now refuse, but do not rely on them.
 - Paid-provider credentials belong only in ignored `.env.local`; session state and databases are local and ignored. Never log credentials, tokens, request headers, full provider bodies, or account profiles.
 - Use normal authenticated browser flows and responses requested by those pages. No challenge bypass, stealth browser, rotating proxies, or speculative endpoint enumeration. Stop visibly on login/challenge/rate-limit/parser failures.
 - Source, valuation format, and observation timestamp are part of a value's identity. Never average raw provider scales or invent earlier observations.

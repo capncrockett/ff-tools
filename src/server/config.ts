@@ -6,6 +6,9 @@ if (process.env.NODE_ENV !== 'test') {
   config({ path: '.env.local', quiet: true })
   config({ path: '.env', quiet: true })
 }
+// Tests delete every tracker table, so test mode must never fall back to the real local database (S14).
+if (process.env.NODE_ENV === 'test' && !process.env.DATABASE_URL)
+  throw new Error('Test mode requires a throwaway DATABASE_URL. Run tests with npm test.')
 process.env.DATABASE_URL ??= 'file:./dev.db'
 
 export const localDir = path.resolve(process.cwd(), '.local')

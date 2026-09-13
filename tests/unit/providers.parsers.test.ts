@@ -88,7 +88,10 @@ test('a player present in the catalog but missing from the captured roster is no
     },
   }
   expect(() => parseNerdsRows(rows, listed, '273947', new Date(), sleeperRoster)).toThrow(
-    'roster value is missing',
+    expect.objectContaining({
+      code: 'unavailable',
+      message: expect.stringContaining('not on its copy of the owned roster yet'),
+    }),
   )
   expect(() => parseNerdsRows(rows.slice(0, 1), init, '273947', new Date(), sleeperRoster)).toThrow(
     'incomplete',
@@ -101,6 +104,19 @@ test('a player present in the catalog but missing from the captured roster is no
   expect(() => parseNerdsRows(rows, broken, '273947', new Date(), sleeperRoster)).toThrow(
     'metadata is incomplete',
   )
+})
+
+test('a Dynasty GM roster that still holds a departed Sleeper player is a temporary mismatch', () => {
+  // Sleeper traded the receiver away for a player Dynasty GM has not synced or does not list.
+  const traded = [sleeperRoster[0], { sleeperId: '104', name: 'Sample Arrival', position: 'TE' }]
+  expect(() => parseNerdsRows(rows, init, '273947', new Date(), traded)).toThrow(
+    expect.objectContaining({
+      code: 'unavailable',
+      message: expect.stringContaining('Sample Receiver is not on the Sleeper roster'),
+    }),
+  )
+  // Without the optional Sleeper roster there is nothing to compare, so verified rows still save.
+  expect(parseNerdsRows(rows, init, '273947').records).toHaveLength(2)
 })
 
 test('Dynasty GM canonical matching rejects ambiguous names and accepts unique suffix differences', () => {

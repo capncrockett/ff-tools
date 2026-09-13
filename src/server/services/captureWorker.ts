@@ -1,23 +1,57 @@
+import type { AxiosInstance } from 'axios'
 import type { PrismaClient } from '@prisma/client'
 import { sourceSchema, type SourceName } from '../../shared/tracker.js'
-import { captureWindowStart, decideScheduledCapture } from '../../shared/captureSchedule.js'
-import { syncSuccessMs } from '../config.js'
+import { rosterRefreshMs, sleeperLeagueId, sleeperOwnerId } from '../config.js'
 import type { ValueProvider } from '../providers/types.js'
-import { sourceConfigured, syncSource } from './sync.js'
+import { reconcileSleeperRoster } from './rosterAutomation.js'
+import { automaticCaptureDecision, sourceConfigured, syncSource } from './sync.js'
 import { DataError } from './valuations.js'
 
 export type WorkerReport = {
-  source: SourceName
-  status: 'waiting' | 'due' | 'saved' | 'failed'
+  source: SourceName | 'sleeper'
+  status: 'waiting' | 'due' | 'checked' | 'saved' | 'failed'
   message: string
+}
+
+// Detects new roster additions under the shared hourly Sleeper limit. Returns null while cooling down.
+async function checkSleeperRoster(
+  db: PrismaClient,
+  http: AxiosInstance | undefined,
+): Promise<WorkerReport | null> {
+  const state = await db.rosterSyncState.findFirst({
+    where: { leagueId: sleeperLeagueId, ownerId: sleeperOwnerId },
+    select: { lastCheckedAt: true },
+  })
+  if (state?.lastCheckedAt && +state.lastCheckedAt + rosterRefreshMs > Date.now()) return null
+  try {
+    const result = await reconcileSleeperRoster(db, { http })
+    return { source: 'sleeper', status: 'checked', message: result.message }
+  } catch (error) {
+    return {
+      source: 'sleeper',
+      status: error instanceof DataError && error.status === 429 ? 'waiting' : 'failed',
+      message: error instanceof DataError ? error.message : 'Sleeper roster check failed.',
+    }
+  }
 }
 
 export async function runCaptureWorkerTick(
   db: PrismaClient,
   providers: Record<SourceName, ValueProvider>,
-  options: { dryRun?: boolean; stopped?: () => boolean } = {},
+  options: { dryRun?: boolean; stopped?: () => boolean; rosterHttp?: AxiosInstance } = {},
 ): Promise<WorkerReport[]> {
   const reports: WorkerReport[] = []
+  // A dry run stays read-only and offline; it reports additions an earlier check already saved.
+  if (
+    !options.dryRun &&
+    !options.stopped?.() &&
+    sourceSchema.options.some(
+      (source) => providers[source].tracksSleeperRoster && sourceConfigured(source),
+    )
+  ) {
+    const roster = await checkSleeperRoster(db, options.rosterHttp)
+    if (roster) reports.push(roster)
+  }
   for (const source of sourceSchema.options) {
     if (options.stopped?.()) break
     if (!sourceConfigured(source)) {
@@ -28,15 +62,11 @@ export async function runCaptureWorkerTick(
       })
       continue
     }
-    const now = new Date()
-    const start = captureWindowStart(now)
-    const [latest, attempts] = await Promise.all([
-      db.syncRun.findFirst({ where: { sourceName: source }, orderBy: { startedAt: 'desc' } }),
-      start
-        ? db.syncRun.findMany({ where: { sourceName: source, startedAt: { gte: start } } })
-        : [],
-    ])
-    const decision = decideScheduledCapture(now, latest, attempts, syncSuccessMs)
+    const decision = await automaticCaptureDecision(
+      db,
+      source,
+      Boolean(providers[source].tracksSleeperRoster),
+    )
     if (!decision.due || options.dryRun) {
       reports.push({ source, status: decision.due ? 'due' : 'waiting', message: decision.reason })
       continue
@@ -46,6 +76,7 @@ export async function runCaptureWorkerTick(
       const result = await syncSource(db, source, providers[source], {
         headless: true,
         scheduled: true,
+        rosterHttp: options.rosterHttp,
       })
       reports.push({ source, status: 'saved', message: `Saved ${result.saved} observations.` })
     } catch (error) {

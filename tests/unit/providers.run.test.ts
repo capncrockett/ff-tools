@@ -362,6 +362,102 @@ describe('local scheduled worker', () => {
     expect((await runCaptureWorkerTick(db, providers))[0].status).toBe('saved')
   })
 
+  test('a Sleeper roster addition triggers one prompt daytime capture for roster-tracked providers', async () => {
+    const daytime = new Date('2026-09-12T20:00:00Z')
+    jest.setSystemTime(daytime)
+    for (const [sleeperId, name] of [
+      ['123', 'Sync Player'],
+      ['456', 'Arriving Player'],
+    ])
+      await db.player.create({ data: { sleeperId, name, position: 'WR', team: 'SEA' } })
+    let transactions: unknown[] = []
+    const rosterHttp = {
+      get: jest.fn(async (url: string) => {
+        if (url.endsWith('/state/nfl')) return { data: { week: 1 } }
+        if (url.endsWith('/rosters'))
+          return {
+            data: [
+              {
+                roster_id: 7,
+                owner_id: '82289736559247360',
+                players: transactions.length ? ['123', '456'] : ['123'],
+                taxi: [],
+                reserve: [],
+              },
+            ],
+          }
+        if (url.includes('/transactions/')) return { data: transactions }
+        return { data: { name: 'A League For All Seasons', season: '2026' } }
+      }),
+    } as unknown as AxiosInstance
+    const tracked: ValueProvider = {
+      name: 'dynasty-nerds',
+      tracksSleeperRoster: true,
+      run: jest.fn(async (options) => ({
+        source: 'dynasty-nerds',
+        capturedAt: new Date().toISOString(),
+        context: {
+          label: 'Fixture roster',
+          settings: { leagueId: '1378427936817815552', scope: 'owned-roster', scoring: 'ppr' },
+        },
+        records: (options?.sleeperRoster ?? []).map((player) => ({
+          sourceKey: `sleeper:${player.sleeperId}`,
+          sleeperId: player.sleeperId,
+          playerName: player.name,
+          position: 'WR' as const,
+          value: 40,
+        })),
+      })),
+    }
+    // Dynasty GM follows the roster; the untracked provider keeps nightly-only behavior.
+    const mixed = { ...providers, 'dynasty-nerds': tracked }
+    const statuses = async () =>
+      (await runCaptureWorkerTick(db, mixed, { rosterHttp })).map((r) => `${r.source}:${r.status}`)
+
+    expect(await statuses()).toEqual([
+      'sleeper:checked',
+      'dynasty-nerds:waiting',
+      'dynasty-calculator:waiting',
+    ])
+    transactions = [
+      {
+        transaction_id: 'fixture-trade',
+        type: 'trade',
+        status: 'complete',
+        status_updated: +daytime + 30 * 60_000,
+        adds: { '456': 7 },
+        drops: null,
+      },
+    ]
+    // Before the hourly Sleeper limit, the addition is not yet known.
+    jest.setSystemTime(new Date(+daytime + 3_600_000 - 1))
+    expect(await statuses()).toEqual(['dynasty-nerds:waiting', 'dynasty-calculator:waiting'])
+    jest.setSystemTime(new Date(+daytime + 3_600_000))
+    expect(await statuses()).toEqual([
+      'sleeper:checked',
+      'dynasty-nerds:saved',
+      'dynasty-calculator:waiting',
+    ])
+    expect(tracked.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sleeperRoster: expect.arrayContaining([expect.objectContaining({ sleeperId: '456' })]),
+      }),
+    )
+    expect(provider.run).not.toHaveBeenCalled()
+
+    jest.setSystemTime(new Date(+daytime + 3 * 3_600_000))
+    const later = await runCaptureWorkerTick(db, mixed, { rosterHttp })
+    expect(later.find((r) => r.source === 'dynasty-nerds')).toMatchObject({
+      status: 'waiting',
+      message: 'A capture already followed the latest Sleeper roster addition.',
+    })
+    // Outside the 36-hour entry window the addition no longer drives captures.
+    jest.setSystemTime(new Date(+daytime + 44 * 3_600_000))
+    const expired = await runCaptureWorkerTick(db, mixed, { rosterHttp })
+    expect(expired.find((r) => r.source === 'dynasty-nerds')?.message).toContain('capture window')
+    expect(tracked.run).toHaveBeenCalledTimes(1)
+  })
+
   test('unconfigured sources, shutdown, and daytime checks never launch a browser', async () => {
     jest.mocked(syncService.sourceConfigured).mockReturnValue(false)
     expect(

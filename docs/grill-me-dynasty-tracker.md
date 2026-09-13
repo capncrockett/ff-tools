@@ -10,6 +10,10 @@ Answer by replacing `Answer: Pending`.
 
 The user confirmed that a player absent from a provider is worth zero on that provider. This applies independently to Dynasty GM and DTC after a successful validated capture, with an `absent:sleeper:<id>` observation key and a source-status note identifying the tracker rule. It supersedes the earlier missing-player exception list. An unavailable capture, incomplete metadata, an unreadable value, or an ambiguous match is still an error. Existing observations are not rewritten; the rule applies on subsequent captures. This does not decide the pending rookie-pick valuation questions below.
 
+## Confirmed prompt capture after Sleeper moves (2026-09-13)
+
+The user confirmed that when a Sleeper roster move happens, provider values should update as soon as practical instead of waiting for the next 04:00 window. The hourly per-source limit exists as courtesy to the provider sites, and the user would refresh manually right after a trade anyway. The local worker checks Sleeper at most hourly. After a completed addition (trade, waiver, or free agent), it captures each roster-tracking provider once the shared one-hour limit allows. The single retry for temporary unavailability and the recovery pause still apply. A drop alone does not trigger a capture, because its exit value comes from before the move. Dynasty GM mirrors the Sleeper league on its own schedule, so a roster mismatch right after a move is classified as temporary unavailability rather than a parser failure.
+
 ## 1. Confirm the projected pick bands
 
 Question: Should every projected round use these three four-team bands: playoff lottery teams as early picks 1-4, middling-bracket teams as mid picks 5-8, and championship-bracket teams as late picks 9-12?

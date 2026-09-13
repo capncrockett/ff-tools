@@ -20,6 +20,18 @@ No active claims.
 
 ## Open questions
 
+### 2026-09-13 CLAUDE -> CODEX prompt capture after Sleeper additions
+
+The user confirmed a new rule, recorded in the Grill Me document: after a Sleeper roster move, update provider values as soon as practical instead of waiting for 04:00. The hourly limit is courtesy to the sites, and the user would refresh by hand after a trade anyway.
+
+- **Trigger.** `decideAdditionCapture` in `captureSchedule.ts` is a pure function beside the nightly rule. `automaticCaptureDecision` in `sync.ts` loads state for both rules and is used by the worker and by the reservation transaction. A capture is due when a completed non-baseline addition from the last 36 hours was detected after this source's last attempt. It uses the same recovery pause, one-hour limit, and single retry as the nightly window. It applies only to providers with `tracksSleeperRoster`. Drops do not trigger, because `applyRemoval` uses the value from before the move.
+- **Detection.** The worker calls `reconcileSleeperRoster` whenever the hourly Sleeper limit allows, but only if a roster-tracking provider is configured. Dry runs stay offline. `rosterMovement.createdAt` is now set from reconcile's `now` rather than the database default, so detection time and `syncRun.startedAt` share one clock. Worker reports can carry a `sleeper` row with status `checked`.
+- **Dynasty GM staleness.** A prompt capture is exactly when Dynasty GM's mirror of the league is most likely behind. The "catalog lists the player but the roster lacks them" failure moved from `format` to `unavailable`, since `format` would pause automation until a manual capture. A new check applies the same code when Dynasty GM still rosters a player the Sleeper roster no longer has. A persistent name or position mismatch now shows up there with the player named, instead of as a duplicate-resolution error from `saveSnapshot`.
+
+Q6 is narrower but still open. A trade or add/drop now fails temporarily while Dynasty GM is stale, instead of saving a zero. A pure addition with no drop can still produce a zero if `init.players` is league-scoped.
+
+Validation: `npm run verify -- --e2e` passed. No provider or Sleeper endpoint was contacted; the worker test uses an injected Sleeper transport. Claims released.
+
 ### 2026-09-13 CLAUDE -> CODEX absence-to-zero handoff
 
 The user asked Claude to finish your uncommitted absence-to-zero slice. I took over your claim, reviewed the diff, and committed it with one addition. Your implementation is otherwise unchanged.
@@ -32,6 +44,8 @@ The user asked Claude to finish your uncommitted absence-to-zero slice. I took o
 `parseNerdsRows` treats a Sleeper player missing from `init.players` as unlisted on the platform. `docs/sources.md` calls that response "minimal player and selected-league metadata". If the catalog covers only players rostered in the analyzer league, then a player added on Sleeper before Dynasty GM resyncs its league would get a zero instead of a stale-roster failure. I cannot check this without a live payload, and tests must not contact the provider.
 
 **Ask:** did your live checks show `init.players` covering the platform's full player pool, or only league rosters? If only league rosters, a catalog miss should probably fail as a stale provider roster rather than produce a zero.
+
+User direction (via Claude, 2026-09-13): update promptly after Sleeper moves; see the prompt-capture handoff above. That narrows this question without answering it.
 
 Answer: Pending
 

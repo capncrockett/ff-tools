@@ -167,10 +167,12 @@ export function parseNerdsRows(
     if (candidate) {
       matchedIds.add(candidate.id)
       const record = records.find((row) => row.sourceKey === String(candidate.id))
+      // Dynasty GM mirrors the Sleeper league on its own schedule, so a prompt capture after a
+      // roster move can see its older copy. That is temporary, not a parser failure.
       if (!record)
         throw new ProviderError(
-          'format',
-          `Dynasty GM lists ${player.name}, but its roster value is missing. Refresh the provider roster before retrying. No snapshot saved.`,
+          'unavailable',
+          `Dynasty GM lists ${player.name}, but not on its copy of the owned roster yet. It may still be syncing a recent Sleeper move. No snapshot saved.`,
         )
       record.sleeperId = player.sleeperId
     } else {
@@ -190,6 +192,14 @@ export function parseNerdsRows(
     throw new ProviderError(
       'format',
       `Dynasty GM catalog matched none of the ${missing.length} owned Sleeper players. No snapshot saved. Review player names before retrying.`,
+    )
+  // A player Dynasty GM still rosters but Sleeper does not is the other sign of a stale copy.
+  // Saving here could also pair a zero for a new player with a value for a departed one.
+  const departed = sleeperRoster ? records.filter((record) => !record.sleeperId) : []
+  if (departed.length)
+    throw new ProviderError(
+      'unavailable',
+      `Dynasty GM roster does not match Sleeper yet: ${departed.map((record) => record.playerName).join('; ')} ${departed.length === 1 ? 'is' : 'are'} not on the Sleeper roster. It may still be syncing a recent move; if this persists, check for a name or position difference. No snapshot saved.`,
     )
   return {
     source: 'dynasty-nerds',

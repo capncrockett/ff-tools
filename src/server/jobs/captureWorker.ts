@@ -17,7 +17,7 @@ try {
   const dryRun = args.includes('--dry-run')
   const once = args.includes('--once') || dryRun
   console.log(
-    'Local capture worker: 04:00-06:00 America/Los_Angeles; at most two attempts per source; one-hour minimum. Ctrl+C stops after the active capture.',
+    'Local capture worker: 04:00-06:00 America/Los_Angeles, and soon after a Sleeper roster addition (checked hourly); at most two attempts per trigger; one-hour minimum. Ctrl+C stops after the active capture.',
   )
   let previous = ''
   do {

@@ -317,6 +317,8 @@ async function saveRosterResult(
           ...movement,
           rosterSyncStateId: reserved.id,
           playerId: playerBySleeper.get(movement.sleeperPlayerId),
+          // Detection time, on the same clock as capture attempts that follow it.
+          createdAt: now,
         },
       })
     }

@@ -28,17 +28,20 @@ export function captureWindowStart(now: Date): Date | null {
   )
 }
 
+const paused: CaptureDecision = {
+  due: false,
+  reason: 'Automatic capture paused. Complete a successful manual capture to resume.',
+}
+const pausedForRecovery = (latest: CaptureAttempt | null) =>
+  latest?.status === 'failed' && latest.failureCode !== 'unavailable'
+
 export function decideScheduledCapture(
   now: Date,
   latest: CaptureAttempt | null,
   attempts: CaptureAttempt[],
   cooldownMs: number,
 ): CaptureDecision {
-  if (latest?.status === 'failed' && latest.failureCode !== 'unavailable')
-    return {
-      due: false,
-      reason: 'Automatic capture paused. Complete a successful manual capture to resume.',
-    }
+  if (pausedForRecovery(latest)) return paused
   const start = captureWindowStart(now)
   if (!start) return { due: false, reason: 'Waiting for the 04:00-06:00 Pacific capture window.' }
   if (attempts.some((attempt) => attempt.status === 'success'))
@@ -52,5 +55,38 @@ export function decideScheduledCapture(
   return {
     due: true,
     reason: attempts.length ? 'Single nightly retry is due.' : 'Nightly capture is due.',
+  }
+}
+
+// User-confirmed 2026-09-13: a Sleeper roster addition should get provider values promptly rather
+// than at the next nightly window. The hourly limit, recovery pause, and single retry still apply.
+// `attempts` are this source's attempts started at or after the addition was detected.
+export function decideAdditionCapture(
+  now: Date,
+  latest: CaptureAttempt | null,
+  attempts: CaptureAttempt[],
+  cooldownMs: number,
+): CaptureDecision {
+  if (pausedForRecovery(latest)) return paused
+  if (attempts.some((attempt) => attempt.status === 'success'))
+    return { due: false, reason: 'A capture already followed the latest Sleeper roster addition.' }
+  if (attempts.length >= 2)
+    return {
+      due: false,
+      reason:
+        'The capture and single retry after the latest Sleeper roster addition have been used.',
+    }
+  if (latest && +latest.startedAt + cooldownMs > +now)
+    return { due: false, reason: 'Waiting for the shared one-hour refresh limit.' }
+  if (attempts.some((attempt) => attempt.status === 'running'))
+    return {
+      due: false,
+      reason: 'An unfinished capture needs review; no automatic retry for this roster addition.',
+    }
+  return {
+    due: true,
+    reason: attempts.length
+      ? 'Single retry after a Sleeper roster addition is due.'
+      : 'A Sleeper roster addition needs fresh values.',
   }
 }

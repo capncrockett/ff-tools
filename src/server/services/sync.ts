@@ -1,15 +1,27 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { AxiosInstance } from 'axios'
-import type { PrismaClient } from '@prisma/client'
-import { captureWindowStart, decideScheduledCapture } from '../../shared/captureSchedule.js'
+import type { Prisma, PrismaClient } from '@prisma/client'
+import {
+  captureWindowStart,
+  decideAdditionCapture,
+  decideScheduledCapture,
+  type CaptureDecision,
+} from '../../shared/captureSchedule.js'
 import {
   sourceLabels,
   sourceSchema,
+  trackerAlertThresholds,
   type SourceName,
   type SourceStatus,
 } from '../../shared/tracker.js'
-import { localDir, syncFailureMs, syncSuccessMs } from '../config.js'
+import {
+  localDir,
+  sleeperLeagueId,
+  sleeperOwnerId,
+  syncFailureMs,
+  syncSuccessMs,
+} from '../config.js'
 import { ProviderError, type ValueProvider } from '../providers/types.js'
 import { DataError, saveSnapshot } from './valuations.js'
 import {
@@ -53,6 +65,39 @@ export async function getSourceStatuses(db: PrismaClient): Promise<SourceStatus[
   )
 }
 
+// The nightly window, or a recent Sleeper roster addition for providers that capture the owned roster.
+// An addition older than the 36-hour entry window can no longer receive its entry value.
+export async function automaticCaptureDecision(
+  db: PrismaClient | Prisma.TransactionClient,
+  source: SourceName,
+  tracksSleeperRoster: boolean,
+  now = new Date(),
+): Promise<CaptureDecision> {
+  const start = captureWindowStart(now)
+  const [latest, windowAttempts, addition] = await Promise.all([
+    db.syncRun.findFirst({ where: { sourceName: source }, orderBy: { startedAt: 'desc' } }),
+    start ? db.syncRun.findMany({ where: { sourceName: source, startedAt: { gte: start } } }) : [],
+    tracksSleeperRoster
+      ? db.rosterMovement.findFirst({
+          where: {
+            direction: 'add',
+            kind: { notIn: ['baseline', 'roster_diff'] },
+            occurredAt: { gte: new Date(+now - trackerAlertThresholds.staleMs) },
+            rosterSyncState: { leagueId: sleeperLeagueId, ownerId: sleeperOwnerId },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        })
+      : null,
+  ])
+  const nightly = decideScheduledCapture(now, latest, windowAttempts, syncSuccessMs)
+  if (nightly.due || !addition) return nightly
+  const sinceAddition = await db.syncRun.findMany({
+    where: { sourceName: source, startedAt: { gte: addition.createdAt } },
+  })
+  return decideAdditionCapture(now, latest, sinceAddition, syncSuccessMs)
+}
+
 export async function syncSource(
   db: PrismaClient,
   source: SourceName,
@@ -66,12 +111,11 @@ export async function syncSource(
       orderBy: { startedAt: 'desc' },
     })
     if (options?.scheduled) {
-      const now = new Date()
-      const start = captureWindowStart(now)
-      const attempts = start
-        ? await tx.syncRun.findMany({ where: { sourceName: source, startedAt: { gte: start } } })
-        : []
-      const decision = decideScheduledCapture(now, last, attempts, syncSuccessMs)
+      const decision = await automaticCaptureDecision(
+        tx,
+        source,
+        Boolean(provider.tracksSleeperRoster),
+      )
       if (!decision.due) throw new DataError(decision.reason, 429)
     }
     const until = last

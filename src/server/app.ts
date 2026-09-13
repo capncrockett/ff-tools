@@ -37,19 +37,22 @@ export function createApp(db?: PrismaClient) {
   app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'ff-tools', ts: Date.now() }))
   registerApiRoutes(app, db)
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API endpoint not found.' }))
-  const errors: ErrorRequestHandler = (error, _req, res, _next) => {
-    if (error instanceof z.ZodError)
-      return res
-        .status(400)
-        .json({ error: error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') })
-    if (error instanceof DataError) return res.status(error.status).json({ error: error.message })
-    if (error instanceof SyntaxError) return res.status(400).json({ error: 'Invalid JSON.' })
-    logger.error({ kind: error instanceof Error ? error.name : 'unknown' }, 'Request failed')
-    res
-      .status(500)
-      .json({ error: 'Unable to complete the request. Check the local database and server setup.' })
-  }
   app.use(errors)
   return app
+}
+
+// Exported so a caller that appends its own routes can register it last. Express only
+// reaches an error handler registered after the layer that failed.
+export const errors: ErrorRequestHandler = (error, _req, res, _next) => {
+  if (error instanceof z.ZodError)
+    return res
+      .status(400)
+      .json({ error: error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') })
+  if (error instanceof DataError) return res.status(error.status).json({ error: error.message })
+  if (error instanceof SyntaxError) return res.status(400).json({ error: 'Invalid JSON.' })
+  logger.error({ kind: error instanceof Error ? error.name : 'unknown' }, 'Request failed')
+  res
+    .status(500)
+    .json({ error: 'Unable to complete the request. Check the local database and server setup.' })
 }
 export const app = createApp()

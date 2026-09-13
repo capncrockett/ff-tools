@@ -61,7 +61,11 @@ export async function getHoldings(db: PrismaClient, market: MarketRow[]): Promis
     include: { player: true },
     orderBy: { acquiredAt: 'desc' },
   })
-  return lots.map((h) => {
+  // A row whose source is no longer recognized is skipped, not thrown on. One unreadable
+  // holding must not take down the whole dashboard response.
+  return lots.flatMap((h) => {
+    const sourceName = sourceSchema.safeParse(h.sourceName)
+    if (!sourceName.success) return []
     const quote = market.find(
       (r) =>
         r.playerId === h.playerId && r.source === h.sourceName && r.contextKey === h.contextKey,
@@ -69,26 +73,28 @@ export async function getHoldings(db: PrismaClient, market: MarketRow[]): Promis
     // An observation before purchase cannot establish a current return on that purchase.
     const current = quote && Date.parse(quote.capturedAt) >= +h.acquiredAt ? quote : undefined
     const basisValue = h.closedAt ? h.proceeds : (current?.value ?? null)
-    return {
-      id: h.id,
-      acquisitionKey: h.originMovementId ?? `manual:${h.id}`,
-      playerId: h.playerId,
-      playerName: h.player.name,
-      sourceName: sourceSchema.parse(h.sourceName),
-      contextKey: h.contextKey,
-      contextLabel: quote?.contextLabel ?? 'Unknown format',
-      portfolio: h.portfolio,
-      acquiredAt: h.acquiredAt.toISOString(),
-      costBasis: h.costBasis,
-      targetRoi: h.targetRoi,
-      notes: h.notes,
-      closedAt: h.closedAt?.toISOString() ?? null,
-      proceeds: h.proceeds,
-      automated: h.originMovementId !== null,
-      reviewReason: h.reviewReason,
-      currentValue: current?.value ?? null,
-      capturedAt: current?.capturedAt ?? null,
-      ...calculateReturn(h.costBasis, basisValue, h.targetRoi),
-    }
+    return [
+      {
+        id: h.id,
+        acquisitionKey: h.originMovementId ?? `manual:${h.id}`,
+        playerId: h.playerId,
+        playerName: h.player.name,
+        sourceName: sourceName.data,
+        contextKey: h.contextKey,
+        contextLabel: quote?.contextLabel ?? 'Unknown format',
+        portfolio: h.portfolio,
+        acquiredAt: h.acquiredAt.toISOString(),
+        costBasis: h.costBasis,
+        targetRoi: h.targetRoi,
+        notes: h.notes,
+        closedAt: h.closedAt?.toISOString() ?? null,
+        proceeds: h.proceeds,
+        automated: h.originMovementId !== null,
+        reviewReason: h.reviewReason,
+        currentValue: current?.value ?? null,
+        capturedAt: current?.capturedAt ?? null,
+        ...calculateReturn(h.costBasis, basisValue, h.targetRoi),
+      },
+    ]
   })
 }

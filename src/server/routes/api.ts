@@ -114,14 +114,12 @@ export function registerApiRoutes(app: Express, injected?: PrismaClient) {
     route(async (req, res) => {
       const playerId = z.coerce.number().int().positive().parse(req.params.playerId)
       res.json(
-        (await getMarket(await database()))
-          .filter((r) => r.playerId === playerId)
-          .map((r) => ({
-            source: r.source,
-            contextKey: r.contextKey,
-            contextLabel: r.contextLabel,
-            history: r.history,
-          })),
+        (await getMarket(await database(), playerId)).map((r) => ({
+          source: r.source,
+          contextKey: r.contextKey,
+          contextLabel: r.contextLabel,
+          history: r.history,
+        })),
       )
     }),
   )

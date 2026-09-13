@@ -89,6 +89,45 @@ test('both sources, changed settings and out-of-order history remain distinct', 
     (await request(app).get(`/api/timeseries/${main.playerId}`).expect(200)).body,
   ).toHaveLength(3)
 })
+test('long series keep observation order and a player filter excludes other players', async () => {
+  const days = 40
+  for (let day = days; day >= 1; day--)
+    await saveSnapshot(
+      db,
+      capture({
+        capturedAt: new Date(Date.UTC(2026, 0, day)).toISOString(),
+        records: [
+          { sourceKey: 'a', sleeperId: '123', playerName: 'Sample Alpha', value: day },
+          { sourceKey: 'b', sleeperId: '456', playerName: 'Sample Beta', value: day * 2 },
+        ],
+      }),
+    )
+  const alpha = (await getMarket(db)).find((r) => r.playerName === 'Sample Alpha')!
+  expect(alpha.history.map((point) => point.value)).toEqual(
+    Array.from({ length: days }, (_, i) => i + 1),
+  )
+  expect(alpha).toMatchObject({ observations: days, contextLabel: context.label, value: days })
+  const filtered = await getMarket(db, alpha.playerId)
+  expect(filtered.map((r) => r.playerName)).toEqual(['Sample Alpha'])
+  expect(filtered[0].history).toEqual(alpha.history)
+})
+test('an unrecognized holding source is skipped instead of failing the dashboard', async () => {
+  await saveSnapshot(db, capture())
+  const [row] = await getMarket(db)
+  await db.holding.create({
+    data: {
+      playerId: row.playerId,
+      sourceName: 'retired-provider',
+      contextKey: row.contextKey,
+      portfolio: 'Legacy',
+      acquiredAt: new Date('2025-12-01T00:00:00Z'),
+      costBasis: 50,
+    },
+  })
+  const dashboard = (await request(app).get('/api/tracker').expect(200)).body
+  expect(dashboard.holdings).toEqual([])
+  expect(dashboard.market).toHaveLength(1)
+})
 test('a conflict halfway through a batch rolls back every observation and player', async () => {
   await db.player.create({ data: { name: 'Known Person', sleeperId: '55' } })
   const broken = capture({

@@ -36,7 +36,36 @@ function normalizeName(name: string) {
     .replace(/[^a-z0-9]/g, '')
 }
 
-async function resolvePlayer(tx: Prisma.TransactionClient, sourceId: number, record: Observation) {
+type Candidate = { id: number; name: string; position: string | null }
+// Built at most once per snapshot, and only if a record actually needs name matching.
+// Querying and normalizing the canonical catalog per record is O(records x catalog).
+function canonicalIndex(tx: Prisma.TransactionClient) {
+  let byPositionAndName: Promise<Map<string, Candidate[]>> | null = null
+  return (position: string, name: string) => {
+    byPositionAndName ??= tx.player
+      .findMany({
+        where: { sleeperId: { not: null } },
+        select: { id: true, name: true, position: true },
+      })
+      .then((players) => {
+        const index = new Map<string, Candidate[]>()
+        for (const player of players) {
+          if (!player.position) continue
+          const key = `${player.position}:${normalizeName(player.name)}`
+          index.set(key, [...(index.get(key) ?? []), player])
+        }
+        return index
+      })
+    return byPositionAndName.then((index) => index.get(`${position}:${normalizeName(name)}`) ?? [])
+  }
+}
+
+async function resolvePlayer(
+  tx: Prisma.TransactionClient,
+  sourceId: number,
+  record: Observation,
+  findCanonical: ReturnType<typeof canonicalIndex>,
+) {
   const mapping = await tx.mapping.findUnique({
     where: { sourceId_sourceKey: { sourceId, sourceKey: record.sourceKey } },
     include: { player: true },
@@ -50,14 +79,12 @@ async function resolvePlayer(tx: Prisma.TransactionClient, sourceId: number, rec
       throw new DataError(`Conflicting player ID for ${record.playerName}. Review its mapping.`)
     return mapping.player
   }
-  let player = record.sleeperId
+  let player: Candidate | null = record.sleeperId
     ? await tx.player.findUnique({ where: { sleeperId: record.sleeperId } })
     : null
   if (!player && !record.sleeperId && record.position) {
     // Only canonical Sleeper identities are candidates. Never merge two source-only players by name.
-    const candidates = (
-      await tx.player.findMany({ where: { sleeperId: { not: null }, position: record.position } })
-    ).filter((p) => normalizeName(p.name) === normalizeName(record.playerName))
+    const candidates = await findCanonical(record.position, record.playerName)
     if (candidates.length > 1)
       throw new DataError(
         `Ambiguous player: ${record.playerName}. Supply a Sleeper ID or confirmed mapping.`,
@@ -120,9 +147,10 @@ export async function saveSnapshot(db: PrismaClient, raw: unknown, method = 'imp
           method,
         },
       })
+      const findCanonical = canonicalIndex(tx)
       const playerIds = new Set<number>()
       for (const r of input.records) {
-        const player = await resolvePlayer(tx, source.id, r)
+        const player = await resolvePlayer(tx, source.id, r, findCanonical)
         if (playerIds.has(player.id))
           throw new DataError(
             `Multiple source records resolve to ${player.name}. Nothing was imported.`,
@@ -210,22 +238,34 @@ export function parseCsvSnapshot(
   return snapshotSchema.parse({ source, context, capturedAt, records })
 }
 
-export async function getMarket(db: PrismaClient): Promise<MarketRow[]> {
+export async function getMarket(db: PrismaClient, playerId?: number): Promise<MarketRow[]> {
   // Do not truncate before grouping: old observations for one player must not hide another player/source.
   const rows = await db.valuation.findMany({
+    where: playerId === undefined ? undefined : { playerId },
     orderBy: [{ capturedAt: 'asc' }, { id: 'asc' }],
-    include: { player: true, source: true, snapshot: true },
+    include: { player: true, source: true, snapshot: { select: { contextJson: true } } },
   })
+  // One snapshot describes many observations. Parse each context once, not once per row.
+  const labels = new Map<string, string>()
+  const contextLabel = (snapshotId: string | null, contextJson: string | undefined) => {
+    if (!snapshotId || contextJson === undefined) return 'Legacy - unverified settings'
+    let label = labels.get(snapshotId)
+    if (label === undefined) {
+      label = (JSON.parse(contextJson) as ValueContext).label
+      labels.set(snapshotId, label)
+    }
+    return label
+  }
   const market = new Map<string, MarketRow>()
   for (const v of rows) {
     const parsed = sourceSchema.safeParse(v.source.name)
     if (!parsed.success) continue
     const key = `${v.playerId}:${v.sourceId}:${v.contextKey}`
     const previous = market.get(key)
-    const history = [
-      ...(previous?.history ?? []),
-      { value: v.value, capturedAt: v.capturedAt.toISOString() },
-    ]
+    const capturedAt = v.capturedAt.toISOString()
+    // Append in place. Rebuilding the array per observation is quadratic in series length.
+    const history = previous?.history ?? []
+    history.push({ value: v.value, capturedAt })
     market.set(key, {
       playerId: v.playerId,
       playerName: v.player.name,
@@ -234,11 +274,9 @@ export async function getMarket(db: PrismaClient): Promise<MarketRow[]> {
       team: v.player.team,
       source: parsed.data,
       contextKey: v.contextKey,
-      contextLabel: v.snapshot
-        ? (JSON.parse(v.snapshot.contextJson) as ValueContext).label
-        : 'Legacy - unverified settings',
+      contextLabel: contextLabel(v.snapshotId, v.snapshot?.contextJson),
       value: v.value,
-      capturedAt: v.capturedAt.toISOString(),
+      capturedAt,
       previousValue: previous?.value ?? null,
       changePct: previous ? percentageChange(v.value, previous.value) : null,
       baselineValue: history[0].value,

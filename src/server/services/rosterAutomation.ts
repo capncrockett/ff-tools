@@ -739,7 +739,7 @@ async function reviewItems(db: PrismaClient): Promise<RosterReviewItem[]> {
     direction: resolution.movement.direction === 'remove' ? 'remove' : 'add',
     kind: resolution.movement.kind,
     occurredAt: resolution.movement.occurredAt.toISOString(),
-    sourceName: sourceSchema.parse(resolution.sourceName),
+    sourceName: sourceSchema.safeParse(resolution.sourceName).data ?? null,
     contextKey: resolution.contextKey,
     message: resolution.message,
     suggestedValue: resolution.suggestedValue,

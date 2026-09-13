@@ -20,6 +20,23 @@ No active claims.
 
 ## Open questions
 
+### 2026-09-13 CLAUDE -> CODEX absence-to-zero handoff
+
+The user asked Claude to finish your uncommitted absence-to-zero slice. I took over your claim, reviewed the diff, and committed it with one addition. Your implementation is otherwise unchanged.
+
+- **Added a total-miss guard to both providers.** When the exception list was removed, the old `!records.length` check in `buildDtcSnapshot` went with it. `!rankings.length` replaced it, but that only catches an empty export. If DTC changes its name format, every roster player would fall through to `absent:sleeper:<id>` and write a full roster of zeros that cannot be rewritten later. This conflicts with the rule's own exclusion of unreadable values. Both `buildDtcSnapshot` and `parseNerdsRows` now fail when no owned player matches. For Dynasty GM the snapshot already failed later in `saveSnapshot` with "Multiple source records resolve to", but that message pointed at the wrong cause. Regressions were added to the existing fail-closed tests, and `docs/sources.md` describes both guards.
+- **Left `valuations.ts` `normalizeName` alone.** It strips suffixes unconditionally and in a different order than `playerIdentityKey`. Merging them would change import mapping behavior, so it stays outside this slice.
+
+#### Q6. Dynasty GM catalog scope
+
+`parseNerdsRows` treats a Sleeper player missing from `init.players` as unlisted on the platform. `docs/sources.md` calls that response "minimal player and selected-league metadata". If the catalog covers only players rostered in the analyzer league, then a player added on Sleeper before Dynasty GM resyncs its league would get a zero instead of a stale-roster failure. I cannot check this without a live payload, and tests must not contact the provider.
+
+**Ask:** did your live checks show `init.players` covering the platform's full player pool, or only league rosters? If only league rosters, a catalog miss should probably fail as a stale provider roster rather than produce a zero.
+
+Answer: Pending
+
+Validation: `npm run verify -- --e2e` passed: repo check, format, lint, typecheck, 94 tests across 16 suites, both builds, and 16 Chromium checks. No provider was contacted. The line-ending-only `package.json` change and the untracked workbook stay outside this commit, as in your earlier handoff. Claims released.
+
 ### 2026-09-13 CODEX DTC repair
 
 The user authorized the DTC fix. S4 now uses an explicit local canonical-ID exception list (`DTC_ALLOWED_MISSING_SLEEPER_IDS`), with no default allowance. An unexpected absence, ambiguous match, or empty matched result fails before snapshot persistence. A configured absence is named in the saved run message and capture result; the player is still imported if its value later returns. Diagnostics remain outside snapshot/context identity, and failures preserve saved observations and the hourly cooldown.
@@ -123,7 +140,7 @@ Severity reflects impact on a single-user local tool, not a hosted service.
 | S1  | High     | Efficiency      | `getMarket` loads the entire `Valuation` table with three joins on every `/api/tracker`, `/api/valuations/latest`, and `/api/timeseries/:playerId` call, rebuilds each series' history by spreading the previous array per row, and re-parses `snapshot.contextJson` once per row. Nightly capture is what makes this bite.         | Fixed    |
 | S2  | Medium   | Correctness     | `applyRemoval` closes open holdings for a player across every portfolio. See Q4.                                                                                                                                                                                                                                                    | Question |
 | S3  | Medium   | Robustness      | `sourceSchema.parse` in `rosterAutomation.reviewItems` and `holdings.getHoldings` throws on an unrecognized row, taking down the whole dashboard response. `getMarket` and `activeContexts` use `safeParse` and skip.                                                                                                               | Fixed    |
-| S4  | Medium   | Correctness     | DTC silently drops one unmatched roster player. Fixed with explicit canonical-ID exceptions and persisted, visible coverage messages; see the 2026-09-13 repair handoff.                                                                                                                                                            | Fixed    |
+| S4  | Medium   | Correctness     | DTC silently drops one unmatched roster player. Fixed with explicit canonical-ID exceptions, then superseded by the user's absence-to-zero rule; see the 2026-09-13 handoffs.                                                                                                                                                       | Fixed    |
 | S5  | Medium   | Correctness     | CSV import context identity is a free-text label. See Q2.                                                                                                                                                                                                                                                                           | Question |
 | S6  | Low      | Correctness     | `createApp` registers the JSON error handler before `index.ts` appends `express.static` and the SPA fallback, so errors from those two bypass it and render Express's default HTML page.                                                                                                                                            | Fixed    |
 | S7  | Low      | Reuse           | Two hand-rolled CSV tokenizers with divergent edge-case behavior: `csvFields` trims fields and rejects a stray quote, `csvRows` does neither.                                                                                                                                                                                       | Backlog  |

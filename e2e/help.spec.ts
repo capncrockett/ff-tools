@@ -102,7 +102,7 @@ test('DTC capture obeys cooldown and clears its failure flag after a successful 
                 nextAllowedAt,
                 status: recovered ? 'success' : 'failed',
                 message: recovered
-                  ? 'Saved 29 player observations. DTC coverage: 29 of 30 owned players. Missing DTC values (configured exceptions): Fixture Runner (RB, Sleeper 999). No values were invented for these players.'
+                  ? 'Saved 30 player observations. DTC: 1 unlisted player valued at 0 by the tracker rule: Fixture Runner (RB, Sleeper 999).'
                   : s.message,
               }
             : s,
@@ -122,8 +122,10 @@ test('DTC capture obeys cooldown and clears its failure flag after a successful 
   await expect(dtc).toContainText('Connected')
   await expect(dtc).not.toContainText('Last DTC capture failed.')
   await expect(dtc).not.toContainText('Fixture failure')
-  await expect(dtc).toContainText('DTC coverage: 29 of 30 owned players.')
-  await expect(dtc).toContainText('Missing DTC values (configured exceptions): Fixture Runner')
+  await expect(dtc).toContainText('Saved 30 player observations.')
+  await expect(dtc).toContainText(
+    '1 unlisted player valued at 0 by the tracker rule: Fixture Runner',
+  )
   await expect(dtc).toContainText('Next capture')
   await expect(dtc.getByRole('button', { name: 'Capture values', exact: true })).toBeDisabled()
   await page.setViewportSize({ width: 375, height: 812 })

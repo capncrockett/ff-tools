@@ -101,7 +101,7 @@ export async function syncSource(
           http: options?.rosterHttp,
         })
         const canonicalRoster = await loadReconciledRosterPlayers(db, roster.playerIds)
-        if (provider.needsSleeperRoster) sleeperRoster = canonicalRoster
+        sleeperRoster = canonicalRoster
         rosterMessage = ` ${roster.message}`
       } catch (error) {
         if (provider.needsSleeperRoster) throw error

@@ -47,7 +47,7 @@ The two chart definitions are titled `DTC Pos Totals` and `Nerds Pos Totals`. Th
 - Include an interactive example showing why change since the previous capture differs from growth since the baseline.
 - Show one row per player with Dynasty GM and DTC values side by side, as the user clarified after this review. The 58 saved source series appear across 29 player rows; investment entries still require an explicitly saved cost or benchmark.
 - Show the initial 20% target calculation and points still needed in the entry form. Preserve the distinction between historical cost and a deliberately chosen starting benchmark.
-- The earlier DTC automatic-refresh issue was resolved by the official position-export flow and reverified with a guarded live capture on 2026-09-13. Capture is available; known missing-player exceptions now remain explicit in its saved status. See [current source behavior](sources.md#limits-and-failures).
+- The earlier DTC automatic-refresh issue was resolved by the official position-export flow and reverified with a guarded live capture on 2026-09-13. Capture is available. The user subsequently confirmed that unlisted players are worth zero; saved capture status identifies that rule. See [current source behavior](sources.md#limits-and-failures).
 
 ## Preserve for later, without expanding this slice
 

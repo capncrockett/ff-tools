@@ -6,6 +6,10 @@ This follow-up defines the next asset type: owned rookie picks. The linked [Leag
 
 Answer by replacing `Answer: Pending`.
 
+## Confirmed player absence rule (2026-09-13)
+
+The user confirmed that a player absent from a provider is worth zero on that provider. This applies independently to Dynasty GM and DTC after a successful validated capture, with an `absent:sleeper:<id>` observation key and a source-status note identifying the tracker rule. It supersedes the earlier missing-player exception list. An unavailable capture, incomplete metadata, an unreadable value, or an ambiguous match is still an error. Existing observations are not rewritten; the rule applies on subsequent captures. This does not decide the pending rookie-pick valuation questions below.
+
 ## 1. Confirm the projected pick bands
 
 Question: Should every projected round use these three four-team bands: playoff lottery teams as early picks 1-4, middling-bracket teams as mid picks 5-8, and championship-bracket teams as late picks 9-12?

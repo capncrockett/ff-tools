@@ -3,7 +3,6 @@ import {
   buildDtcSnapshot,
   fetchOwnedSleeperRoster,
   parseDtcRankingsCsv,
-  parseDtcAllowedMissingIds,
   type DtcRankingRow,
 } from '../../src/server/providers/dynastyCalculator'
 import type { CanonicalPlayer } from '../../src/server/services/players'
@@ -76,7 +75,7 @@ test('DTC rejects changed columns, wrong positions, malformed values and duplica
 })
 
 test('DTC matches exports to canonical Sleeper IDs and preserves half-PPR context', () => {
-  const result = buildDtcSnapshot(rankings, roster, new Date('2026-09-08T12:00:00Z'), ['3'])
+  const result = buildDtcSnapshot(rankings, roster, new Date('2026-09-08T12:00:00Z'))
   expect(result.records).toEqual([
     {
       sourceKey: 'sleeper:1',
@@ -94,6 +93,14 @@ test('DTC matches exports to canonical Sleeper IDs and preserves half-PPR contex
       position: 'TE',
       value: 0,
     },
+    {
+      sourceKey: 'absent:sleeper:3',
+      sleeperId: '3',
+      playerName: 'Unsupported Runner',
+      team: 'FA',
+      position: 'RB',
+      value: 0,
+    },
   ])
   expect(result.context.settings).toMatchObject({
     team_size: '12',
@@ -107,14 +114,15 @@ test('DTC matches exports to canonical Sleeper IDs and preserves half-PPR contex
   })
   expect(result.warnings).toEqual([
     expect.stringContaining(
-      '2 of 3 owned players. Missing DTC values (configured exceptions): Unsupported Runner (RB, Sleeper 3)',
+      '1 unlisted player valued at 0 by the tracker rule: Unsupported Runner (RB, Sleeper 3)',
     ),
   ])
 })
 
-test('DTC fails closed when any unapproved player is missing or names are ambiguous', () => {
-  expect(() => buildDtcSnapshot(rankings, roster)).toThrow('Unsupported Runner (RB, Sleeper 3)')
-  expect(() => buildDtcSnapshot(rankings.slice(0, 1), roster)).toThrow('matched 1 of 3')
+test('DTC fails closed on empty exports and ambiguous names', () => {
+  expect(() => buildDtcSnapshot([], roster)).toThrow('rankings are empty')
+  const renamed = rankings.map((row) => ({ ...row, playerName: `${row.playerName} Renamed` }))
+  expect(() => buildDtcSnapshot(renamed, roster)).toThrow('matched none of the 3 owned players')
   expect(() => buildDtcSnapshot([...rankings, rankings[0]], roster)).toThrow('ambiguous')
   expect(() =>
     buildDtcSnapshot(rankings, [{ sleeperId: '9', name: 'Kicker', position: 'K' }]),
@@ -130,15 +138,17 @@ test('DTC fails closed when any unapproved player is missing or names are ambigu
   ).toThrow('more than one roster player')
 })
 
-test('a known absence never absorbs another missing player, even with the same name', () => {
+test('every absent player gets a zero tied to its canonical identity', () => {
   const changedRoster = roster.map((player) =>
     player.sleeperId === '3' ? { ...player, sleeperId: '4' } : player,
   )
-  expect(() => buildDtcSnapshot(rankings, changedRoster, new Date(), ['3'])).toThrow('Sleeper 4')
-  expect(() => buildDtcSnapshot(rankings.slice(0, 1), roster, new Date(), ['3'])).toThrow(
-    'Sleeper 2',
-  )
-  expect(() => buildDtcSnapshot([], [roster[2]], new Date(), ['3'])).toThrow('matched 0 of 1')
+  expect(buildDtcSnapshot(rankings, changedRoster).records[2]).toMatchObject({
+    sourceKey: 'absent:sleeper:4',
+    value: 0,
+  })
+  const result = buildDtcSnapshot(rankings.slice(0, 1), roster)
+  expect(result.records.map((r) => r.value)).toEqual([48, 0, 0])
+  expect(result.warnings?.[0]).toContain('2 unlisted players valued at 0')
 })
 
 test('a previously absent player is captured normally when it returns to the export', () => {
@@ -146,20 +156,11 @@ test('a previously absent player is captured normally when it returns to the exp
     [...rankings, { ...rankings[0], playerName: roster[2].name, position: 'RB' }],
     roster,
     new Date(),
-    ['3'],
   )
   expect(result.records).toHaveLength(3)
   expect(result.records[2]).toMatchObject({ sleeperId: '3', value: 48 })
   expect(result.warnings).toBeUndefined()
-  expect(result.context).toEqual(buildDtcSnapshot(rankings, roster, new Date(), ['3']).context)
-})
-
-test('DTC missing-player configuration defaults to strict and rejects malformed IDs', () => {
-  expect(parseDtcAllowedMissingIds()).toEqual([])
-  expect(parseDtcAllowedMissingIds('  ')).toEqual([])
-  expect(parseDtcAllowedMissingIds('3, 4,3')).toEqual(['3', '4'])
-  for (const value of ['3,', 'any', '3;4', Array.from({ length: 11 }, (_, i) => i).join(',')])
-    expect(() => parseDtcAllowedMissingIds(value)).toThrow('comma-separated numeric Sleeper IDs')
+  expect(result.context).toEqual(buildDtcSnapshot(rankings, roster).context)
 })
 
 test('DTC uses a unique suffix-insensitive fallback for Sleeper name differences', () => {

@@ -59,3 +59,63 @@ test('fails closed on truncated roster, duplicate rows, missing values and unsup
     parseNerdsRows(rows, { ...init, leagues: [{ ...init.leagues[0], teams: [] }] }, '273947'),
   ).toThrow('exactly one')
 })
+
+const sleeperRoster = [
+  { sleeperId: '101', name: 'Sample Quarterback', position: 'QB', team: 'LAC' },
+  { sleeperId: '102', name: 'Sample Receiver', position: 'WR' },
+  { sleeperId: '103', name: 'Sample Unlisted', position: 'RB' },
+]
+
+test('Dynasty GM values an absent catalog player at zero but preserves real provider values', () => {
+  const result = parseNerdsRows(rows, init, '273947', new Date(), sleeperRoster)
+  expect(result.records.map((r) => r.value)).toEqual([2624, 0, 0])
+  expect(result.records[0]).toMatchObject({ sleeperId: '101', sourceKey: '1' })
+  expect(result.records[2]).toMatchObject({
+    sleeperId: '103',
+    sourceKey: 'absent:sleeper:103',
+    value: 0,
+  })
+  expect(result.warnings?.[0]).toContain('Sample Unlisted')
+  expect(result.context).toEqual(parseNerdsRows(rows, init, '273947').context)
+})
+
+test('a player present in the catalog but missing from the captured roster is not zero', () => {
+  const listed = {
+    ...init,
+    players: {
+      ...init.players,
+      '3': { id: 3, firstName: 'Sample', lastName: 'Unlisted', pos: 'RB', team: null },
+    },
+  }
+  expect(() => parseNerdsRows(rows, listed, '273947', new Date(), sleeperRoster)).toThrow(
+    'roster value is missing',
+  )
+  expect(() => parseNerdsRows(rows.slice(0, 1), init, '273947', new Date(), sleeperRoster)).toThrow(
+    'incomplete',
+  )
+  const renamed = sleeperRoster.map((player) => ({ ...player, name: `${player.name} Renamed` }))
+  expect(() => parseNerdsRows(rows, init, '273947', new Date(), renamed)).toThrow(
+    'matched none of the 3 owned Sleeper players',
+  )
+  const broken = { ...init, players: { '1': init.players['1'] } }
+  expect(() => parseNerdsRows(rows, broken, '273947', new Date(), sleeperRoster)).toThrow(
+    'metadata is incomplete',
+  )
+})
+
+test('Dynasty GM canonical matching rejects ambiguous names and accepts unique suffix differences', () => {
+  const duplicate = { ...init, players: { ...init.players, '3': { ...init.players['1'], id: 3 } } }
+  expect(() => parseNerdsRows(rows, duplicate, '273947', new Date(), sleeperRoster)).toThrow(
+    'ambiguous',
+  )
+  const suffixed = sleeperRoster.map((player) => ({ ...player, name: `${player.name} Jr.` }))
+  expect(parseNerdsRows(rows, init, '273947', new Date(), suffixed).records[0].sleeperId).toBe(
+    '101',
+  )
+  expect(() =>
+    parseNerdsRows(rows, init, '273947', new Date(), [
+      sleeperRoster[0],
+      { ...sleeperRoster[0], sleeperId: '999' },
+    ]),
+  ).toThrow('ambiguous')
+})

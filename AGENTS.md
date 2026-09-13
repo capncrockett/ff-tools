@@ -25,4 +25,5 @@ Use `rg` for exact names, paths, keys, and exhaustive matches. When the wording 
 - Use normal authenticated browser flows and responses requested by those pages. No challenge bypass, stealth browser, rotating proxies, or speculative endpoint enumeration. Stop visibly on login/challenge/rate-limit/parser failures.
 - Source, valuation format, and observation timestamp are part of a value's identity. Never average raw provider scales or invent earlier observations.
 - Ambiguous player matches require explicit mapping. A rank is not a trade value. Unknown cost is not zero cost. Target hit is not a completed trade.
+- User-confirmed on 2026-09-13: a player absent from a provider's validated list is valued at zero on that provider. Mark these observations with `absent:sleeper:<id>` and identify the rule in capture status. Capture failures, unreadable values, and ambiguous identities do not become zeros; do not rewrite earlier observations.
 - User requested an asynchronous Grill Me document plus implementation. Do not start an interactive interview or stop implementation to wait for optional answers.

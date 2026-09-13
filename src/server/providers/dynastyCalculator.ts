@@ -2,6 +2,7 @@ import type { AxiosInstance } from 'axios'
 import axios from 'axios'
 import type { Download, Locator, Page } from 'playwright'
 import { z } from 'zod'
+import { playerIdentityKey as playerKey } from '../../shared/playerIdentity.js'
 import { sleeperLeagueId, sleeperLeagueName, sleeperOwnerId } from '../config.js'
 import { loadSleeperPlayers, type CanonicalPlayer } from '../services/players.js'
 import { checkAccess, credentials, withProviderPage } from './browser.js'
@@ -101,40 +102,13 @@ export function parseDtcRankingsCsv(
   return parsed
 }
 
-function normalizeName(name: string) {
-  return name
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
-}
-
-function normalizeNameWithoutSuffix(name: string) {
-  return normalizeName(name.replace(/\s+(jr\.?|sr\.?|ii|iii|iv)$/i, ''))
-}
-
-function playerKey(name: string, position: string, removeSuffix = false) {
-  const normalized = removeSuffix ? normalizeNameWithoutSuffix(name) : normalizeName(name)
-  return `${normalized}:${position}`
-}
-
-export function parseDtcAllowedMissingIds(raw = ''): string[] {
-  if (!raw.trim()) return []
-  const ids = raw.split(',').map((id) => id.trim())
-  if (ids.length > 10 || ids.some((id) => !/^\d+$/.test(id)))
-    throw new ProviderError(
-      'configuration',
-      'DTC_ALLOWED_MISSING_SLEEPER_IDS must contain at most 10 comma-separated numeric Sleeper IDs.',
-    )
-  return [...new Set(ids)]
-}
-
 export function buildDtcSnapshot(
   rankings: DtcRankingRow[],
   roster: CanonicalPlayer[],
   now = new Date(),
-  allowedMissingSleeperIds: readonly string[] = [],
 ): ProviderSnapshot {
+  if (!rankings.length)
+    throw new ProviderError('format', 'DTC rankings are empty. No snapshot saved.')
   const eligibleRoster = roster.filter((player) =>
     supportedPositions.includes(player.position as SupportedPosition),
   )
@@ -180,19 +154,27 @@ export function buildDtcSnapshot(
             value: row.value,
           },
         ]
-      : []
+      : [
+          {
+            sourceKey: `absent:sleeper:${player.sleeperId}`,
+            sleeperId: player.sleeperId,
+            playerName: player.name,
+            team: player.team ?? null,
+            position: player.position as SupportedPosition,
+            value: 0,
+          },
+        ]
   })
-  const allowed = new Set(allowedMissingSleeperIds)
-  const unexpected = missing.filter((player) => !allowed.has(player.sleeperId))
+  // A total miss signals a changed export or name format, not a roster DTC stopped listing.
+  if (!matchedRows.size)
+    throw new ProviderError(
+      'format',
+      `DTC rankings matched none of the ${eligibleRoster.length} owned players. No snapshot saved. Review the export and player names before retrying.`,
+    )
   const describe = (players: CanonicalPlayer[]) =>
     players
       .map((player) => `${player.name} (${player.position}, Sleeper ${player.sleeperId})`)
       .join('; ')
-  if (unexpected.length || !records.length)
-    throw new ProviderError(
-      'format',
-      `DTC rankings matched ${records.length} of ${eligibleRoster.length} owned players. No snapshot saved. Missing: ${describe(missing)}. Review the export and player mapping before allowing a known absence.`,
-    )
 
   return {
     source: 'dynasty-calculator',
@@ -220,7 +202,7 @@ export function buildDtcSnapshot(
     ...(missing.length
       ? {
           warnings: [
-            `DTC coverage: ${records.length} of ${eligibleRoster.length} owned players. Missing DTC values (configured exceptions): ${describe(missing)}. No values were invented for these players.`,
+            `DTC: ${missing.length} unlisted player${missing.length === 1 ? '' : 's'} valued at 0 by the tracker rule: ${describe(missing)}.`,
           ],
         }
       : {}),
@@ -397,7 +379,6 @@ export const dynastyCalculatorProvider: ValueProvider = {
   tracksSleeperRoster: true,
   needsSleeperRoster: true,
   async run(options = {}) {
-    const allowedMissingIds = parseDtcAllowedMissingIds(process.env.DTC_ALLOWED_MISSING_SLEEPER_IDS)
     if (!/^\d+$/.test(sleeperLeagueId) || !/^\d+$/.test(sleeperOwnerId))
       throw new ProviderError('configuration', 'Sleeper league and owner IDs must be numeric.')
     const roster =
@@ -425,7 +406,7 @@ export const dynastyCalculatorProvider: ValueProvider = {
         stage = 'downloading the position rankings'
         const rankings = await downloadDtcRankingExports(page)
         stage = 'matching rankings to the Sleeper roster'
-        return buildDtcSnapshot(rankings, roster, new Date(), allowedMissingIds)
+        return buildDtcSnapshot(rankings, roster)
       } catch (error) {
         if (error instanceof ProviderError) throw error
         throw new ProviderError(

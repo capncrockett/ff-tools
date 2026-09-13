@@ -1,9 +1,11 @@
 import type { Page } from 'playwright'
 import { z } from 'zod'
-import type { SnapshotInput, Observation } from '../../shared/tracker.js'
+import type { Observation } from '../../shared/tracker.js'
+import { playerIdentityKey } from '../../shared/playerIdentity.js'
+import type { CanonicalPlayer } from '../services/players.js'
 import { sleeperLeagueId } from '../config.js'
 import { checkAccess, credentials, withProviderPage } from './browser.js'
-import { ProviderError, type ValueProvider } from './types.js'
+import { ProviderError, type ProviderSnapshot, type ValueProvider } from './types.js'
 
 const playerSchema = z.object({
   id: z.number(),
@@ -71,7 +73,8 @@ export function parseNerdsRows(
   rawInit: unknown,
   leagueId: string,
   now = new Date(),
-): SnapshotInput {
+  sleeperRoster?: CanonicalPlayer[],
+): ProviderSnapshot {
   const init = initSchema.parse(rawInit)
   const league = init.leagues.find((l) => String(l.id) === leagueId)
   if (!league)
@@ -95,6 +98,15 @@ export function parseNerdsRows(
       'Select exactly one owned Dynasty GM team with DYNASTY_NERDS_TEAM_ID.',
     )
   const team = teams[0]
+  if (
+    [...team.starters, ...team.bench, ...team.taxi, ...team.ir].some(
+      (id) => !init.players[String(id)],
+    )
+  )
+    throw new ProviderError(
+      'format',
+      'Dynasty GM player metadata is incomplete. No snapshot saved.',
+    )
   const expected = new Set(
     [...team.starters, ...team.bench, ...team.taxi, ...team.ir].filter((id) =>
       ['QB', 'RB', 'WR', 'TE'].includes(init.players[String(id)]?.pos),
@@ -127,6 +139,58 @@ export function parseNerdsRows(
     new Set(records.map((r) => r.sourceKey)).size !== expected.size
   )
     throw new ProviderError('format', 'Dynasty GM roster capture is incomplete. No snapshot saved.')
+
+  // A player missing from a rendered roster is not necessarily absent from the platform.
+  // Only apply the user's zero rule when the validated player catalog has no match.
+  const missing: CanonicalPlayer[] = []
+  const catalog = Object.values(init.players)
+  const matchedIds = new Set<number>()
+  for (const player of sleeperRoster ?? []) {
+    if (!['QB', 'RB', 'WR', 'TE'].includes(player.position ?? '')) continue
+    const candidatesFor = (removeSuffix: boolean) =>
+      catalog.filter(
+        (candidate) =>
+          playerIdentityKey(
+            `${candidate.firstName} ${candidate.lastName}`,
+            candidate.pos,
+            removeSuffix,
+          ) === playerIdentityKey(player.name, player.position ?? '', removeSuffix),
+      )
+    const exact = candidatesFor(false)
+    const candidates = exact.length ? exact : candidatesFor(true)
+    if (candidates.length > 1 || (candidates[0] && matchedIds.has(candidates[0].id)))
+      throw new ProviderError(
+        'format',
+        `Dynasty GM has an ambiguous match for ${player.name}. No snapshot saved.`,
+      )
+    const candidate = candidates[0]
+    if (candidate) {
+      matchedIds.add(candidate.id)
+      const record = records.find((row) => row.sourceKey === String(candidate.id))
+      if (!record)
+        throw new ProviderError(
+          'format',
+          `Dynasty GM lists ${player.name}, but its roster value is missing. Refresh the provider roster before retrying. No snapshot saved.`,
+        )
+      record.sleeperId = player.sleeperId
+    } else {
+      missing.push(player)
+      records.push({
+        sourceKey: `absent:sleeper:${player.sleeperId}`,
+        sleeperId: player.sleeperId,
+        playerName: player.name,
+        position: player.position as Observation['position'],
+        team: player.team ?? null,
+        value: 0,
+      })
+    }
+  }
+  // A total miss signals changed catalog names, not a roster the platform stopped listing.
+  if (missing.length && !matchedIds.size)
+    throw new ProviderError(
+      'format',
+      `Dynasty GM catalog matched none of the ${missing.length} owned Sleeper players. No snapshot saved. Review player names before retrying.`,
+    )
   return {
     source: 'dynasty-nerds',
     capturedAt: now.toISOString(),
@@ -147,6 +211,13 @@ export function parseNerdsRows(
       },
     },
     records,
+    ...(missing.length
+      ? {
+          warnings: [
+            `Dynasty GM: ${missing.length} unlisted player${missing.length === 1 ? '' : 's'} valued at 0 by the tracker rule: ${missing.map((player) => `${player.name} (${player.position}, Sleeper ${player.sleeperId})`).join('; ')}.`,
+          ],
+        }
+      : {}),
   }
 }
 
@@ -248,7 +319,7 @@ export const dynastyNerdsProvider: ValueProvider = {
         .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.pos))
         .map((p) => ({ id: String(p.id), name: `${p.firstName} ${p.lastName}` }))
       const rows = await readNerdsRows(page, candidates)
-      return parseNerdsRows(rows, init, leagueId)
+      return parseNerdsRows(rows, init, leagueId, new Date(), options.sleeperRoster)
     })
   },
 }

@@ -154,35 +154,32 @@ test('DTC coverage warnings persist across reloads and failed captures preserve 
   ]
   const partial: ValueProvider = {
     name: 'dynasty-calculator',
-    run: async () => buildDtcSnapshot(rankings, roster, new Date(), ['2']),
+    run: async () => buildDtcSnapshot(rankings, roster),
   }
   const result = await syncSource(db, 'dynasty-calculator', partial)
-  expect(result).toMatchObject({ saved: 1, warnings: [expect.stringContaining('Fixture Missing')] })
+  expect(result).toMatchObject({ saved: 2, warnings: [expect.stringContaining('Fixture Missing')] })
   const first = await db.valuation.findMany()
-  expect(first).toHaveLength(1)
+  expect(first).toHaveLength(2)
   expect(first[0].value).toBe(0)
+  expect(first.find((row) => row.sourceKey === 'absent:sleeper:2')?.value).toBe(0)
   const dashboard = (await request(createApp(db)).get('/api/tracker').expect(200)).body
   expect(
     dashboard.sources.find((s: { source: string }) => s.source === 'dynasty-calculator'),
   ).toMatchObject({
     status: 'success',
-    message: expect.stringContaining('Missing DTC values (configured exceptions): Fixture Missing'),
+    message: expect.stringContaining(
+      'unlisted player valued at 0 by the tracker rule: Fixture Missing',
+    ),
   })
   const snapshot = await db.snapshot.findFirstOrThrow()
   expect(snapshot.contextJson).not.toContain('Fixture Missing')
   await db.syncRun.updateMany({ data: { startedAt: new Date(Date.now() - 3_600_001) } })
   const unexpected: ValueProvider = {
     ...partial,
-    run: async () =>
-      buildDtcSnapshot(
-        rankings,
-        [...roster, { sleeperId: '3', name: 'Fixture New Missing', position: 'TE' }],
-        new Date(),
-        ['2'],
-      ),
+    run: async () => buildDtcSnapshot([], roster),
   }
   await expect(syncSource(db, 'dynasty-calculator', unexpected)).rejects.toThrow(
-    'Fixture New Missing',
+    'rankings are empty',
   )
   expect(await db.valuation.findMany()).toEqual(first)
   expect(await db.snapshot.count()).toBe(1)
@@ -192,6 +189,20 @@ test('DTC coverage warnings persist across reloads and failed captures preserve 
     message: expect.stringContaining('No snapshot saved'),
     nextAllowedAt: expect.any(String),
   })
+  await db.syncRun.updateMany({ data: { startedAt: new Date(Date.now() - 3_600_001) } })
+  await syncSource(db, 'dynasty-calculator', {
+    ...partial,
+    run: async () =>
+      buildDtcSnapshot(
+        [...rankings, { ...rankings[0], playerName: 'Fixture Missing', position: 'RB', value: 12 }],
+        roster,
+      ),
+  })
+  const after = (await request(createApp(db)).get('/api/tracker').expect(200)).body
+  const returned = after.market.filter((row: { sleeperId: string }) => row.sleeperId === '2')
+  expect(returned).toHaveLength(1)
+  expect(returned[0].history.map((point: { value: number }) => point.value)).toEqual([0, 12])
+  expect(returned[0].baselineChangePct).toBeNull()
 })
 
 test('tracked providers share the persisted Sleeper roster with the capture', async () => {

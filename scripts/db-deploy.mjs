@@ -9,6 +9,16 @@ const url = process.env.DATABASE_URL || 'file:./dev.db'
 if (!url.startsWith('file:')) throw new Error('The local tracker requires a SQLite file URL.')
 const filename = path.resolve('prisma', url.slice(5))
 fs.mkdirSync(path.dirname(filename), { recursive: true })
+// Migrations can rewrite tables, so never migrate existing data without a verified backup.
+// Imported after dotenv so the backup uses the same database and folder as the app.
+const { backupTrackerDatabase } = await import('../src/server/services/backup.ts')
+try {
+  const backup = await backupTrackerDatabase('pre-migrate')
+  if (backup.status === 'created') console.log(`Database backup saved: ${backup.file}`)
+} catch {
+  console.error('Database backup failed, so migrations were not run. Nothing was changed.')
+  process.exit(1)
+}
 // Prisma 6 on this Windows/Node combination cannot migrate a missing SQLite file.
 // Opening an existing file preserves its contents; this also makes a fresh empty file.
 const db = new DatabaseSync(filename)

@@ -23,6 +23,7 @@ import {
   syncSuccessMs,
 } from '../config.js'
 import { ProviderError, type ValueProvider } from '../providers/types.js'
+import { backupTrackerDatabase } from './backup.js'
 import { DataError, saveSnapshot } from './valuations.js'
 import {
   applyRosterMovements,
@@ -136,6 +137,12 @@ export async function syncSource(
     })
   })
   try {
+    // A restore point before the capture writes. A failed backup is reported but does not cost
+    // the observation, which could never be captured again later.
+    const backupNote = await backupTrackerDatabase('pre-capture').then(
+      () => '',
+      () => ' The pre-capture database backup failed.',
+    )
     let sleeperRoster
     let rosterMessage = ''
     if (provider.tracksSleeperRoster) {
@@ -172,9 +179,10 @@ export async function syncSource(
       where: { id: run.id },
       data: {
         status: 'success',
-        message: [`Saved ${result.saved} player observations.${rosterMessage}`, ...warnings].join(
-          ' ',
-        ),
+        message: [
+          `Saved ${result.saved} player observations.${rosterMessage}${backupNote}`,
+          ...warnings,
+        ].join(' '),
         saved: result.saved,
         finishedAt: new Date(),
       },

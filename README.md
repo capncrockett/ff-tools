@@ -20,7 +20,7 @@ npm run dev
 
 Only copy the example on first setup; preserve an existing `.env.local`. Fill its optional credentials to enable capture. Player seeding downloads Sleeper's public player catalog at most once per day and provides canonical identities before the first import. A DTC capture also reads the current owned Sleeper roster, while reusing that daily player catalog cache.
 
-Open [the local app](http://127.0.0.1:5173). For a built app, run `npm run build`, then `npm start` and open [port 3000](http://127.0.0.1:3000). Both servers bind to loopback. This MVP runs on your computer. An optional [local nightly capture worker](docs/local-capture-worker.md) is available. Vercel hosting, durable hosted storage, and authentication remain future work.
+Open [the local app](http://127.0.0.1:5173). For a built app, run `npm run build`, then `npm start` and open [port 3000](http://127.0.0.1:3000). Both servers bind to loopback. This MVP runs on your computer. An optional [local nightly capture worker](docs/local-capture-worker.md) is available. The database is [backed up automatically](docs/backups.md) outside the repository; `npm run db:restore` lists and restores backups. Vercel hosting, durable hosted storage, and authentication remain future work.
 
 The database is `prisma/dev.db`. Credentials live in ignored `.env.local`; browser sessions and the player catalog live in ignored `.local/`. Environment variables override local-file values. No credentials belong in Git or the browser app.
 

@@ -45,6 +45,8 @@ Only the owned QB/RB/WR/TE roster is captured today. The persisted Sleeper check
 
 SQLite and local session files persist through app restarts and remain outside Git. Source failure cannot replace the last good snapshot. Errors never include raw browser exceptions, credentials, tokens, account payloads, or callback URLs.
 
+The database is backed up automatically to a folder outside the repository: at app start and hourly, on worker checks, before captures, before seeding, and before migrations. Backups are verified `VACUUM INTO` copies that are never pruned automatically. `npm run db:restore` saves the current database before replacing it. See [database backups](backups.md).
+
 Run migrations before starting a new checkout. The baseline represents the old placeholder schema; the tracker migration is additive. Existing uncontextualized values remain visible as legacy/unverified instead of being relabeled.
 
 Tests use temporary SQLite files and synthetic browser fixtures. Verification does not mutate the real database or fetch provider pages. See [workflow](agent-workflow.md), [source notes](sources.md), [confirmed initial decisions](archive/grill-me-dynasty-tracker-initial-2026-09-09.md), and [active follow-up questions](grill-me-dynasty-tracker.md).

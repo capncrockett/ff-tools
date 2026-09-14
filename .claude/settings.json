@@ -8,6 +8,8 @@
       "Read(./prisma/*.db-journal)",
       "Read(./prisma/*.db-wal)",
       "Read(./prisma/*.db-shm)",
+      "Read(./prisma/*.db.*)",
+      "Read(~/ff-tools-backups/**)",
       "Bash(cat .env*)",
       "Bash(cat ./.env*)",
       "Bash(type .env*)",

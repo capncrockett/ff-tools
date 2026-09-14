@@ -1,14 +1,16 @@
+import path from 'node:path'
 import type { AxiosInstance } from 'axios'
 import type { PrismaClient } from '@prisma/client'
 import { sourceSchema, type SourceName } from '../../shared/tracker.js'
 import { rosterRefreshMs, sleeperLeagueId, sleeperOwnerId } from '../config.js'
 import type { ValueProvider } from '../providers/types.js'
+import { backupTrackerDatabase } from './backup.js'
 import { reconcileSleeperRoster } from './rosterAutomation.js'
 import { automaticCaptureDecision, sourceConfigured, syncSource } from './sync.js'
 import { DataError } from './valuations.js'
 
 export type WorkerReport = {
-  source: SourceName | 'sleeper'
+  source: SourceName | 'sleeper' | 'backup'
   status: 'waiting' | 'due' | 'checked' | 'saved' | 'failed'
   message: string
 }
@@ -41,6 +43,18 @@ export async function runCaptureWorkerTick(
   options: { dryRun?: boolean; stopped?: () => boolean; rosterHttp?: AxiosInstance } = {},
 ): Promise<WorkerReport[]> {
   const reports: WorkerReport[] = []
+  // Each tick backs up whatever changed since the last backup, including this worker's captures.
+  if (!options.dryRun && !options.stopped?.()) {
+    const backup = await backupTrackerDatabase('scheduled').catch(() => null)
+    if (!backup)
+      reports.push({ source: 'backup', status: 'failed', message: 'Database backup failed.' })
+    else if (backup.status === 'created')
+      reports.push({
+        source: 'backup',
+        status: 'saved',
+        message: `Saved ${path.basename(backup.file)}.`,
+      })
+  }
   // A dry run stays read-only and offline; it reports additions an earlier check already saved.
   if (
     !options.dryRun &&

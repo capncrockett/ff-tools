@@ -1,4 +1,5 @@
 import { config } from 'dotenv'
+import os from 'node:os'
 import path from 'node:path'
 
 // Environment variables take precedence, then ignored local secrets, then old defaults.
@@ -12,6 +13,19 @@ if (process.env.NODE_ENV === 'test' && !process.env.DATABASE_URL)
 process.env.DATABASE_URL ??= 'file:./dev.db'
 
 export const localDir = path.resolve(process.cwd(), '.local')
+// Outside the repository, so deleting or re-cloning the checkout cannot take the backups too.
+// Test mode has no backup folder at all, so tests can never write into the real one.
+export const backupDir =
+  process.env.NODE_ENV === 'test'
+    ? null
+    : path.resolve(process.env.TRACKER_BACKUP_DIR || path.join(os.homedir(), 'ff-tools-backups'))
+
+// Prisma resolves a relative SQLite path from the schema folder.
+export function databaseFile(url = process.env.DATABASE_URL ?? '') {
+  if (!url.startsWith('file:')) return null
+  const file = url.slice('file:'.length).split('?')[0]
+  return path.isAbsolute(file) ? file : path.resolve(process.cwd(), 'prisma', file)
+}
 // User-confirmed limit: at most one refresh per source per hour, including failed attempts.
 export const syncSuccessMs = 60 * 60 * 1000
 export const syncFailureMs = 60 * 60 * 1000

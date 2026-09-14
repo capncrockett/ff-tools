@@ -13,12 +13,23 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Active claims
 
-| Agent  | Paths                                                                                                                                                                                     | Branch                       | Claimed    | Status                                                        |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------- | ------------------------------------------------------------- |
-| Claude | Database backup and restore (new service, jobs, `scripts/db-deploy.mjs`, `scripts/doctor.mjs`, `src/server/index.ts`, `sync.ts`, `captureWorker.ts`, `package.json` scripts, tests, docs) | `feat/dynasty-value-tracker` | 2026-09-13 | Automatic verified backups; the user asked for them after S14 |
-| Claude | `src/server/providers/dynastyNerds.ts`, `src/server/providers/browser.ts`, provider browser tests                                                                                         | `feat/dynasty-value-tracker` | 2026-09-13 | Diagnosing "Dynasty GM league metadata was unavailable" live  |
+| Agent | Paths | Branch | Claimed | Status |
+| ----- | ----- | ------ | ------- | ------ |
+
+No active claims.
 
 ## Open questions
+
+### 2026-09-13 CLAUDE -> CODEX database backups
+
+After S14 the user asked for real backups. Captured history cannot be re-captured, so they are never deleted automatically. See [docs/backups.md](backups.md).
+
+- **Mechanism.** `src/server/services/backup.ts` opens the database read-only with Node 24's `node:sqlite`, runs `VACUUM INTO` for a consistent copy while the app is running, checks it with `PRAGMA integrity_check`, gzips it, and renames it into place. An exclusive `.lock` file reserves each name, so concurrent backups never replace each other; a test caught that race. Each backup's mtime is set to its start time, and a backup is skipped when the newest backup's mtime is at least the database mtime. Same-millisecond writes err toward an extra backup. `node:sqlite` is imported lazily because it prints an experimental warning, and `src/server/types/node-sqlite.d.ts` covers the missing types in `@types/node` 20.
+- **Location.** `~/ff-tools-backups`, or `TRACKER_BACKUP_DIR` if set. The folder is outside the repository so a deleted or re-cloned checkout cannot take the backups with it. `config.ts` gives test mode no backup folder at all. Backups are never committed: the repository is public and Git history is permanent. `.claude/settings.json` denies Claude reads of the backup folder and of `prisma/*.db.*` copies.
+- **Triggers.** Server start and hourly (`index.ts`), every worker tick, before each capture (`syncSource`, where a failed backup is noted in the run message but does not cost the observation), before `players:seed`, and before `db:deploy`, which refuses to migrate if the backup fails and now runs under `node --import tsx`. `npm run db:backup` forces one.
+- **Restore.** `npm run db:restore -- <file>` stages and integrity-checks the backup first, then force-backs-up the current database as `pre-restore`, then renames the backup into place. It refuses when a `-journal` or `-wal` file exists or when the database is locked. `doctor` reports the backup count and the newest backup's age.
+
+Validation: `npm run verify -- --e2e` passed: 103 tests across 18 suites, both builds, and 17 Chromium checks. `tests/unit/backup.test.ts` ran 25 more times in a loop after the lock and timing fixes. Every database in those tests is a temp file. Claims released.
 
 ### 2026-09-13 CLAUDE -> CODEX prompt capture after Sleeper additions
 

@@ -25,6 +25,49 @@ The user asked for a change to AGENTS.md step 10 (workflow), effective for both 
 
 Step 10 now asks the agent to confirm its actual model and effort with the user at the start of taking an issue, rather than assuming it, and to flag a mismatch against the issue's recommendation immediately. At close, the settings-used comment should also say whether the recommended setting would have been enough given what the work turned out to need, not just what was run. This is a reporting-accuracy fix for the calibration purpose the settings comments already serve; it does not change the label/comment mechanics themselves. Already applied to AGENTS.md; reply here if you'd apply this differently on your side.
 
+### 2026-09-14 CLAUDE handoff: dependency upgrades in progress
+
+The user asked for every dependency on its newest stable major, no features first. A fresh session continues from here; the user asked to stop long sessions and hand off.
+
+**Where.** Worktree `C:\Users\capnc\Codin\ff-tools-deps`, branch `chore/dependency-upgrades`, branched from `feat/dynasty-value-tracker` at `9460b1b`. The user's `npm run dev` runs in the main tree, which is why the work is isolated. It lands by fast-forwarding `feat/dynasty-value-tracker`. Everything below is committed; nothing is pending in the worktree.
+
+**Done**, each passing `npm run verify -- --e2e` (120 tests, both builds, 17 Chromium checks):
+
+1. `6aa1f47` pnpm 12.4.1. Settings live in `pnpm-workspace.yaml`; `allowBuilds` permits only esbuild and the Prisma packages. pnpm now refuses packages published less than a day ago, so the lockfile was re-resolved and Express's floor is 4.22.2.
+2. `a89661d` TypeScript 6.0.3, `@types/node` 24, ESLint 10 with `defineConfig`, React Hooks plugin 7. TypeScript 7 is blocked: typescript-eslint requires `<6.1.0` and ts-jest `<7`. The plugin's new rules fixed two render-time patterns in `HelpTip.tsx` and `ValueTracker.tsx`.
+
+**How, inside the worktree.**
+
+- Install with `COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm@12.4.1 add <pkgs> --store-dir "C:/Users/capnc/Codin/ff-tools/.cache/pnpm"`.
+- Run `npm run prisma:generate` after any install that changes `@prisma/client`'s peers. pnpm gives it a new folder holding a stub client, and every Prisma type turns into `any`.
+- Verify with `npm run verify -- --e2e`, and commit one group at a time.
+
+**Remaining, in order.**
+
+3. **Tests:** Jest 30 with `@types/jest` 30 (ts-jest 29.4.12 supports it; alias matchers such as `toThrowError` are removed), supertest 7 with current `@types/supertest`, and nock 14 (our use is only `disableNetConnect`, `enableNetConnect('127.0.0.1')`, `cleanAll`, and `get().reply()`). pnpm may ask to allow more install scripts.
+4. **Utilities:** dotenv 17 (calls already pass `quiet: true`), pino 10 and pino-pretty 13 (Node support drops only), concurrently 10 (ESM-only, Node 22+, automatic colors; our flags still work). Remove `rimraf`, which nothing uses.
+5. **Express 5** with `@types/express` 5. `app.get('*')` in `src/server/index.ts` becomes `app.get('/{*splat}')`.
+6. **Zod 4.**
+   - One-argument `z.record(v)` becomes `z.record(z.string(), v)`, in `src/shared/tracker.ts`, `rosterAutomation.ts`, and `dynastyNerds.ts`.
+   - `.strict()` and `.passthrough()` become `z.strictObject` and `z.looseObject`.
+   - `z.string().datetime({ offset: true })` becomes `z.iso.datetime({ offset: true })`.
+7. **Prisma 7.10.0** with `@prisma/adapter-better-sqlite3`. The `prisma` package's `latest` tag points at 8.0.0-rc.15, so pin 7.10.0 for both packages.
+   - Use the `prisma-client` generator with an `output` folder; `prisma-client-js` is deprecated. About 15 files import `@prisma/client`. Exclude the generated folder from ESLint, Prettier, and coverage.
+   - `prisma.config.ts` is required. Its `env()` helper throws when a variable is missing, even for `generate`, and Prisma no longer loads `.env`, so compute the URL instead.
+   - **Dates:** the real database stores every DateTime as integer epoch milliseconds, verified read-only. The adapter needs `new PrismaBetterSqlite3({ url }, { timestampFormat: 'unixepoch-ms' })`; its default ISO text would mix formats. Add a test that pins this.
+   - **Paths:** Prisma 6 resolved a relative SQLite path from `prisma/`, which `databaseFile()` in `src/server/config.ts` reproduces. Pass an absolute path to the adapter and to `prisma.config.ts`; otherwise `file:./dev.db` opens a new empty database at the repository root.
+   - Four tests call `new PrismaClient()` directly: `providers.run`, `player.catalogs`, `roster.automation`, and `valuations.import`. Give them a shared factory.
+   - Replace the Prisma-based `withSqliteFile` in `backup.ts` and `databaseQuery.ts` with better-sqlite3. For `db:query`, open with `readonly: true, fileMustExist: true` plus `query_only`, restoring the true read-only open the user asked about. Keep `VACUUM INTO` and `integrity_check`. Allow better-sqlite3's install script.
+8. **UI:** React 19 and its types, Vite 8 with `@vitejs/plugin-react` 6, Tailwind 4 with DaisyUI 5.
+   - `useRef<T>()` needs an argument in `HelpTip.tsx`.
+   - Move the `dynasty` theme from `tailwind.config.ts` into CSS (`@import "tailwindcss"` and `@plugin "daisyui"`), use `@tailwindcss/vite`, and drop the PostCSS and autoprefixer config.
+   - `styles.css` overrides many DaisyUI classes (`.btn`, `.badge`, `.tabs-boxed`, `.tab-active`, `.modal-box`, `.table`, `.input`). Compare before and after screenshots of the e2e states.
+9. **Land.**
+   - Replace this entry with a summary and delete the claim row.
+   - Stop the user's dev server, then fast-forward `feat/dynasty-value-tracker`.
+   - Install in the main tree, generate the client, and verify. Tell the user to restart `npm run dev`.
+   - Update the `db:query` wording in CLAUDE.md if the mechanism changes.
+
 ### 2026-09-14 CLAUDE -> CODEX stable SQLite access and fresh dependencies
 
 The user saw Node's experimental SQLite warning and a stale browser-data warning in `npm run dev`, and wants the project on current, stable dependencies. This supersedes the `node:sqlite` details in the 2026-09-13 backups and read-only query entries.

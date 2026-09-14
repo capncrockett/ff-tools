@@ -597,11 +597,39 @@ async function summarizeMovement(db: PrismaClient, movementId: string, now: Date
 
 export async function applyRosterMovements(db: PrismaClient, now = new Date()) {
   const contexts = await activeContexts(db)
-  const movements = await db.rosterMovement.findMany({
+  const open = await db.rosterMovement.findMany({
     where: { kind: { not: 'roster_diff' }, status: { in: ['pending', 'needs_review'] } },
-    orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
   })
-  for (const movement of movements) {
+  // A provider's first capture can follow the other's, for example after a fresh database, and a
+  // changed scoring setting starts a new context. Additions already applied elsewhere still need an
+  // entry for that context. A player dropped before then gets none, so no holding opens after an exit.
+  const [applied, removals] = await Promise.all([
+    db.rosterMovement.findMany({
+      where: { kind: { not: 'roster_diff' }, direction: 'add', status: 'applied' },
+      include: { resolutions: { select: { targetKey: true } } },
+    }),
+    db.rosterMovement.findMany({
+      where: { direction: 'remove' },
+      select: { sleeperPlayerId: true, occurredAt: true },
+    }),
+  ])
+  const targetKey = (context: ActiveContext) =>
+    `context:${context.sourceName}:${context.contextKey}`
+  const late = applied.flatMap(({ resolutions, ...movement }) => {
+    const resolved = new Set(resolutions.map((resolution) => resolution.targetKey))
+    const missing = contexts.filter((context) => !resolved.has(targetKey(context)))
+    const departed = removals.some(
+      (removal) =>
+        removal.sleeperPlayerId === movement.sleeperPlayerId &&
+        +removal.occurredAt > +movement.occurredAt,
+    )
+    return missing.length && !departed ? [{ movement, contexts: missing }] : []
+  })
+  const work = [...open.map((movement) => ({ movement, contexts })), ...late].sort(
+    (a, b) =>
+      +a.movement.occurredAt - +b.movement.occurredAt || a.movement.id.localeCompare(b.movement.id),
+  )
+  for (const { movement, contexts: targets } of work) {
     let playerId = movement.playerId
     if (!playerId) {
       const player = await db.player.findUnique({ where: { sleeperId: movement.sleeperPlayerId } })
@@ -612,7 +640,7 @@ export async function applyRosterMovements(db: PrismaClient, now = new Date()) {
     }
     if (playerId) {
       if (movement.direction === 'add')
-        for (const context of contexts)
+        for (const context of targets)
           await applyAddition(db, { ...movement, playerId }, context, now)
       else await applyRemoval(db, { ...movement, playerId }, now)
     }

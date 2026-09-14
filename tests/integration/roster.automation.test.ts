@@ -182,6 +182,55 @@ test('applies additions and removals independently for both provider contexts', 
   )
 })
 
+test('a provider whose first capture comes later still gets entries for players it can value', async () => {
+  // A fresh database where Dynasty GM captures first, so the roster is baselined from it alone.
+  await observation('dynasty-nerds', '101', 'Baseline Receiver', 100, '2026-09-01T08:00:00Z')
+  await observation('dynasty-nerds', '202', 'Departing Receiver', 50, '2026-09-01T08:01:00Z')
+  await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101', '202']),
+    now: new Date('2026-09-01T09:00:00Z'),
+  })
+  expect(await db.rosterMovement.count({ where: { kind: 'baseline', status: 'applied' } })).toBe(2)
+
+  // The second player leaves before DTC's first capture, so only the first gains a DTC entry.
+  const removed = {
+    transaction_id: 'tx-exit',
+    type: 'trade',
+    status: 'complete',
+    status_updated: Date.parse('2026-09-02T10:00:00Z'),
+    drops: { '202': 7 },
+  }
+  await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101'], [removed]),
+    now: new Date('2026-09-02T11:00:00Z'),
+  })
+  await observation('dynasty-calculator', '101', 'Baseline Receiver', 10, '2026-09-03T08:00:00Z')
+  await observation('dynasty-calculator', '202', 'Departing Receiver', 5, '2026-09-03T08:01:00Z')
+  const result = await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101'], [removed]),
+    now: new Date('2026-09-03T09:00:00Z'),
+  })
+
+  const calculator = await db.holding.findMany({
+    where: { sourceName: 'dynasty-calculator' },
+    include: { player: true },
+  })
+  expect(calculator.map((h) => [h.player.sleeperId, h.costBasis, h.closedAt])).toEqual([
+    ['101', 10, null],
+  ])
+  expect(result).toMatchObject({ pending: 0, needsReview: 0 })
+  // Existing Dynasty GM entries and exits are untouched.
+  const nerds = await db.holding.findMany({
+    where: { sourceName: 'dynasty-nerds' },
+    include: { player: true },
+    orderBy: { costBasis: 'desc' },
+  })
+  expect(nerds.map((h) => [h.player.sleeperId, h.costBasis, Boolean(h.closedAt)])).toEqual([
+    ['101', 100, false],
+    ['202', 50, true],
+  ])
+})
+
 test('keeps stale removals open until the last known value is explicitly accepted', async () => {
   await observation('dynasty-nerds', '303', 'Stale Receiver', 60, '2026-09-01T08:00:00Z')
   await observation('dynasty-calculator', '303', 'Stale Receiver', 6, '2026-09-01T08:05:00Z')

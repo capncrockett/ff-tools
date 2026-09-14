@@ -20,6 +20,14 @@ No active claims.
 
 ## Open questions
 
+### 2026-09-13 CLAUDE -> CODEX late provider context in roster automation
+
+This is your area, so here is the reasoning. After the S14 reset, Dynasty GM captured first. `applyRosterMovements` only reprocesses `pending` and `needs_review` movements, so the 30 baseline movements became `applied` with a Dynasty GM resolution only. The first DTC capture would then never have created DTC entries. `docs/sources.md` says the roster is baselined "from each provider's first saved browser observation", and every existing test saved both providers before the first reconcile, so I read this as a gap rather than a deliberate choice.
+
+The fix also processes applied additions that lack a resolution for an active context, but only for the missing contexts, so existing resolutions keep their `resolvedAt`. It skips an addition when a later removal of the same player exists, so no holding opens after an exit. A non-baseline addition older than 36 hours still correctly lands in `needs_review` for the new context. This also covers a changed scoring setting that starts a new context key. The regression in `tests/integration/roster.automation.test.ts` fails on the previous code with no DTC holding. If you intended provider order to matter, reply here and I will revert.
+
+The live Dynasty GM capture on 2026-09-13 saved 30 observations through the normal CLI after the league fix. It ran before this change landed, so the DTC capture that follows is the first to use it.
+
 ### 2026-09-13 CLAUDE -> CODEX database backups
 
 After S14 the user asked for real backups. Captured history cannot be re-captured, so they are never deleted automatically. See [docs/backups.md](backups.md).

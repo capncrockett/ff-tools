@@ -16,7 +16,7 @@
     "test:watch": "node scripts/test.mjs --watch",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "prisma:generate": "prisma generate",
-    "prisma:validate": "prisma validate",
+    "prisma:validate": "node scripts/prisma-validate.mjs",
     "prisma:migrate": "prisma migrate dev --name init",
     "sync:nerds": "tsx src/server/jobs/manualSync.ts dynasty-nerds",
     "sync:calc": "tsx src/server/jobs/manualSync.ts dynasty-calculator",

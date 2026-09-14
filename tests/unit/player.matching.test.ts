@@ -101,6 +101,16 @@ test('DTC links by its whole-year age, allowing a few weeks for a birthday it ha
 
 test('birth dates must be real calendar dates in YYYY-MM-DD form', () => {
   expect(validBirthDate('2000-05-10')).toBe('2000-05-10')
-  for (const value of ['2000-5-10', '10/05/2000', 'NaN-NaN-NaN', '', null, 20000510])
+  expect(validBirthDate('2000-02-29')).toBe('2000-02-29')
+  for (const value of [
+    '2000-5-10',
+    '10/05/2000',
+    '2001-02-29',
+    '2000-02-30',
+    'NaN-NaN-NaN',
+    '',
+    null,
+    20000510,
+  ])
     expect(validBirthDate(value)).toBeNull()
 })

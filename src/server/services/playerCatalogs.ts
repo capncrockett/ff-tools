@@ -167,10 +167,14 @@ function planDecisions(
   rows: CatalogState[],
   decide: (key: string) => MatchDecision,
   label: string,
+  reservedPlayerIds: Iterable<number> = [],
 ) {
   const standing = (row: CatalogState) =>
     row.matchMethod === 'manual' || row.matchStatus === 'linked'
-  const held = new Set(rows.filter(standing).flatMap((row) => (row.playerId ? [row.playerId] : [])))
+  const held = new Set([
+    ...reservedPlayerIds,
+    ...rows.filter(standing).flatMap((row) => (row.playerId ? [row.playerId] : [])),
+  ])
   const proposed = rows
     .filter((row) => !standing(row))
     .map((row) => ({ row, decision: decide(row.key) }))
@@ -265,9 +269,28 @@ export async function matchProviderCatalogs(db: PrismaClient, now = new Date()) 
     )
 
     const dtcRows = await tx.dtcPlayer.findMany()
-    const dtcByKey = new Map(dtcRows.map((row) => [row.key, row]))
+    const latestDtcSeenAt = Math.max(...dtcRows.map((row) => +row.lastSeenAt))
+    const currentDtcRows = dtcRows.filter((row) => +row.lastSeenAt === latestDtcSeenAt)
+    const staleDtcRows = dtcRows.filter((row) => +row.lastSeenAt !== latestDtcSeenAt)
+    // DTC has no stable player IDs. If a current export changes a spelling or position, preserve the
+    // older row but release its automatic claim so the current identity can link. Manual links stand.
+    if (staleDtcRows.length)
+      await tx.dtcPlayer.updateMany({
+        where: {
+          lastSeenAt: { lt: new Date(latestDtcSeenAt) },
+          matchMethod: 'automatic',
+          playerId: { not: null },
+        },
+        data: {
+          playerId: null,
+          matchStatus: 'unmatched',
+          matchNote: 'Not listed in the latest DTC catalog.',
+          matchedAt: null,
+        },
+      })
+    const dtcByKey = new Map(currentDtcRows.map((row) => [row.key, row]))
     const dtcPlan = planDecisions(
-      dtcRows,
+      currentDtcRows,
       (key) => {
         const row = dtcByKey.get(key)!
         return matchByAge(
@@ -281,6 +304,9 @@ export async function matchProviderCatalogs(db: PrismaClient, now = new Date()) 
         )
       },
       'DTC',
+      staleDtcRows.flatMap((row) =>
+        row.matchMethod === 'manual' && row.playerId ? [row.playerId] : [],
+      ),
     )
     await applyDecisions(dtcPlan, (key, data) => tx.dtcPlayer.update({ where: { key }, data }), now)
 
@@ -289,7 +315,7 @@ export async function matchProviderCatalogs(db: PrismaClient, now = new Date()) 
         gmRows.map((row) => ({ ...row, key: String(row.id) })),
         gmPlan,
       ),
-      'dynasty-calculator': summarize(dtcRows, dtcPlan),
+      'dynasty-calculator': summarize(currentDtcRows, dtcPlan),
     }
   }, catalogTransaction)
 }

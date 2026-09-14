@@ -16,11 +16,9 @@ export type MatchDecision =
   | { status: 'ambiguous' | 'unmatched' | 'skipped'; note: string }
 
 export function validBirthDate(value: unknown): string | null {
-  return typeof value === 'string' &&
-    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
-    ? value
-    : null
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(+parsed) && parsed.toISOString().slice(0, 10) === value ? value : null
 }
 
 export function indexCanonicalPlayers(players: CanonicalCandidate[]) {

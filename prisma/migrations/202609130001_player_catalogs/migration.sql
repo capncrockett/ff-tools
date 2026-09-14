@@ -54,4 +54,3 @@ CREATE UNIQUE INDEX "DtcPlayer_playerId_key" ON "DtcPlayer"("playerId");
 
 -- CreateIndex
 CREATE INDEX "DtcPlayer_matchStatus_idx" ON "DtcPlayer"("matchStatus");
-

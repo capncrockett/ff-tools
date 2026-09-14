@@ -174,6 +174,68 @@ test('DTC rows link by displayed age and keep their latest rank', async () => {
   })
 })
 
+test('a current DTC spelling replaces a stale automatic link', async () => {
+  const row = (playerName: string) => ({
+    rank: 1,
+    playerName,
+    team: 'SEA',
+    position: 'WR',
+    age: '26Y',
+  })
+  await saveDtcCatalog(db, [row('Fixture Receiver Jr.')], seenAt)
+  await matchProviderCatalogs(db, seenAt)
+  const old = await db.dtcPlayer.findFirstOrThrow()
+  expect(old).toMatchObject({ matchStatus: 'linked' })
+
+  const later = new Date('2026-09-14T12:00:00Z')
+  await saveDtcCatalog(db, [row('Fixture Receiver')], later)
+  expect(await matchProviderCatalogs(db, later)).toMatchObject({
+    'dynasty-calculator': { linked: 1, ambiguous: 0, unmatched: 0 },
+  })
+  expect(await db.dtcPlayer.findUniqueOrThrow({ where: { key: old.key } })).toMatchObject({
+    playerId: null,
+    matchStatus: 'unmatched',
+    matchNote: 'Not listed in the latest DTC catalog.',
+  })
+  expect(await db.dtcPlayer.findFirstOrThrow({ where: { lastSeenAt: later } })).toMatchObject({
+    matchStatus: 'linked',
+  })
+})
+
+test('a stale manual DTC link remains reserved when the current spelling changes', async () => {
+  const row = (playerName: string) => ({
+    rank: 1,
+    playerName,
+    team: 'SEA',
+    position: 'WR',
+    age: '26Y',
+  })
+  await saveDtcCatalog(db, [row('Fixture Receiver Jr.')], seenAt)
+  await matchProviderCatalogs(db, seenAt)
+  const old = await db.dtcPlayer.findFirstOrThrow()
+  await db.dtcPlayer.update({
+    where: { key: old.key },
+    data: {
+      matchMethod: 'manual',
+      matchNote: 'Checked by hand.',
+    },
+  })
+  const later = new Date('2026-09-14T12:00:00Z')
+  await saveDtcCatalog(db, [row('Fixture Receiver')], later)
+  expect(await matchProviderCatalogs(db, later)).toMatchObject({
+    'dynasty-calculator': { linked: 0, ambiguous: 1, unmatched: 0 },
+  })
+  expect(await db.dtcPlayer.findUniqueOrThrow({ where: { key: old.key } })).toMatchObject({
+    matchStatus: 'linked',
+    matchMethod: 'manual',
+  })
+  expect(await db.dtcPlayer.findFirstOrThrow({ where: { lastSeenAt: later } })).toMatchObject({
+    playerId: null,
+    matchStatus: 'ambiguous',
+    matchNote: 'Another DTC player already links to this Sleeper player.',
+  })
+})
+
 test('a capture saves its catalog, and a catalog failure never costs the saved values', async () => {
   const provider = (catalog: unknown, capturedAt = seenAt): ValueProvider => ({
     name: 'dynasty-nerds',

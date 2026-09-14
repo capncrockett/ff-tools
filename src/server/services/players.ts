@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import axios, { type AxiosInstance } from 'axios'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { validBirthDate } from '../../shared/playerMatching.js'
 import { localDir } from '../config.js'
 
 export type CanonicalPlayer = {
@@ -9,6 +10,7 @@ export type CanonicalPlayer = {
   name: string
   position?: string | null
   team?: string | null
+  birthDate?: string | null
 }
 export function mapSleeperPlayers(playersMap: Record<string, any>): CanonicalPlayer[] {
   return Object.entries(playersMap || {}).flatMap(([pid, info]) => {
@@ -21,6 +23,7 @@ export function mapSleeperPlayers(playersMap: Record<string, any>): CanonicalPla
         name,
         position: info.position || info.fantasy_positions?.[0] || null,
         team: info.team || null,
+        birthDate: validBirthDate(info.birth_date),
       },
     ]
   })
@@ -39,8 +42,11 @@ export async function loadSleeperPlayers(opts?: {
   if (!opts?.http) {
     try {
       const stat = await fs.stat(cache)
-      if ((opts?.now ?? Date.now()) - stat.mtimeMs < 86_400_000)
+      if ((opts?.now ?? Date.now()) - stat.mtimeMs < 86_400_000) {
         players = JSON.parse(await fs.readFile(cache, 'utf8')) as CanonicalPlayer[]
+        // A cache written before birth dates were kept would leave them empty for a day.
+        if (players.length && !('birthDate' in players[0])) players = undefined
+      }
     } catch {
       /* first refresh */
     }
@@ -66,7 +72,7 @@ export async function seedPlayersFromSleeper(opts?: {
     const existing = await db.player.findUnique({ where: { sleeperId: p.sleeperId } })
     await db.player.upsert({
       where: { sleeperId: p.sleeperId },
-      update: { name: p.name, position: p.position, team: p.team },
+      update: { name: p.name, position: p.position, team: p.team, birthDate: p.birthDate },
       create: { ...p },
     })
     if (!existing) created++

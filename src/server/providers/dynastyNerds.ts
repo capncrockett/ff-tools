@@ -13,6 +13,11 @@ const playerSchema = z.object({
   lastName: z.string(),
   pos: z.string(),
   team: z.string().nullable(),
+  // Identity details for the player catalog. Left untyped so odd values such as "NaN-NaN-NaN"
+  // never fail a capture; the catalog normalizes them when saving.
+  dob: z.unknown().optional(),
+  draftYear: z.unknown().optional(),
+  status: z.unknown().optional(),
 })
 const teamSchema = z.object({
   id: z.number(),
@@ -324,7 +329,11 @@ export async function captureNerdsPage(
     .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.pos))
     .map((p) => ({ id: String(p.id), name: `${p.firstName} ${p.lastName}` }))
   const rows = await readNerdsRows(page, candidates)
-  return parseNerdsRows(rows, metadata, leagueId, new Date(), sleeperRoster)
+  return {
+    ...parseNerdsRows(rows, metadata, leagueId, new Date(), sleeperRoster),
+    // The same response lists the whole player pool; it is saved to the Dynasty GM player table.
+    catalog: { source: 'dynasty-nerds', players: Object.values(metadata.players) },
+  }
 }
 
 export const dynastyNerdsProvider: ValueProvider = {

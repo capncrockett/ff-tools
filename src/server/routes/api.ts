@@ -6,6 +6,7 @@ import { getAdpData } from '../services/adp.js'
 import { getKeeperData } from '../services/keeper.js'
 import { dynastyNerdsProvider } from '../providers/dynastyNerds.js'
 import { dynastyCalculatorProvider } from '../providers/dynastyCalculator.js'
+import { matchProviderCatalogs } from '../services/playerCatalogs.js'
 import { listPlayers, seedPlayersFromSleeper } from '../services/players.js'
 import { DataError, getMarket, parseCsvSnapshot, saveSnapshot } from '../services/valuations.js'
 import { addHolding, closeHolding, getHoldings } from '../services/holdings.js'
@@ -182,7 +183,9 @@ export function registerApiRoutes(app: Express, injected?: PrismaClient) {
     '/api/players/seed',
     route(async (req, res) => {
       if (req.query.dry_run === '1') return res.json({ created: 0, upserts: 0, total: 2 })
-      res.json(await seedPlayersFromSleeper({ prisma: await database() }))
+      const db = await database()
+      const seeded = await seedPlayersFromSleeper({ prisma: db })
+      res.json({ ...seeded, matching: await matchProviderCatalogs(db) })
     }),
   )
 }

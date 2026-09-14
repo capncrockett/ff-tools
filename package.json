@@ -22,6 +22,7 @@
     "capture:worker": "tsx src/server/jobs/captureWorker.ts",
     "capture:plan": "tsx src/server/jobs/captureWorker.ts --dry-run",
     "players:seed": "tsx src/server/jobs/seedPlayers.ts",
+    "players:match": "tsx src/server/jobs/matchPlayers.ts",
     "db:deploy": "node --import tsx scripts/db-deploy.mjs",
     "db:backup": "tsx src/server/jobs/backupDatabase.ts",
     "db:restore": "tsx src/server/jobs/restoreDatabase.ts",

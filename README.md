@@ -89,6 +89,7 @@ Start with `npm run doctor` and [the agent workflow](docs/agent-workflow.md).
 | `npm run verify -- --e2e`                        | Full checks plus real Chromium UI and provider DOM fixtures       |
 | `npm run sync:nerds` / `npm run sync:calc`       | Explicit live capture using the same hourly guard as the UI       |
 | `npm run players:seed`                           | Seed/update canonical players using the daily local catalog cache |
+| `npm run players:match`                          | Link provider player catalogs to Sleeper players and summarize    |
 | `npm run db:deploy`                              | Apply checked-in SQLite migrations without resetting data         |
 | `npm run record:dtc` / `npm run record:nerds`    | Record a provider flow locally with Playwright Inspector          |
 | `npm run search:index` / `npm run search:status` | Build or inspect the ignored local zvec-grep index                |

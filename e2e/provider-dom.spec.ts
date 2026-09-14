@@ -71,8 +71,25 @@ test('Dynasty GM captures the owned roster when the account also holds an incomp
   const init = {
     valueSet: 'DynastyGM',
     players: {
-      '1': { id: 1, firstName: 'Fixture', lastName: 'Quarterback', pos: 'QB', team: 'LAC' },
+      '1': {
+        id: 1,
+        firstName: 'Fixture',
+        lastName: 'Quarterback',
+        pos: 'QB',
+        team: 'LAC',
+        dob: '1999-02-03',
+        draftYear: 2021,
+      },
       '2': { id: 2, firstName: 'Fixture', lastName: 'Receiver', pos: 'WR', team: null },
+      // Not on the team: the catalog still carries it, along with odd values from the live site.
+      '3': {
+        id: 3,
+        firstName: 'Fixture',
+        lastName: 'Kicker',
+        pos: 'K',
+        team: null,
+        dob: 'NaN-NaN-NaN',
+      },
     },
     leagues: [
       {
@@ -162,6 +179,14 @@ test('Dynasty GM captures the owned roster when the account also holds an incomp
     ['102', 310],
   ])
   expect(result.warnings).toBeUndefined()
+  // The same response's full player list comes back for the Dynasty GM player table.
+  expect(result.catalog).toMatchObject({
+    source: 'dynasty-nerds',
+    players: expect.arrayContaining([
+      expect.objectContaining({ id: 1, dob: '1999-02-03', draftYear: 2021 }),
+      expect.objectContaining({ id: 3, pos: 'K', dob: 'NaN-NaN-NaN' }),
+    ]),
+  })
   expect(unexpected).toEqual([])
 })
 

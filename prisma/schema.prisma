@@ -7,17 +7,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// The unifying table: one row per real player, keyed by Sleeper ID. Each provider catalog row links
+/// here at most once, so a player's Dynasty GM and DTC identities meet on this row.
 model Player {
   id              Int              @id @default(autoincrement())
   sleeperId       String?          @unique
   name            String
   position        String?
   team            String?
+  /// YYYY-MM-DD from Sleeper; corroborates catalog matches.
+  birthDate       String?
   createdAt       DateTime         @default(now())
   valuations      Valuation[]
   mappings        Mapping[]
   holdings        Holding[]
   rosterMovements RosterMovement[]
+  dynastyGmPlayer DynastyGmPlayer?
+  dtcPlayer       DtcPlayer?
+}
+
+/// Every player Dynasty GM lists, including kickers, defenses, and picks, refreshed from its
+/// initialization response after each successful capture. Rows are never deleted.
+model DynastyGmPlayer {
+  /// Dynasty GM's own player ID.
+  id          Int       @id
+  firstName   String
+  lastName    String
+  position    String
+  team        String?
+  birthDate   String?
+  draftYear   Int?
+  status      String?
+  firstSeenAt DateTime
+  lastSeenAt  DateTime
+  player      Player?   @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  playerId    Int?      @unique
+  /// linked, ambiguous, unmatched, or skipped (a position that is not matched).
+  matchStatus String    @default("unmatched")
+  /// automatic or manual. Automatic matching never replaces a manual decision.
+  matchMethod String?
+  matchNote   String    @default("")
+  matchedAt   DateTime?
+
+  @@index([matchStatus])
+  @@index([position, lastName])
+}
+
+/// Every player DTC's QB, RB, WR, and TE ranking exports list. DTC exports carry no player IDs, so
+/// the key is the normalized name and position. Rows are never deleted.
+model DtcPlayer {
+  key           String    @id
+  name          String
+  position      String
+  team          String?
+  /// Age as DTC displayed it at ageObservedAt, in years.
+  age           Float?
+  ageObservedAt DateTime?
+  rank          Int?
+  firstSeenAt   DateTime
+  lastSeenAt    DateTime
+  player        Player?   @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  playerId      Int?      @unique
+  matchStatus   String    @default("unmatched")
+  matchMethod   String?
+  matchNote     String    @default("")
+  matchedAt     DateTime?
+
+  @@index([matchStatus])
 }
 
 model Source {
@@ -98,13 +154,13 @@ model Holding {
 }
 
 model SyncRun {
-  id         String    @id @default(cuid())
-  sourceName String
-  startedAt  DateTime  @default(now())
-  finishedAt DateTime?
-  status     String
-  message    String
-  saved      Int       @default(0)
+  id          String    @id @default(cuid())
+  sourceName  String
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  status      String
+  message     String
+  saved       Int       @default(0)
   failureCode String?
 
   @@index([sourceName, startedAt])

@@ -406,7 +406,11 @@ export const dynastyCalculatorProvider: ValueProvider = {
         stage = 'downloading the position rankings'
         const rankings = await downloadDtcRankingExports(page)
         stage = 'matching rankings to the Sleeper roster'
-        return buildDtcSnapshot(rankings, roster)
+        return {
+          ...buildDtcSnapshot(rankings, roster),
+          // Every ranked player from the four exports is saved to the DTC player table.
+          catalog: { source: 'dynasty-calculator' as const, rows: rankings },
+        }
       } catch (error) {
         if (error instanceof ProviderError) throw error
         throw new ProviderError(

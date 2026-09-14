@@ -7,8 +7,31 @@ export type ProviderRunOptions = {
   sleeperRoster?: CanonicalPlayer[]
 }
 
+// Every player a provider lists, as its capture already received it. Saved to that provider's
+// player table after a successful capture; never part of valuation identity.
+export type DynastyGmCatalogEntry = {
+  id: number
+  firstName: string
+  lastName: string
+  pos: string
+  team: string | null
+  dob?: unknown
+  draftYear?: unknown
+  status?: unknown
+}
+export type DtcCatalogRow = {
+  rank: number
+  playerName: string
+  team: string
+  position: string
+  age: string
+}
+export type ProviderCatalog =
+  | { source: 'dynasty-nerds'; players: DynastyGmCatalogEntry[] }
+  | { source: 'dynasty-calculator'; rows: DtcCatalogRow[] }
+
 // Capture diagnostics are saved with the run, never mixed into valuation identity.
-export type ProviderSnapshot = SnapshotInput & { warnings?: string[] }
+export type ProviderSnapshot = SnapshotInput & { warnings?: string[]; catalog?: ProviderCatalog }
 
 export interface ValueProvider {
   name: SourceName

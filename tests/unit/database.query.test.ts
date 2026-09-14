@@ -1,29 +1,26 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
+import { withSqliteFile } from '../../src/server/services/backup'
 import { queryDatabaseReadOnly, tableListQuery } from '../../src/server/services/databaseQuery'
 
 // A throwaway database in the system temp folder; the tracker database is never opened here.
 let dir: string
 let file: string
-const count = () => {
-  const db = new DatabaseSync(file, { readOnly: true })
-  try {
-    return Number(db.prepare('SELECT count(*) AS n FROM valuation').get()?.n)
-  } finally {
-    db.close()
-  }
-}
+const count = () =>
+  withSqliteFile(file, async (db) => {
+    const [row] = await db.$queryRawUnsafe<{ n: bigint }[]>('SELECT count(*) AS n FROM valuation')
+    return Number(row.n)
+  })
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-query-test-'))
   file = path.join(dir, 'tracker.db')
-  const db = new DatabaseSync(file)
-  db.exec(
-    'CREATE TABLE valuation (id INTEGER PRIMARY KEY, value INTEGER); INSERT INTO valuation (value) VALUES (10), (20), (30)',
-  )
-  db.close()
+  await fs.writeFile(file, '')
+  await withSqliteFile(file, async (db) => {
+    await db.$executeRawUnsafe('CREATE TABLE valuation (id INTEGER PRIMARY KEY, value INTEGER)')
+    await db.$executeRawUnsafe('INSERT INTO valuation (value) VALUES (10), (20), (30)')
+  })
 })
 afterEach(() => fs.rm(dir, { recursive: true, force: true }))
 
@@ -58,11 +55,16 @@ test('no statement can change the database or write another file', async () => {
     await expect(queryDatabaseReadOnly(sql, { file })).rejects.toThrow(
       'Only SELECT, WITH, and EXPLAIN',
     )
-  // Allowed prefixes cannot smuggle a write past SQLite's read-only connection.
+  // Allowed prefixes cannot smuggle a write past SQLite's query_only connection.
   await expect(
     queryDatabaseReadOnly('WITH gone AS (SELECT 1) DELETE FROM valuation', { file }),
   ).rejects.toThrow()
   await queryDatabaseReadOnly('SELECT 1; DELETE FROM valuation', { file }).catch(() => null)
-  expect(count()).toBe(3)
+  expect(await count()).toBe(3)
+  expect((await fs.readdir(dir)).sort()).toEqual(['tracker.db'])
+  // A missing path is refused rather than created as an empty database.
+  await expect(
+    queryDatabaseReadOnly('SELECT 1', { file: path.join(dir, 'missing.db') }),
+  ).rejects.toThrow('No database file')
   expect((await fs.readdir(dir)).sort()).toEqual(['tracker.db'])
 })

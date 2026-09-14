@@ -1,11 +1,26 @@
+import fs from 'node:fs/promises'
 import { databaseFile } from '../config.js'
+import { withSqliteFile } from './backup.js'
 
-// Agents and people inspect the tracker database through this path only. The connection is opened
-// read-only and query_only, so SQLite itself rejects writes. The statement allowlist additionally
-// blocks VACUUM INTO and ATTACH, which a read-only connection could still use to write other files.
+// Agents and people inspect the tracker database through this path only. The single connection sets
+// query_only, so SQLite itself rejects writes. The statement allowlist additionally blocks VACUUM
+// INTO and ATTACH, which could otherwise write other files.
 const readStatement = /^\s*(select|with|explain)\b/i
 
 export type QueryResult = { rows: Record<string, unknown>[]; total: number }
+
+// Counts arrive as BigInt; plain numbers keep results printable as JSON.
+const plain = (row: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      key,
+      typeof value === 'bigint'
+        ? Number.isSafeInteger(Number(value))
+          ? Number(value)
+          : value.toString()
+        : value,
+    ]),
+  )
 
 export async function queryDatabaseReadOnly(
   sql: string,
@@ -18,16 +33,13 @@ export async function queryDatabaseReadOnly(
     throw new Error(
       'Only SELECT, WITH, and EXPLAIN queries are allowed; the database is read-only.',
     )
-  // Loaded lazily: Node prints an experimental-feature warning the first time this module loads.
-  const { DatabaseSync } = await import('node:sqlite')
-  const db = new DatabaseSync(file, { readOnly: true, timeout: 5_000 })
-  try {
-    db.exec('PRAGMA query_only = ON')
-    const rows = db.prepare(statement).all()
-    return { rows: rows.slice(0, options.maxRows ?? 500), total: rows.length }
-  } finally {
-    db.close()
-  }
+  // Opening a missing path would create an empty database, so require the file to exist.
+  if (!(await fs.stat(file).catch(() => null))) throw new Error('No database file exists there.')
+  return withSqliteFile(file, async (db) => {
+    await db.$executeRawUnsafe('PRAGMA query_only = ON')
+    const rows = await db.$queryRawUnsafe<Record<string, unknown>[]>(statement)
+    return { rows: rows.slice(0, options.maxRows ?? 500).map(plain), total: rows.length }
+  })
 }
 
 export const tableListQuery =

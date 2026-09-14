@@ -3,7 +3,22 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { createGunzip, createGzip } from 'node:zlib'
+import { PrismaClient } from '@prisma/client'
 import { backupDir, databaseFile } from '../config.js'
+
+// A short-lived single-connection Prisma client for one SQLite file. Prisma is stable, unlike
+// Node's experimental built-in SQLite module, and the single connection keeps per-connection
+// settings such as query_only in force for every statement.
+export async function withSqliteFile<T>(file: string, run: (db: PrismaClient) => Promise<T>) {
+  const db = new PrismaClient({
+    datasourceUrl: `file:${file.replaceAll('\\', '/')}?connection_limit=1`,
+  })
+  try {
+    return await run(db)
+  } finally {
+    await db.$disconnect()
+  }
+}
 
 // The tracker database is the only copy of captured history, so backups are compressed,
 // integrity-checked SQLite copies that are never deleted automatically.
@@ -23,17 +38,15 @@ function sqlString(value: string) {
 }
 
 async function verifySqlite(file: string) {
-  // Loaded lazily: Node prints an experimental-feature warning the first time this module loads.
-  const { DatabaseSync } = await import('node:sqlite')
-  const db = new DatabaseSync(file, { readOnly: true })
-  try {
-    const result = db.prepare('PRAGMA integrity_check').get()
-    const tables = db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get()
-    if (result?.integrity_check !== 'ok' || !Number(tables?.n))
-      throw new Error('The database copy failed its integrity check.')
-  } finally {
-    db.close()
-  }
+  const healthy = await withSqliteFile(file, async (db) => {
+    const [result] =
+      await db.$queryRawUnsafe<{ integrity_check: string }[]>('PRAGMA integrity_check')
+    const [tables] = await db.$queryRawUnsafe<{ n: bigint | number }[]>(
+      "SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'",
+    )
+    return result?.integrity_check === 'ok' && Number(tables?.n) > 0
+  }).catch(() => false)
+  if (!healthy) throw new Error('The database copy failed its integrity check.')
 }
 
 export async function backupDatabase(options: {
@@ -74,14 +87,10 @@ export async function backupDatabase(options: {
   }
   const copy = `${file}.copy.partial`
   try {
-    const { DatabaseSync } = await import('node:sqlite')
     // VACUUM INTO takes a consistent snapshot even while the app holds the database open.
-    const db = new DatabaseSync(options.databaseFile, { readOnly: true, timeout: 15_000 })
-    try {
-      db.exec(`VACUUM INTO ${sqlString(copy)}`)
-    } finally {
-      db.close()
-    }
+    await withSqliteFile(options.databaseFile, (db) =>
+      db.$executeRawUnsafe(`VACUUM INTO ${sqlString(copy)}`),
+    )
     await verifySqlite(copy)
     await pipeline(
       createReadStream(copy),

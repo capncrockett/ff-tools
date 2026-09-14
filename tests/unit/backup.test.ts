@@ -1,31 +1,25 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
 import {
   backupDatabase,
   backupTrackerDatabase,
   listBackups,
   restoreDatabase,
+  withSqliteFile,
 } from '../../src/server/services/backup'
 
 // Every database here is a throwaway file in the system temp folder.
 let dir: string
 let databaseFile: string
 let backupDir: string
-const exec = (sql: string, file = databaseFile) => {
-  const db = new DatabaseSync(file)
-  db.exec(sql)
-  db.close()
-}
-const count = (file: string) => {
-  const db = new DatabaseSync(file, { readOnly: true })
-  try {
-    return Number(db.prepare('SELECT count(*) AS n FROM valuation').get()?.n)
-  } finally {
-    db.close()
-  }
-}
+const exec = (sql: string, file = databaseFile) =>
+  withSqliteFile(file, (db) => db.$executeRawUnsafe(sql))
+const count = (file: string) =>
+  withSqliteFile(file, async (db) => {
+    const [row] = await db.$queryRawUnsafe<{ n: bigint }[]>('SELECT count(*) AS n FROM valuation')
+    return Number(row.n)
+  })
 // Filesystem timestamps can be coarse; move the write clearly past the last backup.
 const markChanged = () => {
   const later = new Date(Date.now() + 5_000)
@@ -36,9 +30,9 @@ beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-backup-test-'))
   databaseFile = path.join(dir, 'tracker.db')
   backupDir = path.join(dir, 'backups')
-  exec(
-    'CREATE TABLE valuation (id INTEGER PRIMARY KEY, value INTEGER); INSERT INTO valuation (value) VALUES (10), (20)',
-  )
+  await fs.writeFile(databaseFile, '')
+  await exec('CREATE TABLE valuation (id INTEGER PRIMARY KEY, value INTEGER)')
+  await exec('INSERT INTO valuation (value) VALUES (10), (20)')
   // A write in the same millisecond as a backup's start is indistinguishable from a later write
   // (the backup is then simply repeated), so date the fixture clearly before any backup.
   const earlier = new Date(Date.now() - 60_000)
@@ -56,7 +50,7 @@ test('saves a verified compressed copy only when the database changed, and never
     status: 'skipped',
     reason: expect.stringContaining('not changed'),
   })
-  exec('INSERT INTO valuation (value) VALUES (30)')
+  await exec('INSERT INTO valuation (value) VALUES (30)')
   await markChanged()
   expect(await backupDatabase({ databaseFile, backupDir, reason: 'scheduled' })).toMatchObject({
     status: 'created',
@@ -77,12 +71,12 @@ test('saves a verified compressed copy only when the database changed, and never
 test('restoring backs up the current database first, so a restore can itself be undone', async () => {
   const good = await backupDatabase({ databaseFile, backupDir, reason: 'scheduled' })
   if (good.status !== 'created') throw new Error('expected a backup')
-  exec('DELETE FROM valuation')
+  await exec('DELETE FROM valuation')
   await markChanged()
-  expect(count(databaseFile)).toBe(0)
+  expect(await count(databaseFile)).toBe(0)
 
   const restored = await restoreDatabase({ databaseFile, backupDir, backupFile: good.file })
-  expect(count(databaseFile)).toBe(2)
+  expect(await count(databaseFile)).toBe(2)
   expect(restored.safety).toMatchObject({
     status: 'created',
     file: expect.stringContaining('pre-restore'),
@@ -90,7 +84,7 @@ test('restoring backs up the current database first, so a restore can itself be 
   if (restored.safety.status !== 'created') throw new Error('expected a safety backup')
   const undo = path.join(dir, 'undo.db')
   await restoreDatabase({ databaseFile: undo, backupDir, backupFile: restored.safety.file })
-  expect(count(undo)).toBe(0)
+  expect(await count(undo)).toBe(0)
 })
 
 test('restore refuses unfinished transactions and unreadable backups without touching the database', async () => {
@@ -105,7 +99,7 @@ test('restore refuses unfinished transactions and unreadable backups without tou
   const corrupt = path.join(dir, 'corrupt.db')
   await fs.writeFile(corrupt, 'not a database')
   await expect(restoreDatabase({ databaseFile, backupDir, backupFile: corrupt })).rejects.toThrow()
-  expect(count(databaseFile)).toBe(2)
+  expect(await count(databaseFile)).toBe(2)
   expect(await listBackups(backupDir)).toHaveLength(1)
 })
 

@@ -1,12 +1,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { DatabaseSync } from 'node:sqlite'
 
 // Every browser suite gets an isolated SQLite database. Never load local credentials.
 fs.mkdirSync('.local', { recursive: true })
 const dir = fs.mkdtempSync(path.resolve('.local', 'e2e-'))
-new DatabaseSync(path.join(dir, 'test.db')).close()
+// Prisma cannot migrate a missing SQLite file here; an empty file is a valid empty database.
+fs.closeSync(fs.openSync(path.join(dir, 'test.db'), 'a'))
 Object.assign(process.env, {
   NODE_ENV: 'test',
   LOG_LEVEL: 'silent',

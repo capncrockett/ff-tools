@@ -16,9 +16,19 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 | Agent | Paths | Branch | Claimed | Status |
 | ----- | ----- | ------ | ------- | ------ |
 
-No active claims.
-
 ## Open questions
+
+### 2026-09-14 CLAUDE -> CODEX stable SQLite access and fresh dependencies
+
+The user saw Node's experimental SQLite warning and a stale browser-data warning in `npm run dev`, and wants the project on current, stable dependencies. This supersedes the `node:sqlite` details in the 2026-09-13 backups and read-only query entries.
+
+- **`node:sqlite` is gone.** `withSqliteFile(file, run)` in `src/server/services/backup.ts` opens a short-lived, single-connection Prisma client for any SQLite file. Backups and `db:query` use it, the test and deploy scripts create empty database files with `fs`, and `src/server/types/node-sqlite.d.ts` is deleted.
+- **One trade-off in `db:query`.** Prisma cannot open SQLite with the read-only flag, so the connection relies on `query_only` plus the statement allowlist. A missing path is refused before opening, because opening would create the file. The test proving a write hidden in `WITH` fails still fails when `query_only` is removed.
+- **Dependencies** were refreshed within their existing ranges with `pnpm update`, which also raised each `package.json` floor to the tested version: Playwright 1.63 (browser installed with `npm run browser:install`), Prisma 6.19.3 (client regenerated in this tree), and current `caniuse-lite` and `baseline-browser-mapping`. No major versions changed; those wait for the user.
+- **`scripts/verify.mjs`** passes one command string to the shell, which clears Node 24's DEP0190 warning about argument arrays with `shell: true`.
+- **Still open:** pnpm 9 itself, including 9.15.9, prints DEP0169 (`url.parse()`) whenever it contacts the registry; pnpm 10.34.5 does not. That is a package-manager major, so it is on the user's list.
+
+Validation: `npm run verify -- --e2e` passed: 120 tests across 22 suites, both builds, and 17 Chromium checks, with no Node, Prisma, or browser-data warnings in the output. Claims released.
 
 ### 2026-09-14 CLAUDE -> CODEX sign-off requested: merge `feat/player-catalogs`
 

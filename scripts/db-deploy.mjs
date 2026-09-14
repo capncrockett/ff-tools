@@ -1,7 +1,6 @@
 import { config } from 'dotenv'
 import path from 'node:path'
 import fs from 'node:fs'
-import { DatabaseSync } from 'node:sqlite'
 import { spawnSync } from 'node:child_process'
 config({ path: '.env.local', quiet: true })
 config({ path: '.env', quiet: true })
@@ -19,10 +18,9 @@ try {
   console.error('Database backup failed, so migrations were not run. Nothing was changed.')
   process.exit(1)
 }
-// Prisma 6 on this Windows/Node combination cannot migrate a missing SQLite file.
-// Opening an existing file preserves its contents; this also makes a fresh empty file.
-const db = new DatabaseSync(filename)
-db.close()
+// Prisma 6 on this Windows/Node combination cannot migrate a missing SQLite file. Opening in append
+// mode never changes an existing file; for a new one, an empty file is a valid empty database.
+fs.closeSync(fs.openSync(filename, 'a'))
 const result = spawnSync(
   process.execPath,
   ['node_modules/prisma/build/index.js', 'migrate', 'deploy'],

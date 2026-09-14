@@ -1,11 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { DatabaseSync } from 'node:sqlite'
 fs.mkdirSync('.local', { recursive: true })
 const dir = fs.mkdtempSync(path.resolve('.local', 'test-'))
-const db = new DatabaseSync(path.join(dir, 'test.db'))
-db.close()
+// Prisma cannot migrate a missing SQLite file here; an empty file is a valid empty database.
+fs.closeSync(fs.openSync(path.join(dir, 'test.db'), 'a'))
 const env = {
   ...process.env,
   NODE_ENV: 'test',

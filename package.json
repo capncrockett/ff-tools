@@ -25,6 +25,7 @@
     "db:deploy": "node --import tsx scripts/db-deploy.mjs",
     "db:backup": "tsx src/server/jobs/backupDatabase.ts",
     "db:restore": "tsx src/server/jobs/restoreDatabase.ts",
+    "db:query": "tsx src/server/jobs/queryDatabase.ts",
     "browser:install": "playwright install chromium",
     "record:dtc": "node scripts/record-provider-flow.mjs dynasty-calculator",
     "record:nerds": "node scripts/record-provider-flow.mjs dynasty-nerds",

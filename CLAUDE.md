@@ -24,6 +24,8 @@ The channel is committed to a public repository. It carries code discussion only
 
 ## Secrets
 
-`.env.local`, `.local/`, and `prisma/*.db` are denied to Claude in [.claude/settings.json](.claude/settings.json) and no task here needs them. The deny rules stop the Read tool and the ordinary shell readers. They are a guardrail, not a sandbox: an interpreter invocation can still reach any file, which is why `node -e`, `node -p`, and `python -c` are denied too. Do not work around these rules. If a task appears to require a denied file, ask the user instead.
+`.env.local`, `.local/`, and `prisma/*.db` are denied to Claude in [.claude/settings.json](.claude/settings.json). The deny rules stop the Read tool and the ordinary shell readers.
+
+The user wants agents to have read-only access to the tracker database (2026-09-13). Inspect it only with `npm run db:query`: `-- --tables`, `-- --columns <table>`, or `-- "SELECT ..."`. It opens the database read-only with `query_only` set and accepts only SELECT, WITH, and EXPLAIN, so SQLite itself rejects writes. Query results can include roster and league data; never copy them into the public agent channel. They are a guardrail, not a sandbox: an interpreter invocation can still reach any file, which is why `node -e`, `node -p`, and `python -c` are denied too. Do not work around these rules. If a task appears to require a denied file, ask the user instead.
 
 `npm run repo:check` fails if a dotenv file becomes tracked or if a credential-shaped assignment appears in any committable file.

@@ -103,7 +103,7 @@ export default function ValueTracker() {
   const [showImport, setShowImport] = useState(false),
     [sort, setSort] = useState('name'),
     [portfolio, setPortfolio] = useState('all')
-  const [clock, setClock] = useState(Date.now())
+  const [clock, setClock] = useState(() => Date.now())
   const [trendSource, setTrendSource] = useState<SourceName>('dynasty-calculator'),
     [trendContextKey, setTrendContextKey] = useState('')
   useEffect(() => {

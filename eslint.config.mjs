@@ -1,24 +1,23 @@
+import { defineConfig, globalIgnores } from 'eslint/config'
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import globals from 'globals'
 import hooks from 'eslint-plugin-react-hooks'
 
-export default tseslint.config(
-  {
-    ignores: [
-      'node_modules/**',
-      'dist/**',
-      'coverage/**',
-      '.local/**',
-      '.cache/**',
-      'commish-recap/**',
-      'flea-flicker/**',
-      'sleeper-lfas/**',
-      'sleeper-mini/**',
-    ],
-  },
+export default defineConfig(
+  globalIgnores([
+    'node_modules/**',
+    'dist/**',
+    'coverage/**',
+    '.local/**',
+    '.cache/**',
+    'commish-recap/**',
+    'flea-flicker/**',
+    'sleeper-lfas/**',
+    'sleeper-mini/**',
+  ]),
   js.configs.recommended,
-  ...tseslint.configs.recommended,
+  tseslint.configs.recommended,
   {
     files: ['src/**/*.{ts,tsx}', 'tests/**/*.ts', 'e2e/**/*.ts'],
     languageOptions: { globals: { ...globals.node, ...globals.browser, ...globals.jest } },
@@ -32,7 +31,6 @@ export default tseslint.config(
   },
   {
     files: ['src/web/**/*.{ts,tsx}'],
-    plugins: { 'react-hooks': hooks },
-    rules: hooks.configs.recommended.rules,
+    extends: [hooks.configs.flat.recommended],
   },
 )

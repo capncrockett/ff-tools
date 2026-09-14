@@ -10,9 +10,13 @@ export default function HelpTip({ label, children }: { label: string; children: 
   const pinned = useRef(false)
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ left: 0, top: 0 })
+  // Chosen on open because refs cannot be read during render. Inside a modal dialog, the popup
+  // must render in that dialog to stay above it.
+  const [container, setContainer] = useState<Element | null>(null)
   const cancelHide = () => clearTimeout(timer.current)
   const show = () => {
     cancelHide()
+    setContainer(button.current?.closest('dialog') ?? document.body)
     setOpen(true)
   }
   const close = () => {
@@ -105,6 +109,7 @@ export default function HelpTip({ label, children }: { label: string; children: 
         <span aria-hidden="true">?</span>
       </button>
       {open &&
+        container &&
         createPortal(
           <span
             ref={popup}
@@ -117,7 +122,7 @@ export default function HelpTip({ label, children }: { label: string; children: 
           >
             {children}
           </span>,
-          button.current?.closest('dialog') ?? document.body,
+          container,
         )}
     </>
   )

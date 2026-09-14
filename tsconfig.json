@@ -11,11 +11,11 @@
     "esModuleInterop": true,
     "allowJs": false,
     "resolveJsonModule": true,
-    "baseUrl": ".",
+    "types": ["node", "vite/client"],
     "paths": {
-      "@server/*": ["src/server/*"],
-      "@web/*": ["src/web/*"],
-      "@shared/*": ["src/shared/*"]
+      "@server/*": ["./src/server/*"],
+      "@web/*": ["./src/web/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["src"]

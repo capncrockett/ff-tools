@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process'
 const steps = [
   'repo:check',
   'format',
+  'prisma:validate',
   'lint',
   'typecheck',
   ...(!process.argv.includes('--quick') ? ['test', 'build'] : []),

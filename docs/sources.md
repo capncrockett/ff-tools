@@ -14,7 +14,7 @@ The first check baselines the current roster from each provider's first saved br
 
 Entry: [analyzer 273947](https://app.dynastynerds.com/analyzer/273947). Normal sign-in starts at [the app sign-in page](https://app.dynastynerds.com/sign-in).
 
-The app's own initialization response provides minimal player and selected-league metadata. Its rank/ADP fields are not trade values. The adapter reads the rendered owned roster's numeric trade value and validates coverage against the supported player IDs in starters, bench, taxi, and IR.
+The app's own initialization response provides player and league metadata. A 2026-09-13 live check found 4,362 catalog players, far more than any league's rosters, so the catalog is the platform player pool. The response also lists every league on the account. Only the configured league and owned team are validated strictly; another league or an orphaned team with incomplete metadata no longer blocks capture. That incomplete-league case caused the "league metadata was unavailable" failures on 2026-09-13. The player catalog is still validated in full, so an unreadable entry cannot pass as an unlisted player. Its rank/ADP fields are not trade values. The adapter reads the rendered owned roster's numeric trade value and validates coverage against the supported player IDs in starters, bench, taxi, and IR.
 
 Some players display initials instead of a headshot, so images cannot define roster identity. A changed or incomplete row layout fails the snapshot instead of persisting a partial roster.
 

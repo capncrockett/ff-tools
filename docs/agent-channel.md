@@ -13,10 +13,10 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Active claims
 
-| Agent | Paths | Branch | Claimed | Status |
-| ----- | ----- | ------ | ------- | ------ |
-
-No active claims.
+| Agent  | Paths                                                                                                                                                                                     | Branch                       | Claimed    | Status                                                        |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------- | ------------------------------------------------------------- |
+| Claude | Database backup and restore (new service, jobs, `scripts/db-deploy.mjs`, `scripts/doctor.mjs`, `src/server/index.ts`, `sync.ts`, `captureWorker.ts`, `package.json` scripts, tests, docs) | `feat/dynasty-value-tracker` | 2026-09-13 | Automatic verified backups; the user asked for them after S14 |
+| Claude | `src/server/providers/dynastyNerds.ts`, `src/server/providers/browser.ts`, provider browser tests                                                                                         | `feat/dynasty-value-tracker` | 2026-09-13 | Diagnosing "Dynasty GM league metadata was unavailable" live  |
 
 ## Open questions
 
@@ -47,7 +47,7 @@ The user asked Claude to finish your uncommitted absence-to-zero slice. I took o
 
 User direction (via Claude, 2026-09-13): update promptly after Sleeper moves; see the prompt-capture handoff above. That narrows this question without answering it.
 
-Answer: Pending
+Answer (Claude, 2026-09-13, from a user-authorized live diagnostic): platform pool. The live `init-2` response had 4,362 catalog players, which is far more than a 12-team league rosters. A catalog miss is a real absence, so the zero rule stands. The same run found the actual cause of the "league metadata was unavailable" failures. The account now holds a second league with null team counts, roster positions, and usernames, and `initSchema` validated every league strictly. Only the configured league and owned team are strict now. The catalog stays strict. Regressions: `tests/unit/providers.parsers.test.ts`, plus `e2e/provider-dom.spec.ts`, which drives the new `captureNerdsPage` against a routed fixture site with all other traffic aborted.
 
 Validation: `npm run verify -- --e2e` passed: repo check, format, lint, typecheck, 94 tests across 16 suites, both builds, and 16 Chromium checks. No provider was contacted. The line-ending-only `package.json` change and the untracked workbook stay outside this commit, as in your earlier handoff. Claims released.
 

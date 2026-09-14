@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { readNerdsRows, parseNerdsRows } from '../src/server/providers/dynastyNerds'
+import { sleeperLeagueId } from '../src/server/config'
+import {
+  captureNerdsPage,
+  readNerdsRows,
+  parseNerdsRows,
+} from '../src/server/providers/dynastyNerds'
 import {
   configureDtcRankingSettings,
   downloadDtcRankingExports,
@@ -51,6 +56,113 @@ test('Dynasty GM reads values for players with initials and rejects truncated ro
   const result = parseNerdsRows(rows, metadata, '273947')
   expect(result.records.map((r) => r.value)).toEqual([2624, 0])
   expect(() => parseNerdsRows(rows.slice(0, 1), metadata, '273947')).toThrow('incomplete')
+})
+
+test('Dynasty GM captures the owned roster when the account also holds an incomplete league', async ({
+  page,
+}) => {
+  // Every request outside the routed fixture site is aborted, so this never reaches Dynasty GM.
+  const unexpected: string[] = []
+  await page.context().route('**/*', (route) => {
+    unexpected.push(new URL(route.request().url()).host)
+    return route.abort()
+  })
+  const teamId = Number(process.env.DYNASTY_NERDS_TEAM_ID || 2982100)
+  const init = {
+    valueSet: 'DynastyGM',
+    players: {
+      '1': { id: 1, firstName: 'Fixture', lastName: 'Quarterback', pos: 'QB', team: 'LAC' },
+      '2': { id: 2, firstName: 'Fixture', lastName: 'Receiver', pos: 'WR', team: null },
+    },
+    leagues: [
+      {
+        id: 273947,
+        extId: sleeperLeagueId,
+        name: 'Fixture League',
+        scoringType: 'ppr',
+        fantasyType: 'dynasty',
+        number_of_teams: 12,
+        number_of_starters: 8,
+        rosterPositions: ['QB', 'WR'],
+        teams: [
+          {
+            id: teamId,
+            name: 'Fixture Team',
+            owned: true,
+            sleeperUsername: 'FixtureOwner',
+            starters: [1],
+            bench: [2],
+            taxi: [],
+            ir: [],
+          },
+          {
+            id: 99,
+            name: 'Orphan',
+            sleeperUsername: null,
+            starters: [],
+            bench: [],
+            taxi: [],
+            ir: [],
+          },
+        ],
+      },
+      // The shape that broke live capture on 2026-09-13: null counts, positions, and usernames.
+      {
+        id: 147139,
+        extId: 'other-league',
+        name: 'Other League',
+        scoringType: 'ppr',
+        fantasyType: 'dynasty',
+        number_of_teams: null,
+        number_of_starters: null,
+        rosterPositions: null,
+        teams: [
+          {
+            id: 1,
+            name: 'Other',
+            sleeperUsername: null,
+            starters: [],
+            bench: [],
+            taxi: [],
+            ir: [],
+          },
+        ],
+      },
+    ],
+  }
+  await page.route('https://gm3.dynastynerds.com/api/gm/init-2', (route) =>
+    route.fulfill({
+      json: init,
+      headers: { 'access-control-allow-origin': 'https://app.dynastynerds.com' },
+    }),
+  )
+  await page.route('https://app.dynastynerds.com/analyzer/273947', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: `<!doctype html><main id="app">Loading</main><script>
+        fetch('https://gm3.dynastynerds.com/api/gm/init-2').then((r) => r.json()).then(() => {
+          const app = document.getElementById('app')
+          app.innerHTML = '<div>Dynasty GM</div><div>League</div><button>FixtureOwner</button>'
+          app.querySelector('button').addEventListener('click', () => {
+            app.insertAdjacentHTML('beforeend', '<h2>Quarterbacks</h2>' +
+              '<div><div dir="auto">Fixture Quarterback</div><div dir="auto">(LAC)</div><div dir="auto">2,624</div><div dir="auto">(QB7)</div></div>' +
+              '<div><div dir="auto">Fixture Receiver</div><div dir="auto">(FA)</div><div dir="auto">310</div><div dir="auto">(WR40)</div></div>')
+          })
+        })
+      </script>`,
+    }),
+  )
+
+  const result = await captureNerdsPage(page, '273947', [
+    { sleeperId: '101', name: 'Fixture Quarterback', position: 'QB', team: 'LAC' },
+    { sleeperId: '102', name: 'Fixture Receiver', position: 'WR' },
+  ])
+  expect(result.records.map((r) => [r.sleeperId, r.value])).toEqual([
+    ['101', 2624],
+    ['102', 310],
+  ])
+  expect(result.warnings).toBeUndefined()
+  expect(unexpected).toEqual([])
 })
 
 test('DTC selects and verifies half-PPR before downloading every position export', async ({

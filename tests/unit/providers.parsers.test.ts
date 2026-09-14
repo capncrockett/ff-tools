@@ -60,6 +60,64 @@ test('fails closed on truncated roster, duplicate rows, missing values and unsup
   ).toThrow('exactly one')
 })
 
+test('another league or an orphaned team with incomplete metadata does not block the configured roster', () => {
+  // Reproduces the live 2026-09-13 failure: a second account league with null counts and usernames.
+  const incomplete = {
+    ...init,
+    leagues: [
+      {
+        ...init.leagues[0],
+        teams: [
+          ...init.leagues[0].teams,
+          {
+            id: 12,
+            name: 'Orphan',
+            sleeperUsername: null,
+            starters: [],
+            bench: [],
+            taxi: [],
+            ir: [],
+          },
+        ],
+      },
+      {
+        id: 147139,
+        extId: 'other',
+        name: 'Other League',
+        scoringType: 'ppr',
+        fantasyType: 'dynasty',
+        number_of_teams: null,
+        number_of_starters: null,
+        rosterPositions: null,
+        teams: [
+          {
+            id: 1,
+            name: 'Other',
+            sleeperUsername: null,
+            starters: [],
+            bench: [],
+            taxi: [],
+            ir: [],
+          },
+        ],
+      },
+    ],
+  }
+  expect(parseNerdsRows(rows, incomplete, '273947').records.map((r) => r.value)).toEqual([2624, 0])
+  // The configured league, the owned team, and the player catalog still fail closed.
+  const brokenLeague = { ...init, leagues: [{ ...init.leagues[0], rosterPositions: null }] }
+  expect(() => parseNerdsRows(rows, brokenLeague, '273947')).toThrow('league metadata changed')
+  const brokenTeam = {
+    ...init,
+    leagues: [
+      { ...init.leagues[0], teams: [{ ...init.leagues[0].teams[0], sleeperUsername: null }] },
+    ],
+  }
+  expect(() => parseNerdsRows(rows, brokenTeam, '273947')).toThrow('team metadata changed')
+  const brokenPlayer = { ...init, players: { ...init.players, '9': { id: 9, pos: null } } }
+  expect(() => parseNerdsRows(rows, brokenPlayer, '273947')).toThrow('player metadata changed')
+})
+
 const sleeperRoster = [
   { sleeperId: '101', name: 'Sample Quarterback', position: 'QB', team: 'LAC' },
   { sleeperId: '102', name: 'Sample Receiver', position: 'WR' },

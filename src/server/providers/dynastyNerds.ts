@@ -24,25 +24,55 @@ const teamSchema = z.object({
   taxi: z.array(z.number()),
   ir: z.array(z.number()),
 })
+const leagueSchema = z.object({
+  id: z.number(),
+  extId: z.string(),
+  name: z.string(),
+  scoringType: z.string(),
+  fantasyType: z.string(),
+  number_of_teams: z.number(),
+  number_of_starters: z.number(),
+  rosterPositions: z.array(z.string()),
+  teams: z.array(z.object({ id: z.number(), owned: z.boolean().optional() }).passthrough()),
+})
+// The account can hold other leagues, and a league can hold orphaned teams, with incomplete
+// metadata (null team counts or usernames). Only the configured league and team are validated
+// strictly. The player catalog stays strict: an unreadable entry must never look like an
+// unlisted player worth zero.
 const initSchema = z.object({
   players: z.record(playerSchema),
   valueSet: z.string(),
-  leagues: z.array(
-    z.object({
-      id: z.number(),
-      extId: z.string(),
-      name: z.string(),
-      scoringType: z.string(),
-      fantasyType: z.string(),
-      number_of_teams: z.number(),
-      number_of_starters: z.number(),
-      rosterPositions: z.array(z.string()),
-      teams: z.array(teamSchema),
-    }),
-  ),
+  leagues: z.array(z.object({ id: z.number() }).passthrough()),
 })
 export type NerdsInit = z.infer<typeof initSchema>
 export type NerdsRow = { sourceKey: string; text: string }
+
+function configuredTeam(init: NerdsInit, leagueId: string) {
+  const raw = init.leagues.find((l) => String(l.id) === leagueId)
+  if (!raw)
+    throw new ProviderError(
+      'configuration',
+      'Configured Dynasty GM league is not available to this account.',
+    )
+  const parsedLeague = leagueSchema.safeParse(raw)
+  if (!parsedLeague.success)
+    throw new ProviderError('format', 'Dynasty GM league metadata changed. No snapshot saved.')
+  const league = parsedLeague.data
+  const teams = league.teams.filter((t) =>
+    process.env.DYNASTY_NERDS_TEAM_ID
+      ? String(t.id) === process.env.DYNASTY_NERDS_TEAM_ID
+      : t.owned,
+  )
+  if (teams.length !== 1)
+    throw new ProviderError(
+      'configuration',
+      'Select exactly one owned Dynasty GM team with DYNASTY_NERDS_TEAM_ID.',
+    )
+  const team = teamSchema.safeParse(teams[0])
+  if (!team.success)
+    throw new ProviderError('format', 'Dynasty GM team metadata changed. No snapshot saved.')
+  return { league, team: team.data }
+}
 
 export async function readNerdsRows(
   page: Page,
@@ -75,29 +105,16 @@ export function parseNerdsRows(
   now = new Date(),
   sleeperRoster?: CanonicalPlayer[],
 ): ProviderSnapshot {
-  const init = initSchema.parse(rawInit)
-  const league = init.leagues.find((l) => String(l.id) === leagueId)
-  if (!league)
-    throw new ProviderError(
-      'configuration',
-      'Configured Dynasty GM league is not available to this account.',
-    )
+  const parsedInit = initSchema.safeParse(rawInit)
+  if (!parsedInit.success)
+    throw new ProviderError('format', 'Dynasty GM player metadata changed. No snapshot saved.')
+  const init = parsedInit.data
+  const { league, team } = configuredTeam(init, leagueId)
   if (league.extId !== sleeperLeagueId)
     throw new ProviderError(
       'configuration',
       'Dynasty GM returned another Sleeper league. No snapshot saved.',
     )
-  const teams = league.teams.filter((t) =>
-    process.env.DYNASTY_NERDS_TEAM_ID
-      ? String(t.id) === process.env.DYNASTY_NERDS_TEAM_ID
-      : t.owned,
-  )
-  if (teams.length !== 1)
-    throw new ProviderError(
-      'configuration',
-      'Select exactly one owned Dynasty GM team with DYNASTY_NERDS_TEAM_ID.',
-    )
-  const team = teams[0]
   if (
     [...team.starters, ...team.bench, ...team.taxi, ...team.ir].some(
       (id) => !init.players[String(id)],
@@ -231,6 +248,87 @@ export function parseNerdsRows(
   }
 }
 
+// The page flow, separate from browser launch and session storage so it can run against fixtures.
+export async function captureNerdsPage(
+  page: Page,
+  leagueId: string,
+  sleeperRoster?: CanonicalPlayer[],
+): Promise<ProviderSnapshot> {
+  let init: NerdsInit | undefined
+  let initChanged = false
+  const pending: Promise<void>[] = []
+  page.on('response', (r) => {
+    if (r.url().split('?')[0] !== 'https://gm3.dynastynerds.com/api/gm/init-2' || !r.ok()) return
+    pending.push(
+      (async () => {
+        // The app can request this more than once; keep the latest readable response.
+        const parsed = initSchema.safeParse(await r.json().catch(() => null))
+        if (parsed.success) init = parsed.data
+        else initChanged = true
+      })(),
+    )
+  })
+  await page.goto(`https://app.dynastynerds.com/analyzer/${leagueId}`, {
+    waitUntil: 'domcontentloaded',
+  })
+  await page
+    .getByText(/^dynasty gm$/i)
+    .or(page.getByRole('button', { name: /^log in$/i }))
+    .waitFor({ timeout: 30_000 })
+  await checkAccess(page)
+  if (page.url().includes('sign-in')) {
+    const login = credentials('DYNASTY_NERDS')
+    if (page.url().startsWith('https://app.dynastynerds.com/'))
+      await page.getByRole('button', { name: /^log in$/i }).click()
+    await page.getByText('Continue with Email', { exact: true }).click()
+    await page.getByText('Use password instead', { exact: true }).click()
+    await page.locator('input[type=email]').fill(login.email)
+    await page.locator('input[type=password]').fill(login.password)
+    await page.getByRole('button', { name: /^log in$/i }).click()
+    await page
+      .waitForURL('https://app.dynastynerds.com/home/**', { timeout: 30_000 })
+      .catch(() => {})
+    await checkAccess(page)
+    if (
+      !page.url().startsWith('https://app.dynastynerds.com/') ||
+      /sign-in|callback/.test(page.url())
+    )
+      throw new ProviderError(
+        'login',
+        'Dynasty GM sign-in needs attention. Open the site and complete sign-in manually.',
+      )
+    await page.goto(`https://app.dynastynerds.com/analyzer/${leagueId}`, {
+      waitUntil: 'domcontentloaded',
+    })
+  }
+  await page.getByText(/^dynasty gm$/i).waitFor()
+  await page.waitForFunction(
+    () =>
+      document.body.innerText.includes('League') || document.body.innerText.includes('DYNASTY -'),
+    {},
+    { timeout: 20_000 },
+  )
+  await Promise.all(pending)
+  const metadata = init as NerdsInit | undefined
+  if (!metadata)
+    throw new ProviderError(
+      'format',
+      initChanged
+        ? 'Dynasty GM player metadata changed. No snapshot saved.'
+        : 'Dynasty GM league metadata was unavailable. No snapshot saved.',
+    )
+  const { team } = configuredTeam(metadata, leagueId)
+  if (!(await page.getByText(/^quarterbacks$/i).isVisible()))
+    await page.getByText(team.sleeperUsername, { exact: true }).last().click()
+  await page.getByText(/^quarterbacks$/i).waitFor()
+  const candidates = [...new Set([...team.starters, ...team.bench, ...team.taxi, ...team.ir])]
+    .map((id) => metadata.players[String(id)])
+    .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.pos))
+    .map((p) => ({ id: String(p.id), name: `${p.firstName} ${p.lastName}` }))
+  const rows = await readNerdsRows(page, candidates)
+  return parseNerdsRows(rows, metadata, leagueId, new Date(), sleeperRoster)
+}
+
 export const dynastyNerdsProvider: ValueProvider = {
   name: 'dynasty-nerds',
   tracksSleeperRoster: true,
@@ -241,95 +339,8 @@ export const dynastyNerdsProvider: ValueProvider = {
         'configuration',
         'DYNASTY_NERDS_LEAGUE_ID must be a numeric analyzer ID.',
       )
-    return withProviderPage('dynasty-nerds', options.headless !== false, async (page) => {
-      let init: NerdsInit | undefined
-      let responseError = false
-      const pending: Promise<void>[] = []
-      page.on('response', (r) => {
-        if (r.url().split('?')[0] === 'https://gm3.dynastynerds.com/api/gm/init-2')
-          pending.push(
-            (async () => {
-              if (!r.ok()) {
-                responseError = true
-                return
-              }
-              try {
-                init = initSchema.parse(await r.json())
-              } catch {
-                responseError = true
-              }
-            })(),
-          )
-      })
-      await page.goto(`https://app.dynastynerds.com/analyzer/${leagueId}`, {
-        waitUntil: 'domcontentloaded',
-      })
-      await page
-        .getByText(/^dynasty gm$/i)
-        .or(page.getByRole('button', { name: /^log in$/i }))
-        .waitFor({ timeout: 30_000 })
-      await checkAccess(page)
-      if (page.url().includes('sign-in')) {
-        const login = credentials('DYNASTY_NERDS')
-        if (page.url().startsWith('https://app.dynastynerds.com/'))
-          await page.getByRole('button', { name: /^log in$/i }).click()
-        await page.getByText('Continue with Email', { exact: true }).click()
-        await page.getByText('Use password instead', { exact: true }).click()
-        await page.locator('input[type=email]').fill(login.email)
-        await page.locator('input[type=password]').fill(login.password)
-        await page.getByRole('button', { name: /^log in$/i }).click()
-        await page
-          .waitForURL('https://app.dynastynerds.com/home/**', { timeout: 30_000 })
-          .catch(() => {})
-        await checkAccess(page)
-        if (
-          !page.url().startsWith('https://app.dynastynerds.com/') ||
-          /sign-in|callback/.test(page.url())
-        )
-          throw new ProviderError(
-            'login',
-            'Dynasty GM sign-in needs attention. Open the site and complete sign-in manually.',
-          )
-        await page.goto(`https://app.dynastynerds.com/analyzer/${leagueId}`, {
-          waitUntil: 'domcontentloaded',
-        })
-      }
-      await page.getByText(/^dynasty gm$/i).waitFor()
-      await page.waitForFunction(
-        () =>
-          document.body.innerText.includes('League') ||
-          document.body.innerText.includes('DYNASTY -'),
-        {},
-        { timeout: 20_000 },
-      )
-      await Promise.all(pending)
-      if (!init || responseError)
-        throw new ProviderError(
-          'format',
-          'Dynasty GM league metadata was unavailable. No snapshot saved.',
-        )
-      const league = init.leagues.find((l) => String(l.id) === leagueId)
-      const teams =
-        league?.teams.filter((t) =>
-          process.env.DYNASTY_NERDS_TEAM_ID
-            ? String(t.id) === process.env.DYNASTY_NERDS_TEAM_ID
-            : t.owned,
-        ) ?? []
-      if (teams.length !== 1)
-        throw new ProviderError(
-          'configuration',
-          'Select one owned Dynasty GM team in local configuration.',
-        )
-      if (!(await page.getByText(/^quarterbacks$/i).isVisible()))
-        await page.getByText(teams[0].sleeperUsername, { exact: true }).last().click()
-      await page.getByText(/^quarterbacks$/i).waitFor()
-      const team = teams[0]
-      const candidates = [...new Set([...team.starters, ...team.bench, ...team.taxi, ...team.ir])]
-        .map((id) => init!.players[String(id)])
-        .filter((p) => p && ['QB', 'RB', 'WR', 'TE'].includes(p.pos))
-        .map((p) => ({ id: String(p.id), name: `${p.firstName} ${p.lastName}` }))
-      const rows = await readNerdsRows(page, candidates)
-      return parseNerdsRows(rows, init, leagueId, new Date(), options.sleeperRoster)
-    })
+    return withProviderPage('dynasty-nerds', options.headless !== false, (page) =>
+      captureNerdsPage(page, leagueId, options.sleeperRoster),
+    )
   },
 }

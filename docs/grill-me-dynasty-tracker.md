@@ -22,7 +22,7 @@ Question: Should every projected round use these three four-team bands: playoff 
 
 Recommended: Yes. Apply the same original-team projection to rounds 1-4. Preserve the real pick identity as season, round, and original Sleeper roster. The band selects a provider value but never changes who originally owned the pick.
 
-Answer: Pending
+Answer: Yes
 
 ## 2. How should the bottom-four lottery be shown?
 
@@ -30,7 +30,7 @@ Question: Your playoff app gives the bottom four teams weighted lottery tickets,
 
 Recommended: Stop at `early` before the lottery. Display the four possible exact slots and current ticket odds as forecast detail, but do not turn an expected slot into a provider value. Switch to the exact slot only after the league records the lottery result.
 
-Answer: Pending
+Answer: You got it. Early until lottery, once we know spots we can swap to legit pick slots.
 
 ## 3. Which forecast should drive the bracket during the season?
 
@@ -38,7 +38,7 @@ Question: Should the tracker reproduce the current playoff app's forecast, which
 
 Recommended: Yes. Reuse that league-specific algorithm and its custom path that sends championship first-round losers into the middling bracket. Save the forecast timestamp and inputs with each pick observation so a band change can be explained later.
 
-Answer: Pending
+Answer: yes. Whatever the league for all seasons site I shared does, that what we do.
 
 ## 4. What should happen when a pick changes bands?
 
@@ -46,7 +46,7 @@ Question: If an original team's forecast moves from `early` to `mid`, should the
 
 Recommended: Keep one history per real pick, provider, and scoring context. Record the projected band on every observation. A change from early to mid is a real change in the pick's tracked outlook, so the chart should show it and explain that the band changed on that date.
 
-Answer: Pending
+Answer: Yes we should track band changes. Once we start trying to hunt for trade partners we'll want to know how to value their pick based on the current playoff projection.
 
 ## 5. What if a provider lacks the needed pick label?
 
@@ -54,4 +54,4 @@ Question: If a provider offers a generic round value but no matching early, mid,
 
 Recommended: Use the provider's generic value only when it is explicitly available, label it `generic/provisional`, and keep it in the same provider scale. Never derive a missing band by averaging other pick values. If neither label exists, show `Needs review` with no invented value.
 
-Answer: Pending
+Answer: sounds good. COuld also just say "1st" if unknown and "1.xx" for example is known.

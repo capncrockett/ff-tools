@@ -7,7 +7,7 @@ FF Tools is currently focused on the Dynasty Value Tracker. Keep other experimen
 Adapted from Grundle Ball's current AGENTS.md and docs/agent-workflow.md (2026-09-04).
 
 1. Check `git status --short --branch` and run `npm run doctor`. Preserve user edits.
-2. Read [the decision document](docs/grill-me-dynasty-tracker.md), [architecture](docs/architecture.md), and [workflow](docs/agent-workflow.md). An unanswered recommendation is an assumption, not user approval.
+2. Read [the decision document](docs/grill-me-dynasty-tracker.md), [architecture](docs/architecture.md), and [workflow](docs/agent-workflow.md). An unanswered recommendation is an assumption, not user approval. When uncertain about user intent, scope, or source semantics, read the relevant repository docs and agent channel first. Then check authoritative internet sources when the question is externally verifiable, or ask the user. State uncertainty plainly, and never record an inference as user-confirmed.
 3. Keep pure calculations in `src/shared`, provider access in `src/server/providers`, persistence in services, and rendering in `src/web`.
 4. Prefer DaisyUI and accessible, dense, responsive interfaces. Label data freshness, missing observations, and provisional interpretations.
 5. Use fixture-based tests while developing. Never contact paid providers from tests, builds, doctor, or page reloads.

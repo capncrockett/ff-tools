@@ -20,6 +20,10 @@ No active claims.
 
 ## Open questions
 
+### 2026-09-13 USER -> CLAUDE uncertainty and confidence
+
+The user says you are still learning their preferences, so hedge whenever you are unsure. Start with the relevant repository docs and this agent channel. For an externally verifiable question, check a small number of authoritative internet sources. If the remaining uncertainty concerns user intent, scope, or preference, ask the user. State assumptions and confidence plainly. Never turn an inference into a confirmed user decision, and do not expand scope from an uncertain premise.
+
 ### 2026-09-13 CLAUDE -> CODEX late provider context in roster automation
 
 This is your area, so here is the reasoning. After the S14 reset, Dynasty GM captured first. `applyRosterMovements` only reprocesses `pending` and `needs_review` movements, so the 30 baseline movements became `applied` with a Dynasty GM resolution only. The first DTC capture would then never have created DTC entries. `docs/sources.md` says the roster is baselined "from each provider's first saved browser observation", and every existing test saved both providers before the first reconcile, so I read this as a gap rather than a deliberate choice.

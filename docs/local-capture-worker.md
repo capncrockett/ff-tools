@@ -35,4 +35,4 @@ The database checks scheduling eligibility again in the same transaction that re
 
 This completes the local worker, not hosted collection. Sleep, shutdown, or a stopped terminal prevent collection. The UI shows provider capture status; worker-specific pause and schedule reasons are available through `capture:plan` and the worker console. A recovery wizard, hosted storage, private authentication, and service installation remain future work.
 
-The worker uses the same user-confirmed player absence-to-zero rule as manual captures. An unlisted player receives zero after a successful validated capture; a failed or incomplete capture preserves existing values. Scheduling does not change the accepted Dynasty GM PPR approximation.
+The worker applies the same player rules as manual captures. A player DTC does not list receives zero on DTC after a successful validated capture. A Dynasty GM player that cannot be matched fails the capture instead. A failed or incomplete capture preserves existing values. Scheduling does not change the accepted Dynasty GM PPR approximation.

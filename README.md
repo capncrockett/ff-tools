@@ -36,7 +36,7 @@ Open **How to use this tracker** for a three-step guide and an example you can c
 
 Zero cost produces absolute gain with undefined percentage ROI. Quotes older than an acquisition do not produce unrealized return. Values more than 36 hours old are visibly stale and excluded from the fresh-target count.
 
-Each provider and scoring context keeps a separate series. DTC's imported league is half-PPR/1QB; Dynasty GM calls its valuation set PPR. Their numbers are never averaged. Current capture scope is the owned QB/RB/WR/TE roster, including supported bench/taxi/IR players. Per the user-confirmed rule, a player absent from a provider's validated list gets a zero on that provider at the next successful capture. Failed captures and unreadable values retain their error state. Draft-pick valuation remains separate pending work.
+Each provider and scoring context keeps a separate series. DTC's imported league is half-PPR/1QB; Dynasty GM calls its valuation set PPR. Their numbers are never averaged. Current capture scope is the owned QB/RB/WR/TE roster, including supported bench/taxi/IR players. Per the user-confirmed rule, a player absent from DTC's position exports gets a zero on DTC, since DTC ranks only about a top 300. Dynasty GM lists the whole player pool, so a player it cannot match is a matching error, not a zero; its "NR" players display and save as 0. Failed captures and unreadable values retain their error state. Draft-pick valuation remains separate pending work.
 
 See [source behavior and limitations](docs/sources.md).
 

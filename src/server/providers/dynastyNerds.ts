@@ -37,8 +37,8 @@ const leagueSchema = z.object({
 })
 // The account can hold other leagues, and a league can hold orphaned teams, with incomplete
 // metadata (null team counts or usernames). Only the configured league and team are validated
-// strictly. The player catalog stays strict: an unreadable entry must never look like an
-// unlisted player worth zero.
+// strictly. The player catalog stays strict, because it decides whether an unmatched Sleeper player
+// is a stale mirror or a name mismatch.
 const initSchema = z.object({
   players: z.record(playerSchema),
   valueSet: z.string(),
@@ -157,67 +157,7 @@ export function parseNerdsRows(
   )
     throw new ProviderError('format', 'Dynasty GM roster capture is incomplete. No snapshot saved.')
 
-  // A player missing from a rendered roster is not necessarily absent from the platform.
-  // Only apply the user's zero rule when the validated player catalog has no match.
-  const missing: CanonicalPlayer[] = []
-  const catalog = Object.values(init.players)
-  const matchedIds = new Set<number>()
-  for (const player of sleeperRoster ?? []) {
-    if (!['QB', 'RB', 'WR', 'TE'].includes(player.position ?? '')) continue
-    const candidatesFor = (removeSuffix: boolean) =>
-      catalog.filter(
-        (candidate) =>
-          playerIdentityKey(
-            `${candidate.firstName} ${candidate.lastName}`,
-            candidate.pos,
-            removeSuffix,
-          ) === playerIdentityKey(player.name, player.position ?? '', removeSuffix),
-      )
-    const exact = candidatesFor(false)
-    const candidates = exact.length ? exact : candidatesFor(true)
-    if (candidates.length > 1 || (candidates[0] && matchedIds.has(candidates[0].id)))
-      throw new ProviderError(
-        'format',
-        `Dynasty GM has an ambiguous match for ${player.name}. No snapshot saved.`,
-      )
-    const candidate = candidates[0]
-    if (candidate) {
-      matchedIds.add(candidate.id)
-      const record = records.find((row) => row.sourceKey === String(candidate.id))
-      // Dynasty GM mirrors the Sleeper league on its own schedule, so a prompt capture after a
-      // roster move can see its older copy. That is temporary, not a parser failure.
-      if (!record)
-        throw new ProviderError(
-          'unavailable',
-          `Dynasty GM lists ${player.name}, but not on its copy of the owned roster yet. It may still be syncing a recent Sleeper move. No snapshot saved.`,
-        )
-      record.sleeperId = player.sleeperId
-    } else {
-      missing.push(player)
-      records.push({
-        sourceKey: `absent:sleeper:${player.sleeperId}`,
-        sleeperId: player.sleeperId,
-        playerName: player.name,
-        position: player.position as Observation['position'],
-        team: player.team ?? null,
-        value: 0,
-      })
-    }
-  }
-  // A total miss signals changed catalog names, not a roster the platform stopped listing.
-  if (missing.length && !matchedIds.size)
-    throw new ProviderError(
-      'format',
-      `Dynasty GM catalog matched none of the ${missing.length} owned Sleeper players. No snapshot saved. Review player names before retrying.`,
-    )
-  // A player Dynasty GM still rosters but Sleeper does not is the other sign of a stale copy.
-  // Saving here could also pair a zero for a new player with a value for a departed one.
-  const departed = sleeperRoster ? records.filter((record) => !record.sleeperId) : []
-  if (departed.length)
-    throw new ProviderError(
-      'unavailable',
-      `Dynasty GM roster does not match Sleeper yet: ${departed.map((record) => record.playerName).join('; ')} ${departed.length === 1 ? 'is' : 'are'} not on the Sleeper roster. It may still be syncing a recent move; if this persists, check for a name or position difference. No snapshot saved.`,
-    )
+  if (sleeperRoster) matchSleeperRoster(records, init, sleeperRoster)
   return {
     source: 'dynasty-nerds',
     capturedAt: now.toISOString(),
@@ -238,14 +178,72 @@ export function parseNerdsRows(
       },
     },
     records,
-    ...(missing.length
-      ? {
-          warnings: [
-            `Dynasty GM: ${missing.length} unlisted player${missing.length === 1 ? '' : 's'} valued at 0 by the tracker rule: ${missing.map((player) => `${player.name} (${player.position}, Sleeper ${player.sleeperId})`).join('; ')}.`,
-          ],
-        }
-      : {}),
   }
+}
+
+// Dynasty GM's owned team mirrors the Sleeper roster, so each Sleeper player is matched only among
+// that team's players. The full catalog repeats names (16 shared name-and-position pairs on
+// 2026-09-13), so it is used only to tell a stale mirror from a name mismatch. It covers the whole
+// player pool, so a player it lacks is a matching failure, never a zero (user, 2026-09-13).
+function matchSleeperRoster(
+  records: Observation[],
+  init: NerdsInit,
+  sleeperRoster: CanonicalPlayer[],
+) {
+  const nameKey = (
+    p: { firstName: string; lastName: string; pos: string },
+    removeSuffix: boolean,
+  ) => playerIdentityKey(`${p.firstName} ${p.lastName}`, p.pos, removeSuffix)
+  const sleeperKey = (player: CanonicalPlayer, removeSuffix: boolean) =>
+    playerIdentityKey(player.name, player.position ?? '', removeSuffix)
+  const eligible = sleeperRoster.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position ?? ''))
+  const unmatched: CanonicalPlayer[] = []
+  for (const player of eligible) {
+    const find = (removeSuffix: boolean) =>
+      records.filter(
+        (record) =>
+          nameKey(init.players[record.sourceKey], removeSuffix) ===
+          sleeperKey(player, removeSuffix),
+      )
+    const exact = find(false)
+    const candidates = exact.length ? exact : find(true)
+    if (candidates.length > 1 || candidates[0]?.sleeperId)
+      throw new ProviderError(
+        'format',
+        `Dynasty GM has an ambiguous match for ${player.name} on the owned roster. No snapshot saved.`,
+      )
+    if (candidates[0]) candidates[0].sleeperId = player.sleeperId
+    else unmatched.push(player)
+  }
+  const describe = (players: CanonicalPlayer[]) =>
+    players.map((player) => `${player.name} (${player.position})`).join('; ')
+  if (eligible.length && unmatched.length === eligible.length)
+    throw new ProviderError(
+      'format',
+      `Dynasty GM's roster matched none of the ${eligible.length} owned Sleeper players. No snapshot saved. Review player names before retrying.`,
+    )
+  const catalog = Object.values(init.players)
+  const mismatched = unmatched.filter(
+    (player) =>
+      !catalog.some((candidate) =>
+        [false, true].some(
+          (removeSuffix) => nameKey(candidate, removeSuffix) === sleeperKey(player, removeSuffix),
+        ),
+      ),
+  )
+  if (mismatched.length)
+    throw new ProviderError(
+      'format',
+      `Dynasty GM has no player named like ${describe(mismatched)}. Its catalog covers the whole player pool, so the name or position differs from Sleeper and needs a matching fix. No snapshot saved.`,
+    )
+  // Otherwise the mirror is behind: a new Sleeper player is not on the team yet, or a departed one
+  // still is. Dynasty GM syncs on its own schedule, so this is temporary, not a parser failure.
+  const departed = records.filter((record) => !record.sleeperId)
+  if (unmatched.length || departed.length)
+    throw new ProviderError(
+      'unavailable',
+      `Dynasty GM's roster does not match Sleeper yet${unmatched.length ? `; not on its roster: ${describe(unmatched)}` : ''}${departed.length ? `; no longer on the Sleeper roster: ${departed.map((record) => `${record.playerName} (${record.position})`).join('; ')}` : ''}. It may still be syncing a recent move. No snapshot saved.`,
+    )
 }
 
 // The page flow, separate from browser launch and session storage so it can run against fixtures.

@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["creds", "Prereqs", "sparklines"]
+  "cSpell.words": ["creds", "Prereqs", "sparklines"],
+  "prisma.pinToPrisma6": true
 }

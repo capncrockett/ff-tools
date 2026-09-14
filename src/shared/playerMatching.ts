@@ -95,12 +95,14 @@ export function ageOn(birthDate: string, at: Date) {
   return (+at - Date.parse(`${birthDate}T00:00:00Z`)) / yearMs
 }
 
-// DTC shows an age to one decimal instead of a birth date. The tolerance covers that rounding plus
-// DTC computing ages on a slightly different day than the capture.
+// DTC shows completed years ("25Y") instead of a birth date. In a 2026-09-13 export, the Sleeper
+// birth-date age exceeded DTC's number by a median 0.50 years and by under one year for 98% of 805
+// comparable players, so an age is confirmed when the exact age is 0 to 1 year above it. The lag
+// allowance covers DTC refreshing ages a few weeks after a birthday.
 export function matchByAge(
   source: { name: string; position: string; age: number | null; observedAt: Date },
   find: CanonicalIndex,
-  toleranceYears = 0.15,
+  lagYears = 0.1,
 ): MatchDecision {
   if (!matchedPositions.includes(source.position))
     return { status: 'skipped', note: 'Only QB, RB, WR, and TE are matched.' }
@@ -109,9 +111,10 @@ export function matchByAge(
   const confirmed =
     age === null
       ? []
-      : candidates.filter(
-          (c) =>
-            c.birthDate && Math.abs(ageOn(c.birthDate, source.observedAt) - age) <= toleranceYears,
-        )
+      : candidates.filter((c) => {
+          if (!c.birthDate) return false
+          const above = ageOn(c.birthDate, source.observedAt) - age
+          return above >= 0 && above < 1 + lagYears
+        })
   return decide(candidates, confirmed, age !== null, 'age')
 }

@@ -69,18 +69,34 @@ test('a name match without agreeing birth dates waits for review instead of gues
   ).toMatchObject({ status: 'skipped' })
 })
 
-test('DTC links by age within tolerance of the Sleeper birth date', () => {
+test('DTC links by its whole-year age, allowing a few weeks for a birthday it has not caught up to', () => {
   const observedAt = new Date('2026-09-13T12:00:00Z')
-  const age = Math.round(ageOn('2002-09-30', observedAt) * 10) / 10
+  // DTC shows completed years: 23.96 years old reads "23Y", and 28.7 reads "28Y".
+  expect(ageOn('2002-09-30', observedAt)).toBeCloseTo(23.96, 2)
+  const dtc = (name: string, position: string, age: number | null) =>
+    matchByAge({ name, position, age, observedAt }, sleeper)
+  expect(dtc('Common Name', 'WR', 23)).toMatchObject({ status: 'linked', playerId: 3 })
+  expect(dtc('Common Name', 'WR', 28)).toMatchObject({ status: 'linked', playerId: 2 })
+  // A number the exact age has not reached, or passed more than a year ago, confirms no one.
+  for (const age of [24, 26])
+    expect(dtc('Common Name', 'WR', age)).toMatchObject({
+      status: 'ambiguous',
+      note: expect.stringContaining('age differs'),
+    })
+  expect(dtc('Common Name', 'WR', null)).toMatchObject({
+    status: 'ambiguous',
+    note: expect.stringContaining('no age to confirm'),
+  })
+  // Twelve days past a birthday, DTC may still show the previous year.
+  const birthday = indexCanonicalPlayers([
+    { id: 9, name: 'Birthday Back', position: 'RB', birthDate: '2000-09-01' },
+  ])
   expect(
-    matchByAge({ name: 'Common Name', position: 'WR', age, observedAt }, sleeper),
-  ).toMatchObject({ status: 'linked', playerId: 3 })
+    matchByAge({ name: 'Birthday Back', position: 'RB', age: 25, observedAt }, birthday),
+  ).toMatchObject({ status: 'linked', playerId: 9 })
   expect(
-    matchByAge({ name: 'Common Name', position: 'WR', age: age + 0.3, observedAt }, sleeper),
-  ).toMatchObject({ status: 'ambiguous', note: expect.stringContaining('age differs') })
-  expect(
-    matchByAge({ name: 'Common Name', position: 'WR', age: null, observedAt }, sleeper),
-  ).toMatchObject({ status: 'ambiguous', note: expect.stringContaining('no age to confirm') })
+    matchByAge({ name: 'Birthday Back', position: 'RB', age: 24, observedAt }, birthday),
+  ).toMatchObject({ status: 'ambiguous' })
 })
 
 test('birth dates must be real calendar dates in YYYY-MM-DD form', () => {

@@ -138,7 +138,8 @@ test('links are stable, manual decisions stand, and a changed identity is re-eva
 })
 
 test('DTC rows link by displayed age and keep their latest rank', async () => {
-  const age = (birthDate: string) => (Math.round(ageOn(birthDate, seenAt) * 10) / 10).toFixed(1)
+  // DTC exports ages as completed years, such as "28Y", and leaves some blank.
+  const age = (birthDate: string) => `${Math.floor(ageOn(birthDate, seenAt))}Y`
   const row = (rank: number, playerName: string, position: string, shown: string) => ({
     rank,
     playerName,
@@ -151,15 +152,21 @@ test('DTC rows link by displayed age and keep their latest rank', async () => {
     [
       row(1, 'Fixture Receiver', 'WR', age('2000-05-10')),
       row(2, 'Common Name', 'WR', age('1998-01-01')),
-      row(3, 'Unknown Rookie', 'RB', '21.0'),
+      row(3, 'Unknown Rookie', 'RB', '21Y'),
+      row(4, 'Undated Back', 'RB', ''),
     ],
     seenAt,
   )
   expect(await matchProviderCatalogs(db, seenAt)).toMatchObject({
-    'dynasty-calculator': { linked: 2, ambiguous: 0, unmatched: 1 },
+    'dynasty-calculator': { linked: 2, ambiguous: 1, unmatched: 1 },
   })
   const common = await db.dtcPlayer.findFirstOrThrow({ where: { name: 'Common Name' } })
+  expect(common).toMatchObject({ age: 28 })
   expect(await sleeperId(common.playerId)).toBe('12')
+  expect(await db.dtcPlayer.findFirstOrThrow({ where: { name: 'Undated Back' } })).toMatchObject({
+    age: null,
+    matchStatus: 'ambiguous',
+  })
   await saveDtcCatalog(db, [row(9, 'Common Name', 'WR', age('1998-01-01'))], seenAt)
   expect(await db.dtcPlayer.findUniqueOrThrow({ where: { key: common.key } })).toMatchObject({
     rank: 9,

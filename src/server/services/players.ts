@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import axios, { type AxiosInstance } from 'axios'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { validBirthDate } from '../../shared/playerMatching.js'
+import { leaguePosition, validBirthDate } from '../../shared/playerMatching.js'
 import { localDir } from '../config.js'
 
 export type CanonicalPlayer = {
@@ -12,16 +12,19 @@ export type CanonicalPlayer = {
   team?: string | null
   birthDate?: string | null
 }
+// Only players the league can roster: QB, RB, WR, or TE by position or fantasy eligibility.
 export function mapSleeperPlayers(playersMap: Record<string, any>): CanonicalPlayer[] {
   return Object.entries(playersMap || {}).flatMap(([pid, info]) => {
     if (!info || typeof info !== 'object') return []
+    const position = leaguePosition(info.position, info.fantasy_positions)
+    if (!position) return []
     const name =
       info.full_name || [info.first_name, info.last_name].filter(Boolean).join(' ') || pid
     return [
       {
         sleeperId: pid,
         name,
-        position: info.position || info.fantasy_positions?.[0] || null,
+        position,
         team: info.team || null,
         birthDate: validBirthDate(info.birth_date),
       },
@@ -46,6 +49,8 @@ export async function loadSleeperPlayers(opts?: {
         players = JSON.parse(await fs.readFile(cache, 'utf8')) as CanonicalPlayer[]
         // A cache written before birth dates were kept would leave them empty for a day.
         if (players.length && !('birthDate' in players[0])) players = undefined
+        // A cache written before the league scope still holds every position.
+        else players = players.filter((player) => leaguePosition(player.position))
       }
     } catch {
       /* first refresh */

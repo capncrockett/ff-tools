@@ -26,8 +26,8 @@ model Player {
   dtcPlayer       DtcPlayer?
 }
 
-/// Every player Dynasty GM lists, including kickers, defenses, and picks, refreshed from its
-/// initialization response after each successful capture. Rows are never deleted.
+/// Every QB, RB, WR, TE, and draft pick Dynasty GM lists, refreshed from its initialization
+/// response after each successful capture. The league has no other positions. Rows are never deleted.
 model DynastyGmPlayer {
   /// Dynasty GM's own player ID.
   id          Int       @id

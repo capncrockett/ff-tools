@@ -10,7 +10,7 @@ try {
   const labels = { 'dynasty-nerds': 'Dynasty GM', 'dynasty-calculator': 'DTC' } as const
   for (const [source, counts] of Object.entries(await matchProviderCatalogs(prisma)))
     console.log(
-      `${labels[source as keyof typeof labels]}: ${counts.linked} linked, ${counts.ambiguous} need review, ${counts.unmatched} unmatched, ${counts.skipped} other positions`,
+      `${labels[source as keyof typeof labels]}: ${counts.linked} linked, ${counts.ambiguous} need review, ${counts.unmatched} unmatched${counts.skipped ? `, ${counts.skipped} draft picks (tracked separately)` : ''}`,
     )
 } catch {
   console.error('Player matching failed. No links were changed.')

@@ -1,6 +1,7 @@
 import {
   ageOn,
   indexCanonicalPlayers,
+  leaguePosition,
   matchByAge,
   matchByBirthDate,
   validBirthDate,
@@ -13,7 +14,6 @@ const sleeper = indexCanonicalPlayers([
   { id: 3, name: 'Common Name', position: 'WR', birthDate: '2002-09-30' },
   { id: 4, name: 'Undated Back', position: 'RB', birthDate: null },
   { id: 5, name: 'Suffix Runner Jr.', position: 'RB', birthDate: '2001-03-03' },
-  { id: 6, name: 'Place Kicker', position: 'K', birthDate: '1995-02-02' },
 ])
 
 test('Dynasty GM links only when name, position, and birth date agree on one Sleeper player', () => {
@@ -57,7 +57,7 @@ test('a name match without agreeing birth dates waits for review instead of gues
   expect(
     matchByBirthDate({ name: 'Nobody Here', position: 'TE', birthDate: '1999-09-09' }, sleeper),
   ).toMatchObject({ status: 'unmatched' })
-  // Position is part of identity, and only skill positions are matched.
+  // Position is part of identity, and draft picks are never matched to players.
   expect(
     matchByBirthDate(
       { name: 'Fixture Receiver', position: 'TE', birthDate: '2000-05-10' },
@@ -65,8 +65,23 @@ test('a name match without agreeing birth dates waits for review instead of gues
     ),
   ).toMatchObject({ status: 'unmatched' })
   expect(
-    matchByBirthDate({ name: 'Place Kicker', position: 'K', birthDate: '1995-02-02' }, sleeper),
-  ).toMatchObject({ status: 'skipped' })
+    matchByBirthDate({ name: '2027 Round 1', position: 'pick', birthDate: null }, sleeper),
+  ).toEqual({
+    status: 'skipped',
+    note: 'Picks are tracked separately from players.',
+  })
+})
+
+test('the league positions are QB, RB, WR, and TE, by listed position or fantasy eligibility', () => {
+  expect(leaguePosition('WR')).toBe('WR')
+  expect(leaguePosition('FB', ['RB'])).toBe('RB')
+  for (const [position, eligible] of [
+    ['K', ['K']],
+    ['DEF', []],
+    ['OL', undefined],
+    [null, ['DB']],
+  ])
+    expect(leaguePosition(position, eligible)).toBeNull()
 })
 
 test('DTC links by its whole-year age, allowing a few weeks for a birthday it has not caught up to', () => {

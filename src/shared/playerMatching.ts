@@ -2,7 +2,25 @@ import { playerIdentityKey } from './playerIdentity.js'
 
 // Provider catalogs are matched to canonical Sleeper players. A link needs a unique name-and-position
 // candidate confirmed by an independent identity detail; everything else is left for review.
+// A League for All Seasons rosters only these positions and trades draft picks. Every other position
+// is out of scope and is not stored (user, 2026-09-14).
 export const matchedPositions: readonly string[] = ['QB', 'RB', 'WR', 'TE']
+
+// A Sleeper player's league position: the listed position, or a fantasy eligibility such as a
+// fullback eligible at RB. Null means the league has no use for the player.
+export function leaguePosition(position: unknown, fantasyPositions?: unknown): string | null {
+  if (typeof position === 'string' && matchedPositions.includes(position)) return position
+  if (!Array.isArray(fantasyPositions)) return null
+  const eligible = fantasyPositions.find(
+    (value): value is string => typeof value === 'string' && matchedPositions.includes(value),
+  )
+  return eligible ?? null
+}
+
+const notMatched = (position: string) =>
+  position === 'pick'
+    ? 'Picks are tracked separately from players.'
+    : 'Only QB, RB, WR, and TE are matched.'
 
 export type CanonicalCandidate = {
   id: number
@@ -81,7 +99,7 @@ export function matchByBirthDate(
   find: CanonicalIndex,
 ): MatchDecision {
   if (!matchedPositions.includes(source.position))
-    return { status: 'skipped', note: 'Only QB, RB, WR, and TE are matched.' }
+    return { status: 'skipped', note: notMatched(source.position) }
   const candidates = find(source.name, source.position)
   const birthDate = validBirthDate(source.birthDate)
   const confirmed = birthDate ? candidates.filter((c) => c.birthDate === birthDate) : []
@@ -103,7 +121,7 @@ export function matchByAge(
   lagYears = 0.1,
 ): MatchDecision {
   if (!matchedPositions.includes(source.position))
-    return { status: 'skipped', note: 'Only QB, RB, WR, and TE are matched.' }
+    return { status: 'skipped', note: notMatched(source.position) }
   const candidates = find(source.name, source.position)
   const age = source.age !== null && Number.isFinite(source.age) ? source.age : null
   const confirmed =

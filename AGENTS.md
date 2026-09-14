@@ -2,6 +2,8 @@
 
 FF Tools is currently focused on the Dynasty Value Tracker. Keep other experiments intact; their TODOs do not authorize more features.
 
+League scope (user, 2026-09-14): A League for All Seasons rosters only QB, RB, WR, and TE, and trades draft picks. There are no kickers, team defenses, or offensive or defensive linemen. Do not import, store, match, or report players at any other position.
+
 ## Workflow
 
 Adapted from Grundle Ball's current AGENTS.md and docs/agent-workflow.md (2026-09-04).

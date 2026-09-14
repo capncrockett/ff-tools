@@ -61,7 +61,10 @@ test('Dynasty GM catalog rows link by birth date and wait for review otherwise',
       gm(502, 'Common', 'Name', 'WR', '2002-09-30'),
       gm(503, 'Common', 'Name', 'WR', 'NaN-NaN-NaN'),
       gm(504, 'Undated', 'Back', 'RB', '1999-01-01'),
-      gm(505, 'Place', 'Kicker', 'K', '1995-02-02'),
+      gm(505, '2027', 'Round 1', 'pick'),
+      // The league has no kickers or defenses, so these are never stored.
+      gm(506, 'Place', 'Kicker', 'K', '1995-02-02'),
+      gm(507, 'Home', 'Defense', 'DEF'),
     ],
     seenAt,
   )
@@ -79,6 +82,7 @@ test('Dynasty GM catalog rows link by birth date and wait for review otherwise',
     [504, 'ambiguous', null],
     [505, 'skipped', null],
   ])
+  expect(rows[4].matchNote).toBe('Picks are tracked separately from players.')
   expect(rows[2]).toMatchObject({ birthDate: null, draftYear: 2022, matchMethod: 'automatic' })
   expect(rows[3].matchNote).toContain('Sleeper has no birth date')
 })
@@ -260,7 +264,8 @@ test('a capture saves its catalog, and a catalog failure never costs the saved v
     matchStatus: 'linked',
   })
   await db.syncRun.updateMany({ data: { startedAt: new Date(Date.now() - 3_600_001) } })
-  const broken = { source: 'dynasty-nerds', players: [{ id: 'not-a-number' }] }
+  // A league position gets past the scope filter, so the missing name fails the catalog save.
+  const broken = { source: 'dynasty-nerds', players: [{ id: 'not-a-number', pos: 'WR' }] }
   const result = await syncSource(
     db,
     'dynasty-nerds',

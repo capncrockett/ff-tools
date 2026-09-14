@@ -16,6 +16,8 @@ const chunks = <T>(items: T[], size = 400) =>
     items.slice(i * size, (i + 1) * size),
   )
 const catalogTransaction = { timeout: 120_000 }
+// Dynasty GM rows the league can use. Rows saved at other positions before this scope are ignored.
+const dynastyGmPositions: readonly string[] = [...matchedPositions, 'pick']
 
 export async function saveProviderCatalog(
   db: PrismaClient,
@@ -54,7 +56,14 @@ export async function saveDynastyGmCatalog(
   entries: DynastyGmCatalogEntry[],
   seenAt: Date,
 ) {
-  const incoming = [...new Map(entries.map((entry) => [entry.id, dynastyGmRow(entry)])).values()]
+  // The league rosters only QB, RB, WR, and TE and trades picks; kickers and defenses are not kept.
+  const incoming = [
+    ...new Map(
+      entries
+        .filter((entry) => dynastyGmPositions.includes(entry.pos))
+        .map((entry) => [entry.id, dynastyGmRow(entry)]),
+    ).values(),
+  ]
   return db.$transaction(async (tx) => {
     const existing = new Map((await tx.dynastyGmPlayer.findMany()).map((row) => [row.id, row]))
     const created = incoming.filter((row) => !existing.has(row.id))
@@ -245,7 +254,9 @@ export async function matchProviderCatalogs(db: PrismaClient, now = new Date()) 
   })
   const find = indexCanonicalPlayers(canonical)
   return db.$transaction(async (tx: Tx) => {
-    const gmRows = await tx.dynastyGmPlayer.findMany()
+    const gmRows = await tx.dynastyGmPlayer.findMany({
+      where: { position: { in: [...dynastyGmPositions] } },
+    })
     const gmByKey = new Map(gmRows.map((row) => [String(row.id), row]))
     const gmPlan = planDecisions(
       gmRows.map((row) => ({ ...row, key: String(row.id) })),

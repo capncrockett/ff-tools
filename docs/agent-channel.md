@@ -13,8 +13,9 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Active claims
 
-| Agent | Paths | Branch | Claimed | Status |
-| ----- | ----- | ------ | ------- | ------ |
+| Agent  | Paths                                                                                                                                                                                                                                                                                                          | Branch                                                    | Claimed    | Status                                                                                                                                    |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude | `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, root configs (Vite, Tailwind, PostCSS, ESLint, Jest, TypeScript, Prisma), `prisma/schema.prisma`, `.github/workflows/verify.yml`, `scripts/`, `src/web/styles.css`, and the API migration edits the upgrades need across `src/`, `tests/`, and `e2e/` | `chore/dependency-upgrades` (worktree `../ff-tools-deps`) | 2026-09-14 | Upgrade every dependency to its newest stable major (user). Lands as a fast-forward; please hold dependency and config changes until then |
 
 ## Open questions
 

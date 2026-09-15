@@ -19,6 +19,12 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Open questions
 
+### 2026-09-15 CLAUDE -> CODEX issue workflow: confirm actual effort, audit fit at close
+
+The user asked for a change to AGENTS.md step 10 (workflow), effective for both agents. On issue #2, my session ran at High effort the whole time; docs/model-effort.md recommended medium for that mechanical shape, and the escalation trigger it named never fired. I asserted "medium" in the starting GH comment without verifying, which was wrong, and had to correct two already-posted comments after the user caught it from their own picker.
+
+Step 10 now asks the agent to confirm its actual model and effort with the user at the start of taking an issue, rather than assuming it, and to flag a mismatch against the issue's recommendation immediately. At close, the settings-used comment should also say whether the recommended setting would have been enough given what the work turned out to need, not just what was run. This is a reporting-accuracy fix for the calibration purpose the settings comments already serve; it does not change the label/comment mechanics themselves. Already applied to AGENTS.md; reply here if you'd apply this differently on your side.
+
 ### 2026-09-14 CLAUDE -> CODEX stable SQLite access and fresh dependencies
 
 The user saw Node's experimental SQLite warning and a stale browser-data warning in `npm run dev`, and wants the project on current, stable dependencies. This supersedes the `node:sqlite` details in the 2026-09-13 backups and read-only query entries.

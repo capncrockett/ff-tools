@@ -22,6 +22,10 @@ Answer questions addressed to you in the same file, in place, replacing `Answer:
 
 The channel is committed to a public repository. It carries code discussion only: no credentials, no session data, no account or roster specifics.
 
+## Model and effort
+
+When taking an issue, compare the session's model and effort with the issue's recommended Claude settings and [model and effort](docs/model-effort.md), and tell the user at the start if they do not fit. Claude Code re-reads the entire conversation on the next request after a model change, and after an effort change on most models. Recommend settings for a fresh session rather than switching deep into a long one. On 2026-09-14, nearly all of the user's usage came from sessions active for 8+ hours with more than 150k tokens of context.
+
 ## Secrets
 
 `.env.local`, `.local/`, and `prisma/*.db` are denied to Claude in [.claude/settings.json](.claude/settings.json). The deny rules stop the Read tool and the ordinary shell readers.

@@ -31,6 +31,10 @@ The user saw Node's experimental SQLite warning and a stale browser-data warning
 
 Validation: `npm run verify -- --e2e` passed: 120 tests across 22 suites, both builds, and 17 Chromium checks, with no Node, Prisma, or browser-data warnings in the output. Claims released.
 
+### 2026-09-14 CLAUDE -> CODEX GitHub issues with model and effort recommendations
+
+The user wants work logged as GitHub issues, so each agent can recommend a starting model and effort and take its share. At the user's request I added workflow item 10 to AGENTS.md, a model and effort section to CLAUDE.md, and [docs/model-effort.md](model-effort.md). The new page distills research the user compiled on 2026-09-11. The `agent:claude` and `agent:codex` labels exist for taking an issue. Please check the Codex column and triggers against your current models, and correct anything stale in place; the source was research, not measurement. `gh` is authenticated for this Windows account, but I could not check whether your sandbox can reach it.
+
 ### 2026-09-14 CLAUDE -> CODEX sign-off requested: merge `feat/player-catalogs`
 
 The user said to merge `feat/player-catalogs` into `feat/dynasty-value-tracker` only if you sign off. I merged your latest branch tip (`99334ed`) into mine as `fee90ae` with no conflicts, so a sign-off covers exactly what lands, and the merge becomes a fast-forward. With your new `prisma:validate` step included, `npm run verify -- --e2e` passed in the worktree: the schema validates, 117 tests pass across 22 suites, both builds succeed, and 17 Chromium checks pass.

@@ -38,16 +38,16 @@ const leagueSchema = z.object({
   number_of_teams: z.number(),
   number_of_starters: z.number(),
   rosterPositions: z.array(z.string()),
-  teams: z.array(z.object({ id: z.number(), owned: z.boolean().optional() }).passthrough()),
+  teams: z.array(z.looseObject({ id: z.number(), owned: z.boolean().optional() })),
 })
 // The account can hold other leagues, and a league can hold orphaned teams, with incomplete
 // metadata (null team counts or usernames). Only the configured league and team are validated
 // strictly. The player catalog stays strict, because it decides whether an unmatched Sleeper player
 // is a stale mirror or a name mismatch.
 const initSchema = z.object({
-  players: z.record(playerSchema),
+  players: z.record(z.string(), playerSchema),
   valueSet: z.string(),
-  leagues: z.array(z.object({ id: z.number() }).passthrough()),
+  leagues: z.array(z.looseObject({ id: z.number() })),
 })
 export type NerdsInit = z.infer<typeof initSchema>
 export type NerdsRow = { sourceKey: string; text: string }

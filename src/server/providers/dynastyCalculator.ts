@@ -21,12 +21,10 @@ export type DtcRankingRow = {
 }
 
 const sleeperRostersSchema = z.array(
-  z
-    .object({
-      owner_id: z.string(),
-      players: z.array(z.string()).nullable().optional(),
-    })
-    .passthrough(),
+  z.looseObject({
+    owner_id: z.string(),
+    players: z.array(z.string()).nullable().optional(),
+  }),
 )
 
 function csvRows(text: string): string[][] {

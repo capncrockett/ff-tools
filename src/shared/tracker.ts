@@ -7,36 +7,33 @@ export const sourceLabels: Record<SourceName, string> = {
   'dynasty-calculator': 'Dynasty Trade Calculator',
 }
 
-export const contextSchema = z
-  .object({
-    label: z.string().trim().min(1).max(180),
-    settings: z.record(z.union([z.string().max(200), z.number().finite(), z.boolean(), z.null()])),
-  })
-  .strict()
+export const contextSchema = z.strictObject({
+  label: z.string().trim().min(1).max(180),
+  settings: z.record(
+    z.string(),
+    z.union([z.string().max(200), z.number().finite(), z.boolean(), z.null()]),
+  ),
+})
 export type ValueContext = z.infer<typeof contextSchema>
 
-export const observationSchema = z
-  .object({
-    sourceKey: z.string().trim().min(1).max(180),
-    playerName: z.string().trim().min(2).max(120),
-    sleeperId: z.string().regex(/^\d+$/).optional(),
-    position: z
-      .enum(['QB', 'RB', 'WR', 'TE', 'K', 'DL', 'LB', 'DB', 'DE', 'DT', 'CB', 'S'])
-      .optional(),
-    team: z.string().max(8).nullable().optional(),
-    value: z.number().finite().min(0).max(1_000_000_000),
-  })
-  .strict()
+export const observationSchema = z.strictObject({
+  sourceKey: z.string().trim().min(1).max(180),
+  playerName: z.string().trim().min(2).max(120),
+  sleeperId: z.string().regex(/^\d+$/).optional(),
+  position: z
+    .enum(['QB', 'RB', 'WR', 'TE', 'K', 'DL', 'LB', 'DB', 'DE', 'DT', 'CB', 'S'])
+    .optional(),
+  team: z.string().max(8).nullable().optional(),
+  value: z.number().finite().min(0).max(1_000_000_000),
+})
 export type Observation = z.infer<typeof observationSchema>
 
-export const snapshotSchema = z
-  .object({
-    source: sourceSchema,
-    context: contextSchema,
-    capturedAt: z.string().datetime({ offset: true }),
-    records: z.array(observationSchema).min(1).max(10_000),
-  })
-  .strict()
+export const snapshotSchema = z.strictObject({
+  source: sourceSchema,
+  context: contextSchema,
+  capturedAt: z.iso.datetime({ offset: true }),
+  records: z.array(observationSchema).min(1).max(10_000),
+})
 export type SnapshotInput = z.infer<typeof snapshotSchema>
 
 export type HistoryPoint = { value: number; capturedAt: string }

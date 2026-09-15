@@ -18,36 +18,28 @@ import { DataError } from './valuations.js'
 const stateId = () => `sleeper:${sleeperLeagueId}:${sleeperOwnerId}`
 const sleeperBase = 'https://api.sleeper.app/v1'
 
-const leagueSchema = z
-  .object({
-    name: z.string().min(1),
-    season: z.coerce.string().min(4),
-  })
-  .passthrough()
-const stateSchema = z
-  .object({
-    week: z.number().int().min(0).max(25),
-  })
-  .passthrough()
-const rosterSchema = z
-  .object({
-    roster_id: z.number().int().positive(),
-    owner_id: z.string(),
-    players: z.array(z.string()).nullable().optional(),
-    taxi: z.array(z.string()).nullable().optional(),
-    reserve: z.array(z.string()).nullable().optional(),
-  })
-  .passthrough()
-const transactionSchema = z
-  .object({
-    transaction_id: z.string().min(1),
-    type: z.string().min(1),
-    status: z.string().min(1),
-    status_updated: z.number().int().nonnegative(),
-    adds: z.record(z.number().int().positive()).nullable().optional(),
-    drops: z.record(z.number().int().positive()).nullable().optional(),
-  })
-  .passthrough()
+const leagueSchema = z.looseObject({
+  name: z.string().min(1),
+  season: z.coerce.string().min(4),
+})
+const stateSchema = z.looseObject({
+  week: z.number().int().min(0).max(25),
+})
+const rosterSchema = z.looseObject({
+  roster_id: z.number().int().positive(),
+  owner_id: z.string(),
+  players: z.array(z.string()).nullable().optional(),
+  taxi: z.array(z.string()).nullable().optional(),
+  reserve: z.array(z.string()).nullable().optional(),
+})
+const transactionSchema = z.looseObject({
+  transaction_id: z.string().min(1),
+  type: z.string().min(1),
+  status: z.string().min(1),
+  status_updated: z.number().int().nonnegative(),
+  adds: z.record(z.string(), z.number().int().positive()).nullable().optional(),
+  drops: z.record(z.string(), z.number().int().positive()).nullable().optional(),
+})
 
 type SleeperTransaction = z.infer<typeof transactionSchema>
 type MovementInput = {

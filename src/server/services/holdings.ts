@@ -8,18 +8,16 @@ import {
 } from '../../shared/tracker.js'
 import { DataError } from './valuations.js'
 
-export const holdingSchema = z
-  .object({
-    playerId: z.number().int().positive(),
-    sourceName: sourceSchema,
-    contextKey: z.string().min(1).max(100),
-    portfolio: z.string().trim().min(1).max(120),
-    acquiredAt: z.string().datetime({ offset: true }),
-    costBasis: z.number().finite().min(0).max(1_000_000_000),
-    targetRoi: z.number().finite().min(0).max(10_000),
-    notes: z.string().trim().max(2000).default(''),
-  })
-  .strict()
+export const holdingSchema = z.strictObject({
+  playerId: z.number().int().positive(),
+  sourceName: sourceSchema,
+  contextKey: z.string().min(1).max(100),
+  portfolio: z.string().trim().min(1).max(120),
+  acquiredAt: z.iso.datetime({ offset: true }),
+  costBasis: z.number().finite().min(0).max(1_000_000_000),
+  targetRoi: z.number().finite().min(0).max(10_000),
+  notes: z.string().trim().max(2000).default(''),
+})
 
 export async function addHolding(db: PrismaClient, input: unknown) {
   const data = holdingSchema.parse(input)
@@ -39,11 +37,10 @@ export async function addHolding(db: PrismaClient, input: unknown) {
 
 export async function closeHolding(db: PrismaClient, id: string, input: unknown) {
   const data = z
-    .object({
+    .strictObject({
       proceeds: z.number().finite().min(0).max(1_000_000_000),
-      closedAt: z.string().datetime({ offset: true }),
+      closedAt: z.iso.datetime({ offset: true }),
     })
-    .strict()
     .parse(input)
   return db.$transaction(async (tx) => {
     const holding = await tx.holding.findUnique({ where: { id } })

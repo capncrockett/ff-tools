@@ -37,6 +37,8 @@ The user asked for every dependency on its newest stable major, no features firs
 2. `a89661d` TypeScript 6.0.3, `@types/node` 24, ESLint 10 with `defineConfig`, React Hooks plugin 7. TypeScript 7 is blocked: typescript-eslint requires `<6.1.0` and ts-jest `<7`. The plugin's new rules fixed two render-time patterns in `HelpTip.tsx` and `ValueTracker.tsx`.
 3. `7594c11` Jest 30.5.1, `@types/jest` 30, supertest 7.2.2, `@types/supertest` 7.2.1, nock 14.0.17 (GH issue #2). No source changes: no removed alias matchers (`toThrowError` etc.) and our nock use is only `disableNetConnect`/`enableNetConnect('127.0.0.1')`/`cleanAll`/`get().reply()`. Jest 30 pulls in `@parcel/watcher` and `unrs-resolver` as native builds; both are now `true` in `pnpm-workspace.yaml` alongside the existing Prisma/esbuild entries, since Jest needs them to run normally, not only in watch mode.
 4. `6ea51ff` dotenv 17.4.2, pino 10.3.1, pino-pretty 13.1.3, concurrently 10.0.5; removed unused `rimraf` (GH issue #2). No source changes needed. concurrently 10 is ESM-only, which the project already satisfies (`"type": "module"`); its dev script flags (`-n`, `-c`) still parse, smoke-tested directly.
+5. `b93679c` Express 5.2.1, `@types/express` 5.0.6 (GH issue #3). `app.get('*')` in `src/server/index.ts` became `app.get('/{*splat}')` for path-to-regexp 8. `@types/express` 5 widens `req.params` values to `string | string[]`; the two `:id` route params not already covered by a Zod schema (`roster/reviews/:id/accept-last-value`, `holdings/:id/exit`) now go through `z.string().parse()`. No other route uses a wildcard or optional-param pattern, so nothing else in `api.ts` needed a path syntax change. Host/origin checks and the mutation header in `app.ts` are unaffected.
+6. `c5a7f3c` Zod 4.6.5 (GH issue #3). Two-argument `z.record(z.string(), v)` in `dynastyNerds.ts` and `rosterAutomation.ts`; `.strict()`/`.passthrough()` to `z.strictObject`/`z.looseObject` in `tracker.ts`, `holdings.ts`, `rosterAutomation.ts`, `dynastyCalculator.ts`, `dynastyNerds.ts`; `z.string().datetime({ offset: true })` to `z.iso.datetime({ offset: true })` in `tracker.ts` and `holdings.ts`. No test asserts Zod error-message wording, so the v4 error-shape change needed no follow-up. Schema strictness and fail-closed behavior are unchanged; only the API used to express them moved.
 
 **How, inside the worktree.**
 
@@ -46,11 +48,6 @@ The user asked for every dependency on its newest stable major, no features firs
 
 **Remaining, in order.**
 
-5. **Express 5** with `@types/express` 5. `app.get('*')` in `src/server/index.ts` becomes `app.get('/{*splat}')`.
-6. **Zod 4.**
-   - One-argument `z.record(v)` becomes `z.record(z.string(), v)`, in `src/shared/tracker.ts`, `rosterAutomation.ts`, and `dynastyNerds.ts`.
-   - `.strict()` and `.passthrough()` become `z.strictObject` and `z.looseObject`.
-   - `z.string().datetime({ offset: true })` becomes `z.iso.datetime({ offset: true })`.
 7. **Prisma 7.10.0** with `@prisma/adapter-better-sqlite3`. The `prisma` package's `latest` tag points at 8.0.0-rc.15, so pin 7.10.0 for both packages.
    - Use the `prisma-client` generator with an `output` folder; `prisma-client-js` is deprecated. About 15 files import `@prisma/client`. Exclude the generated folder from ESLint, Prettier, and coverage.
    - `prisma.config.ts` is required. Its `env()` helper throws when a variable is missing, even for `generate`, and Prisma no longer loads `.env`, so compute the URL instead.

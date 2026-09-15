@@ -6,7 +6,7 @@ export default function HelpTip({ label, children }: { label: string; children: 
   const id = useId()
   const button = useRef<HTMLButtonElement>(null)
   const popup = useRef<HTMLSpanElement>(null)
-  const timer = useRef<ReturnType<typeof setTimeout>>()
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const pinned = useRef(false)
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ left: 0, top: 0 })

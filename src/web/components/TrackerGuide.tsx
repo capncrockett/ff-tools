@@ -57,7 +57,7 @@ export default function TrackerGuide() {
               min="0"
               max="1000000"
               step="any"
-              className="input input-bordered input-sm"
+              className="input input-sm"
               value={latest}
               onChange={(event) => setLatest(event.target.value)}
               aria-describedby="example-note"

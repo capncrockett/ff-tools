@@ -422,7 +422,7 @@ export default function ValueTracker() {
       </section>
       <section className="workspace card bg-base-100">
         <div className="workspace-header">
-          <div className="tabs tabs-boxed" role="tablist" aria-label="Tracker view">
+          <div className="tabs tabs-box" role="tablist" aria-label="Tracker view">
             <button
               role="tab"
               aria-selected={view === 'market'}
@@ -471,7 +471,7 @@ export default function ValueTracker() {
             <label className="search-field">
               <span>Find a player</span>
               <input
-                className="input input-bordered input-sm"
+                className="input input-sm"
                 placeholder="Search player names..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -482,7 +482,7 @@ export default function ValueTracker() {
             <label>
               <span>Source</span>
               <select
-                className="select select-bordered select-sm"
+                className="select select-sm"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
               >
@@ -500,7 +500,7 @@ export default function ValueTracker() {
               <label>
                 <span>Position</span>
                 <select
-                  className="select select-bordered select-sm"
+                  className="select select-sm"
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
                 >
@@ -513,7 +513,7 @@ export default function ValueTracker() {
               <label>
                 <span>Sort by</span>
                 <select
-                  className="select select-bordered select-sm"
+                  className="select select-sm"
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
                 >
@@ -530,7 +530,7 @@ export default function ValueTracker() {
               <label>
                 <span>Source</span>
                 <select
-                  className="select select-bordered select-sm"
+                  className="select select-sm"
                   aria-label="Trend source"
                   value={trendSource}
                   onChange={(e) => {
@@ -548,7 +548,7 @@ export default function ValueTracker() {
               <label className="trend-format-filter">
                 <span>Scoring format</span>
                 <select
-                  className="select select-bordered select-sm"
+                  className="select select-sm"
                   aria-label="Trend scoring format"
                   value={trendContext?.contextKey ?? ''}
                   onChange={(e) => setTrendContextKey(e.target.value)}
@@ -565,7 +565,7 @@ export default function ValueTracker() {
               <label>
                 <span>Position</span>
                 <select
-                  className="select select-bordered select-sm"
+                  className="select select-sm"
                   aria-label="Trend position"
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
@@ -581,7 +581,7 @@ export default function ValueTracker() {
             <label>
               <span>Portfolio</span>
               <select
-                className="select select-bordered select-sm"
+                className="select select-sm"
                 value={portfolio}
                 onChange={(e) => setPortfolio(e.target.value)}
               >
@@ -966,7 +966,7 @@ function AcquisitionForm({
         <label>
           <span id="entry-source-label">Value source</span>
           <select
-            className="select select-bordered"
+            className="select"
             aria-labelledby="entry-source-label"
             aria-describedby="entry-source-help"
             value={selected}
@@ -989,7 +989,7 @@ function AcquisitionForm({
         <label>
           Portfolio
           <input
-            className="input input-bordered"
+            className="input"
             value={portfolio}
             onChange={(e) => setPortfolio(e.target.value)}
             required
@@ -1001,7 +1001,7 @@ function AcquisitionForm({
             Entry cost (provider points)
             <input
               autoFocus
-              className="input input-bordered"
+              className="input"
               type="number"
               min="0"
               max="1000000000"
@@ -1020,7 +1020,7 @@ function AcquisitionForm({
           <label>
             Target ROI (%)
             <input
-              className="input input-bordered"
+              className="input"
               type="number"
               min="0"
               max="10000"
@@ -1039,7 +1039,7 @@ function AcquisitionForm({
         <label>
           Acquisition date
           <input
-            className="input input-bordered"
+            className="input"
             type="date"
             max={today()}
             value={acquired}
@@ -1050,7 +1050,7 @@ function AcquisitionForm({
         <label>
           Entry notes
           <textarea
-            className="textarea textarea-bordered"
+            className="textarea"
             placeholder="Trade details or how you allocated the cost"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -1137,7 +1137,7 @@ function ExitForm({
           Player exit value (provider points)
           <input
             autoFocus
-            className="input input-bordered"
+            className="input"
             type="number"
             min="0"
             max="1000000000"
@@ -1155,7 +1155,7 @@ function ExitForm({
         <label>
           Exit date
           <input
-            className="input input-bordered"
+            className="input"
             type="date"
             value={closed}
             min={holding.acquiredAt.slice(0, 10)}
@@ -1233,7 +1233,7 @@ function ImportForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
         <label>
           Snapshot file (.csv or .json)
           <input
-            className="file-input file-input-bordered"
+            className="file-input"
             type="file"
             accept=".csv,.json"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
@@ -1243,7 +1243,7 @@ function ImportForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
         <label>
           CSV source
           <select
-            className="select select-bordered"
+            className="select"
             value={source}
             onChange={(e) => setSource(e.target.value as SourceName)}
           >
@@ -1257,7 +1257,7 @@ function ImportForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
         <label>
           CSV original scoring format
           <input
-            className="input input-bordered"
+            className="input"
             placeholder="12 teams, 1QB, PPR, no TE premium"
             value={format}
             onChange={(e) => setFormat(e.target.value)}

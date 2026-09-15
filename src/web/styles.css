@@ -1,6 +1,22 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@plugin 'daisyui';
+@plugin 'daisyui/theme' {
+  name: 'dynasty';
+  default: true;
+  color-scheme: light;
+  --color-primary: #247760;
+  --color-secondary: #60794e;
+  --color-accent: #187968;
+  --color-neutral: #2c4034;
+  --color-base-100: #ffffff;
+  --color-base-200: #f4f5f1;
+  --color-base-300: #e4eadc;
+  --color-base-content: #23342d;
+  --color-info: #407c9b;
+  --color-success: #d9eddb;
+  --color-warning: #dbab54;
+  --color-error: #f3d8d3;
+}
 :root {
   font-family:
     Inter,
@@ -572,7 +588,7 @@ a:focus-visible {
   gap: 15px;
   padding: 20px 22px 0;
 }
-.tabs-boxed {
+.tabs-box {
   background: #f1f4ed;
   padding: 4px;
 }
@@ -603,6 +619,9 @@ a:focus-visible {
 .filters .search-field {
   flex: 1;
   min-width: 180px;
+}
+.filters .search-field input {
+  width: 100%;
 }
 .filters input,
 .filters select {

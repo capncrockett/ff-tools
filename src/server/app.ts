@@ -3,7 +3,7 @@ import { registerApiRoutes } from './routes/api.js'
 import { logger } from './logger.js'
 import { z } from 'zod'
 import { DataError } from './services/valuations.js'
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from './generated/prisma/client.js'
 
 export function createApp(db?: PrismaClient) {
   const app = express()

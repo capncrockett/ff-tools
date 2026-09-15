@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/server/generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 /// The unifying table: one row per real player, keyed by Sleeper ID. Each provider catalog row links

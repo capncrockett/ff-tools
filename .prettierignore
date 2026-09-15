@@ -14,3 +14,4 @@ sleeper-mini
 docs/sleeper_openapi.json
 docs/sleeper_api_index.md
 prisma/migrations
+src/server/generated

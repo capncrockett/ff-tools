@@ -1,5 +1,6 @@
+import { jest } from '@jest/globals'
 import type { AxiosInstance } from 'axios'
-import { PrismaClient } from '@prisma/client'
+import { createTestPrismaClient } from '../testPrismaClient'
 import {
   acceptLastRemovalValue,
   getRosterAutomation,
@@ -7,7 +8,7 @@ import {
 } from '../../src/server/services/rosterAutomation'
 import { saveSnapshot } from '../../src/server/services/valuations'
 
-const db = new PrismaClient()
+const db = createTestPrismaClient()
 const leagueId = '1378427936817815552'
 const ownerId = '82289736559247360'
 const context = (label: string) => ({

@@ -47,6 +47,9 @@ prisma/*.db-journal
 prisma/*.db-wal
 prisma/*.db-shm
 
+### Prisma (generated client)
+src/server/generated/
+
 ### Legacy folders
 legacy/**/.git/
 legacy/**/node_modules/

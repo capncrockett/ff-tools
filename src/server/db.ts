@@ -1,4 +1,9 @@
-import './config.js'
-import { PrismaClient } from '@prisma/client'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { resolvedDatabaseUrl } from './config.js'
+import { PrismaClient } from './generated/prisma/client.js'
 
-export const prisma = new PrismaClient()
+const adapter = new PrismaBetterSqlite3(
+  { url: resolvedDatabaseUrl() },
+  { timestampFormat: 'unixepoch-ms' },
+)
+export const prisma = new PrismaClient({ adapter })

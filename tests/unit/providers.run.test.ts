@@ -1,13 +1,14 @@
+import { jest } from '@jest/globals'
 import request from 'supertest'
 import type { AxiosInstance } from 'axios'
-import { PrismaClient } from '@prisma/client'
+import { createTestPrismaClient } from '../testPrismaClient'
 import { syncSource, getSourceStatuses } from '../../src/server/services/sync'
 import { ProviderError, type ValueProvider } from '../../src/server/providers/types'
 import { createApp } from '../../src/server/app'
 import { runCaptureWorkerTick } from '../../src/server/services/captureWorker'
 import * as syncService from '../../src/server/services/sync'
 import { buildDtcSnapshot } from '../../src/server/providers/dynastyCalculator'
-const db = new PrismaClient()
+const db = createTestPrismaClient()
 const provider: ValueProvider = {
   name: 'dynasty-nerds',
   run: jest.fn(async () => ({
@@ -38,7 +39,7 @@ afterAll(async () => {
 })
 test('persisted success cache prevents a second browser call, including another process connection', async () => {
   await syncSource(db, 'dynasty-nerds', provider)
-  const other = new PrismaClient()
+  const other = createTestPrismaClient()
   try {
     await expect(syncSource(other, 'dynasty-nerds', provider)).rejects.toMatchObject({
       status: 429,
@@ -290,7 +291,7 @@ describe('local scheduled worker', () => {
       ],
     })
     jest.setSystemTime(morning)
-    jest.spyOn(syncService, 'sourceConfigured').mockReturnValue(true)
+    jest.spyOn(syncService.sourceConfig, 'isConfigured').mockReturnValue(true)
   })
   afterEach(() => {
     jest.restoreAllMocks()
@@ -307,7 +308,7 @@ describe('local scheduled worker', () => {
       'saved',
     ])
     jest.setSystemTime(new Date(+morning + 3_600_000))
-    const restarted = new PrismaClient()
+    const restarted = createTestPrismaClient()
     try {
       expect(
         (await runCaptureWorkerTick(restarted, providers)).every(
@@ -459,11 +460,11 @@ describe('local scheduled worker', () => {
   })
 
   test('unconfigured sources, shutdown, and daytime checks never launch a browser', async () => {
-    jest.mocked(syncService.sourceConfigured).mockReturnValue(false)
+    jest.mocked(syncService.sourceConfig.isConfigured).mockReturnValue(false)
     expect(
       (await runCaptureWorkerTick(db, providers)).every((report) => report.status === 'waiting'),
     ).toBe(true)
-    jest.mocked(syncService.sourceConfigured).mockReturnValue(true)
+    jest.mocked(syncService.sourceConfig.isConfigured).mockReturnValue(true)
     expect(await runCaptureWorkerTick(db, providers, { stopped: () => true })).toEqual([])
     jest.setSystemTime(new Date('2026-09-12T20:00:00Z'))
     expect(

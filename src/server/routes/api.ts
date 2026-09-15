@@ -1,5 +1,5 @@
 import type { Express, RequestHandler } from 'express'
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '../generated/prisma/client.js'
 import { z } from 'zod'
 import { sourceSchema, contextSchema } from '../../shared/tracker.js'
 import { getAdpData } from '../services/adp.js'

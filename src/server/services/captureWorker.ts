@@ -1,12 +1,12 @@
 import path from 'node:path'
 import type { AxiosInstance } from 'axios'
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '../generated/prisma/client.js'
 import { sourceSchema, type SourceName } from '../../shared/tracker.js'
 import { rosterRefreshMs, sleeperLeagueId, sleeperOwnerId } from '../config.js'
 import type { ValueProvider } from '../providers/types.js'
 import { backupTrackerDatabase } from './backup.js'
 import { reconcileSleeperRoster } from './rosterAutomation.js'
-import { automaticCaptureDecision, sourceConfigured, syncSource } from './sync.js'
+import { automaticCaptureDecision, sourceConfig, syncSource } from './sync.js'
 import { DataError } from './valuations.js'
 
 export type WorkerReport = {
@@ -60,7 +60,7 @@ export async function runCaptureWorkerTick(
     !options.dryRun &&
     !options.stopped?.() &&
     sourceSchema.options.some(
-      (source) => providers[source].tracksSleeperRoster && sourceConfigured(source),
+      (source) => providers[source].tracksSleeperRoster && sourceConfig.isConfigured(source),
     )
   ) {
     const roster = await checkSleeperRoster(db, options.rosterHttp)
@@ -68,7 +68,7 @@ export async function runCaptureWorkerTick(
   }
   for (const source of sourceSchema.options) {
     if (options.stopped?.()) break
-    if (!sourceConfigured(source)) {
+    if (!sourceConfig.isConfigured(source)) {
       reports.push({
         source,
         status: 'waiting',

@@ -8,18 +8,18 @@ import { queryDatabaseReadOnly, tableListQuery } from '../../src/server/services
 let dir: string
 let file: string
 const count = () =>
-  withSqliteFile(file, async (db) => {
-    const [row] = await db.$queryRawUnsafe<{ n: bigint }[]>('SELECT count(*) AS n FROM valuation')
-    return Number(row.n)
+  withSqliteFile(file, (db) => {
+    const row = db.prepare('SELECT count(*) AS n FROM valuation').get() as { n: number }
+    return row.n
   })
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-query-test-'))
   file = path.join(dir, 'tracker.db')
   await fs.writeFile(file, '')
-  await withSqliteFile(file, async (db) => {
-    await db.$executeRawUnsafe('CREATE TABLE valuation (id INTEGER PRIMARY KEY, value INTEGER)')
-    await db.$executeRawUnsafe('INSERT INTO valuation (value) VALUES (10), (20), (30)')
+  await withSqliteFile(file, (db) => {
+    db.exec('CREATE TABLE valuation (id INTEGER PRIMARY KEY, value INTEGER)')
+    db.exec('INSERT INTO valuation (value) VALUES (10), (20), (30)')
   })
 })
 afterEach(() => fs.rm(dir, { recursive: true, force: true }))

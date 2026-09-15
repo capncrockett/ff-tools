@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { createTestPrismaClient } from '../testPrismaClient'
 import {
   matchProviderCatalogs,
   saveDtcCatalog,
@@ -8,7 +8,7 @@ import { syncSource } from '../../src/server/services/sync'
 import type { ValueProvider } from '../../src/server/providers/types'
 import { ageOn } from '../../src/shared/playerMatching'
 
-const db = new PrismaClient()
+const db = createTestPrismaClient()
 const seenAt = new Date('2026-09-13T12:00:00Z')
 const gm = (id: number, firstName: string, lastName: string, pos: string, dob: unknown = null) => ({
   id,

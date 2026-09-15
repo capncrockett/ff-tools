@@ -43,8 +43,10 @@
     "verify:quick": "node scripts/verify.mjs --quick"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
+    "@prisma/adapter-better-sqlite3": "7.10.0",
+    "@prisma/client": "7.10.0",
     "axios": "^1.20.0",
+    "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "pino": "^10.3.1",
@@ -54,6 +56,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.13.4",
@@ -72,7 +75,7 @@
     "playwright": "^1.63.0",
     "postcss": "^8.5.28",
     "prettier": "^3.9.6",
-    "prisma": "^6.19.3",
+    "prisma": "7.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "supertest": "^7.2.2",

@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals'
 import { seedPlayersFromSleeper, listPlayers } from '../../src/server/services/players'
 describe('players service', () => {
   it('seeds using SQLite-compatible upserts', async () => {

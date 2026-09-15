@@ -11,6 +11,7 @@ export default defineConfig(
     'coverage/**',
     '.local/**',
     '.cache/**',
+    'src/server/generated/**',
     'commish-recap/**',
     'flea-flicker/**',
     'sleeper-lfas/**',

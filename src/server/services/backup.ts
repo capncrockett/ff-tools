@@ -3,20 +3,23 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { createGunzip, createGzip } from 'node:zlib'
-import { PrismaClient } from '@prisma/client'
+import Database from 'better-sqlite3'
 import { backupDir, databaseFile } from '../config.js'
 
-// A short-lived single-connection Prisma client for one SQLite file. Prisma is stable, unlike
-// Node's experimental built-in SQLite module, and the single connection keeps per-connection
-// settings such as query_only in force for every statement.
-export async function withSqliteFile<T>(file: string, run: (db: PrismaClient) => Promise<T>) {
-  const db = new PrismaClient({
-    datasourceUrl: `file:${file.replaceAll('\\', '/')}?connection_limit=1`,
-  })
+// A short-lived single connection to one SQLite file. Callers choose their own protection level:
+// backup.ts opens writable-capable (never actually writing to the source), databaseQuery.ts opens
+// readonly. VACUUM INTO fails on a connection opened readonly or with query_only set, so those two
+// use-cases cannot share one fixed set of options.
+export async function withSqliteFile<T>(
+  file: string,
+  run: (db: Database.Database) => T | Promise<T>,
+  options: Database.Options = {},
+): Promise<T> {
+  const db = new Database(file, { fileMustExist: true, ...options })
   try {
     return await run(db)
   } finally {
-    await db.$disconnect()
+    db.close()
   }
 }
 
@@ -38,13 +41,12 @@ function sqlString(value: string) {
 }
 
 async function verifySqlite(file: string) {
-  const healthy = await withSqliteFile(file, async (db) => {
-    const [result] =
-      await db.$queryRawUnsafe<{ integrity_check: string }[]>('PRAGMA integrity_check')
-    const [tables] = await db.$queryRawUnsafe<{ n: bigint | number }[]>(
-      "SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'",
-    )
-    return result?.integrity_check === 'ok' && Number(tables?.n) > 0
+  const healthy = await withSqliteFile(file, (db) => {
+    const [result] = db.pragma('integrity_check') as { integrity_check: string }[]
+    const tables = db
+      .prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'")
+      .get() as { n: number }
+    return result?.integrity_check === 'ok' && tables.n > 0
   }).catch(() => false)
   if (!healthy) throw new Error('The database copy failed its integrity check.')
 }
@@ -88,9 +90,7 @@ export async function backupDatabase(options: {
   const copy = `${file}.copy.partial`
   try {
     // VACUUM INTO takes a consistent snapshot even while the app holds the database open.
-    await withSqliteFile(options.databaseFile, (db) =>
-      db.$executeRawUnsafe(`VACUUM INTO ${sqlString(copy)}`),
-    )
+    await withSqliteFile(options.databaseFile, (db) => db.exec(`VACUUM INTO ${sqlString(copy)}`))
     await verifySqlite(copy)
     await pipeline(
       createReadStream(copy),

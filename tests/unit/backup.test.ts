@@ -13,12 +13,11 @@ import {
 let dir: string
 let databaseFile: string
 let backupDir: string
-const exec = (sql: string, file = databaseFile) =>
-  withSqliteFile(file, (db) => db.$executeRawUnsafe(sql))
+const exec = (sql: string, file = databaseFile) => withSqliteFile(file, (db) => db.exec(sql))
 const count = (file: string) =>
-  withSqliteFile(file, async (db) => {
-    const [row] = await db.$queryRawUnsafe<{ n: bigint }[]>('SELECT count(*) AS n FROM valuation')
-    return Number(row.n)
+  withSqliteFile(file, (db) => {
+    const row = db.prepare('SELECT count(*) AS n FROM valuation').get() as { n: number }
+    return row.n
   })
 // Filesystem timestamps can be coarse; move the write clearly past the last backup.
 const markChanged = () => {

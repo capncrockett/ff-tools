@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals'
 import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'

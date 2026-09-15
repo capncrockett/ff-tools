@@ -1,5 +1,5 @@
 import request from 'supertest'
-import { PrismaClient } from '@prisma/client'
+import { createTestPrismaClient } from '../testPrismaClient'
 import { createApp } from '../../src/server/app'
 import {
   saveSnapshot,
@@ -8,7 +8,7 @@ import {
   parseCsvSnapshot,
 } from '../../src/server/services/valuations'
 import { calculateReturn } from '../../src/shared/tracker'
-const db = new PrismaClient()
+const db = createTestPrismaClient()
 const app = createApp(db)
 const context = {
   label: '12 teams / 1QB / PPR',
@@ -40,7 +40,7 @@ test('snapshot is atomic, idempotent, and persisted through another connection',
   const result = await post('/api/snapshots/import', capture()).expect(200)
   expect(result.body.saved).toBe(1)
   expect((await post('/api/snapshots/import', capture()).expect(200)).body.duplicate).toBe(true)
-  const other = new PrismaClient()
+  const other = createTestPrismaClient()
   try {
     expect(await other.valuation.count()).toBe(1)
   } finally {

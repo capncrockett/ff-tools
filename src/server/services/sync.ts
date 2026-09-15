@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { AxiosInstance } from 'axios'
-import type { Prisma, PrismaClient } from '@prisma/client'
+import type { Prisma, PrismaClient } from '../generated/prisma/client.js'
 import {
   captureWindowStart,
   decideAdditionCapture,
@@ -32,12 +32,16 @@ import {
   reconcileSleeperRoster,
 } from './rosterAutomation.js'
 
-export function sourceConfigured(source: SourceName) {
-  const prefix = source === 'dynasty-nerds' ? 'DYNASTY_NERDS' : 'DYNASTY_CALC'
-  return Boolean(
-    (process.env[`${prefix}_EMAIL`] && process.env[`${prefix}_PASSWORD`]) ||
-    fs.existsSync(path.join(localDir, 'sessions', `${source}.json`)),
-  )
+// A plain object property, not a bare function export: a native ESM module's own exported
+// bindings are read-only from importers, so tests spy on this method instead.
+export const sourceConfig = {
+  isConfigured(source: SourceName) {
+    const prefix = source === 'dynasty-nerds' ? 'DYNASTY_NERDS' : 'DYNASTY_CALC'
+    return Boolean(
+      (process.env[`${prefix}_EMAIL`] && process.env[`${prefix}_PASSWORD`]) ||
+      fs.existsSync(path.join(localDir, 'sessions', `${source}.json`)),
+    )
+  },
 }
 
 export async function getSourceStatuses(db: PrismaClient): Promise<SourceStatus[]> {
@@ -56,7 +60,7 @@ export async function getSourceStatuses(db: PrismaClient): Promise<SourceStatus[
       return {
         source,
         label: sourceLabels[source],
-        configured: sourceConfigured(source),
+        configured: sourceConfig.isConfigured(source),
         lastSuccess: success?.finishedAt?.toISOString() ?? null,
         lastAttempt: last?.startedAt.toISOString() ?? null,
         status: last?.status ?? 'idle',

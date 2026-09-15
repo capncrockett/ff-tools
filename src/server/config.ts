@@ -26,6 +26,13 @@ export function databaseFile(url = process.env.DATABASE_URL ?? '') {
   const file = url.slice('file:'.length).split('?')[0]
   return path.isAbsolute(file) ? file : path.resolve(process.cwd(), 'prisma', file)
 }
+
+// The driver adapter and prisma.config.ts both need an absolute file: URL, or a relative one
+// resolves against the process's cwd instead of prisma/ and quietly opens an empty database.
+export function resolvedDatabaseUrl(url = process.env.DATABASE_URL ?? '') {
+  const file = databaseFile(url)
+  return file ? `file:${file.replaceAll('\\', '/')}` : url
+}
 // User-confirmed limit: at most one refresh per source per hour, including failed attempts.
 export const syncSuccessMs = 60 * 60 * 1000
 export const syncFailureMs = 60 * 60 * 1000

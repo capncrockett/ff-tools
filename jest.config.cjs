@@ -19,6 +19,7 @@ module.exports = {
     '<rootDir>/src/server/index.ts',
     '<rootDir>/src/server/jobs/',
     '<rootDir>/src/server/db.ts',
+    '<rootDir>/src/server/generated/',
   ],
   coverageReporters: ['text', 'lcov'],
   coverageThreshold: { global: { branches: 50, functions: 70, lines: 70, statements: 70 } },

@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios'
 import axios from 'axios'
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '../generated/prisma/client.js'
 import { z } from 'zod'
 import {
   contextSchema,

@@ -14,7 +14,14 @@ const env = {
 try {
   for (const args of [
     ['node_modules/prisma/build/index.js', 'migrate', 'deploy'],
-    ['node_modules/jest/bin/jest.js', '--runInBand', ...process.argv.slice(2)],
+    // The generated Prisma client uses import.meta.url, which ts-jest cannot down-level to
+    // CommonJS. Jest needs Node's real ESM loader to run it, not the transpiled-to-CJS fallback.
+    [
+      '--experimental-vm-modules',
+      'node_modules/jest/bin/jest.js',
+      '--runInBand',
+      ...process.argv.slice(2),
+    ],
   ]) {
     const result = spawnSync(process.execPath, args, { env, stdio: 'inherit' })
     if (result.status !== 0) {

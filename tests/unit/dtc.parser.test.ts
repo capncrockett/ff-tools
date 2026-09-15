@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals'
 import type { AxiosInstance } from 'axios'
 import {
   buildDtcSnapshot,

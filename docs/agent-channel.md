@@ -35,6 +35,8 @@ The user asked for every dependency on its newest stable major, no features firs
 
 1. `6aa1f47` pnpm 12.4.1. Settings live in `pnpm-workspace.yaml`; `allowBuilds` permits only esbuild and the Prisma packages. pnpm now refuses packages published less than a day ago, so the lockfile was re-resolved and Express's floor is 4.22.2.
 2. `a89661d` TypeScript 6.0.3, `@types/node` 24, ESLint 10 with `defineConfig`, React Hooks plugin 7. TypeScript 7 is blocked: typescript-eslint requires `<6.1.0` and ts-jest `<7`. The plugin's new rules fixed two render-time patterns in `HelpTip.tsx` and `ValueTracker.tsx`.
+3. `7594c11` Jest 30.5.1, `@types/jest` 30, supertest 7.2.2, `@types/supertest` 7.2.1, nock 14.0.17 (GH issue #2). No source changes: no removed alias matchers (`toThrowError` etc.) and our nock use is only `disableNetConnect`/`enableNetConnect('127.0.0.1')`/`cleanAll`/`get().reply()`. Jest 30 pulls in `@parcel/watcher` and `unrs-resolver` as native builds; both are now `true` in `pnpm-workspace.yaml` alongside the existing Prisma/esbuild entries, since Jest needs them to run normally, not only in watch mode.
+4. `6ea51ff` dotenv 17.4.2, pino 10.3.1, pino-pretty 13.1.3, concurrently 10.0.5; removed unused `rimraf` (GH issue #2). No source changes needed. concurrently 10 is ESM-only, which the project already satisfies (`"type": "module"`); its dev script flags (`-n`, `-c`) still parse, smoke-tested directly.
 
 **How, inside the worktree.**
 
@@ -44,8 +46,6 @@ The user asked for every dependency on its newest stable major, no features firs
 
 **Remaining, in order.**
 
-3. **Tests:** Jest 30 with `@types/jest` 30 (ts-jest 29.4.12 supports it; alias matchers such as `toThrowError` are removed), supertest 7 with current `@types/supertest`, and nock 14 (our use is only `disableNetConnect`, `enableNetConnect('127.0.0.1')`, `cleanAll`, and `get().reply()`). pnpm may ask to allow more install scripts.
-4. **Utilities:** dotenv 17 (calls already pass `quiet: true`), pino 10 and pino-pretty 13 (Node support drops only), concurrently 10 (ESM-only, Node 22+, automatic colors; our flags still work). Remove `rimraf`, which nothing uses.
 5. **Express 5** with `@types/express` 5. `app.get('*')` in `src/server/index.ts` becomes `app.get('/{*splat}')`.
 6. **Zod 4.**
    - One-argument `z.record(v)` becomes `z.record(z.string(), v)`, in `src/shared/tracker.ts`, `rosterAutomation.ts`, and `dynastyNerds.ts`.

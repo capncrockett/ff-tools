@@ -10,7 +10,7 @@
     "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
     "build:web": "vite build --config vite.config.ts",
     "build:server": "tsc -p tsconfig.server.json",
-    "build": "npm run build:web && npm run build:server",
+    "build": "pnpm run build:web && pnpm run build:server",
     "start": "node dist/server/index.js",
     "test": "node scripts/test.mjs",
     "test:watch": "node scripts/test.mjs --watch",

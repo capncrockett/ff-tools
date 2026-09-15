@@ -15,7 +15,7 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 | Agent  | Paths | Branch | Claimed | Status |
 | ------ | ----- | ------ | ------- | ------ |
-| Claude | `scripts/verify.mjs`, `scripts/doctor.mjs`, `package.json`, `.github/workflows/verify.yml`, `docs/`, `CLAUDE.md`, `AGENTS.md` (npm->pnpm rename, issue #7) | `feat/dynasty-value-tracker` | 2026-09-15 | In progress |
+| _none_ |       |        |         |        |
 
 ## Open questions
 

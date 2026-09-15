@@ -7,16 +7,16 @@ The optional local worker captures each configured provider at 04:00 Pacific, an
 From the repository root, with dependencies and Chromium installed:
 
 ```powershell
-npm run db:deploy
-npm run capture:plan
-npm run capture:worker
+pnpm run db:deploy
+pnpm run capture:plan
+pnpm run capture:worker
 ```
 
 `capture:plan` reads local scheduling state once and exits. It never opens a browser, contacts Sleeper or a paid provider, or reserves an attempt. Use it to see whether a source is due, cooling down, already captured, unconfigured, or paused for recovery.
 
-`capture:worker` stays in the foreground and checks eligibility once per minute. While a roster-tracking provider is configured, it also checks the owned Sleeper roster whenever the shared one-hour Sleeper limit allows. Keep this terminal running overnight. Ctrl+C requests shutdown, lets an active capture finish and close its browser, and skips the next provider. It is not installed as a Windows startup task or hosted service. The built equivalent is `node dist/server/jobs/captureWorker.js` after `npm run build`.
+`capture:worker` stays in the foreground and checks eligibility once per minute. While a roster-tracking provider is configured, it also checks the owned Sleeper roster whenever the shared one-hour Sleeper limit allows. Keep this terminal running overnight. Ctrl+C requests shutdown, lets an active capture finish and close its browser, and skips the next provider. It is not installed as a Windows startup task or hosted service. The built equivalent is `node dist/server/jobs/captureWorker.js` after `pnpm run build`.
 
-`npm run capture:worker -- --once` performs one eligibility check and exits. Unlike `capture:plan`, it can capture live data when due. It does not wait for a future retry. This is the entry point for a future external scheduler.
+`pnpm run capture:worker -- --once` performs one eligibility check and exits. Unlike `capture:plan`, it can capture live data when due. It does not wait for a future retry. This is the entry point for a future external scheduler.
 
 ## Timing and retry rules
 

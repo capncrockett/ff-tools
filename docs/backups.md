@@ -15,10 +15,10 @@ A backup is saved only when the database has changed since the newest backup:
 - when the app starts, then hourly while it runs
 - on each capture worker check, which runs every minute
 - before every capture
-- before player seeding (`npm run players:seed`)
-- before migrations: `npm run db:deploy` refuses to migrate if the backup fails
+- before player seeding (`pnpm run players:seed`)
+- before migrations: `pnpm run db:deploy` refuses to migrate if the backup fails
 
-`npm run db:backup` always saves a fresh backup and reports how many exist.
+`pnpm run db:backup` always saves a fresh backup and reports how many exist.
 
 Each backup is a consistent SQLite copy made with `VACUUM INTO`, which is safe while the app is running. It passes `PRAGMA integrity_check` before it is compressed and saved as `tracker-<UTC time>-<reason>.db.gz`. A few hundred kilobytes per backup is typical. Nothing is pruned automatically; if the folder ever grows large, archive old files by hand.
 
@@ -27,7 +27,7 @@ Tests never create backups: test mode has no backup folder.
 ## Restoring
 
 1. Stop the app and the capture worker.
-2. Run `npm run db:restore` to list backups, newest first.
-3. Run `npm run db:restore -- <file name>`.
+2. Run `pnpm run db:restore` to list backups, newest first.
+3. Run `pnpm run db:restore -- <file name>`.
 
 The chosen backup is decompressed and integrity-checked before anything changes. The current database is backed up first, as a `pre-restore` backup, so a restore can itself be undone. Restore refuses to run while the database is in use or has an unfinished transaction file.

@@ -38,7 +38,7 @@ console.log(
   `Local credentials file: ${fs.existsSync('.env.local') ? 'present (contents not inspected)' : 'optional; absent'}`,
 )
 console.log(
-  `SQLite database: ${fs.existsSync('prisma/dev.db') ? 'present' : 'run npm run db:deploy'}`,
+  `SQLite database: ${fs.existsSync('prisma/dev.db') ? 'present' : 'run pnpm run db:deploy'}`,
 )
 // Reads file names and times only. A TRACKER_BACKUP_DIR set only in .env.local is not seen here.
 const backupDir = path.resolve(
@@ -54,14 +54,14 @@ const ageHours = newest
 console.log(
   `Database backups: ${
     newest
-      ? `${backups.length} in ${backupDir}; newest ${ageHours < 1 ? 'under an hour' : `${Math.round(ageHours)} hours`} old${ageHours > 48 ? ' (start the app or run npm run db:backup)' : ''}`
-      : `none yet in ${backupDir} (run npm run db:backup)`
+      ? `${backups.length} in ${backupDir}; newest ${ageHours < 1 ? 'under an hour' : `${Math.round(ageHours)} hours`} old${ageHours > 48 ? ' (start the app or run pnpm run db:backup)' : ''}`
+      : `none yet in ${backupDir} (run pnpm run db:backup)`
   }`,
 )
 try {
   const { chromium } = require('playwright')
   console.log(
-    `Bundled browser: ${fs.existsSync(chromium.executablePath()) ? 'present' : 'run npm run browser:install (or configure PLAYWRIGHT_CHANNEL)'}`,
+    `Bundled browser: ${fs.existsSync(chromium.executablePath()) ? 'present' : 'run pnpm run browser:install (or configure PLAYWRIGHT_CHANNEL)'}`,
   )
 } catch {
   /* package failure reported above */

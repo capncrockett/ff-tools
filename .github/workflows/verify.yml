@@ -13,6 +13,6 @@ jobs:
           node-version: 24
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: npm run prisma:generate
-      - run: npm run browser:install -- --with-deps
-      - run: npm run verify -- --e2e
+      - run: pnpm run prisma:generate
+      - run: pnpm run browser:install -- --with-deps
+      - run: pnpm run verify -- --e2e

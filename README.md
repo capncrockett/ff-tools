@@ -11,16 +11,16 @@ Prerequisites: Node 24+, Corepack/pnpm 9, and Chromium for paid-provider capture
 ```powershell
 corepack pnpm install --frozen-lockfile
 Copy-Item .env.example .env.local
-npm run prisma:generate
-npm run db:deploy
-npm run browser:install
-npm run players:seed
-npm run dev
+pnpm run prisma:generate
+pnpm run db:deploy
+pnpm run browser:install
+pnpm run players:seed
+pnpm run dev
 ```
 
 Only copy the example on first setup; preserve an existing `.env.local`. Fill its optional credentials to enable capture. Player seeding downloads Sleeper's public player catalog at most once per day and provides canonical identities before the first import. A DTC capture also reads the current owned Sleeper roster, while reusing that daily player catalog cache.
 
-Open [the local app](http://127.0.0.1:5173). For a built app, run `npm run build`, then `npm start` and open [port 3000](http://127.0.0.1:3000). Both servers bind to loopback. This MVP runs on your computer. An optional [local nightly capture worker](docs/local-capture-worker.md) is available. The database is [backed up automatically](docs/backups.md) outside the repository; `npm run db:restore` lists and restores backups. `npm run db:query -- --tables` and `npm run db:query -- "SELECT ..."` inspect saved data read-only. Vercel hosting, durable hosted storage, and authentication remain future work.
+Open [the local app](http://127.0.0.1:5173). For a built app, run `pnpm run build`, then `pnpm start` and open [port 3000](http://127.0.0.1:3000). Both servers bind to loopback. This MVP runs on your computer. An optional [local nightly capture worker](docs/local-capture-worker.md) is available. The database is [backed up automatically](docs/backups.md) outside the repository; `pnpm run db:restore` lists and restores backups. `pnpm run db:query -- --tables` and `pnpm run db:query -- "SELECT ..."` inspect saved data read-only. Vercel hosting, durable hosted storage, and authentication remain future work.
 
 The database is `prisma/dev.db`. Credentials live in ignored `.env.local`; browser sessions and the player catalog live in ignored `.local/`. Environment variables override local-file values. No credentials belong in Git or the browser app.
 
@@ -28,7 +28,7 @@ The database is `prisma/dev.db`. Credentials live in ignored `.env.local`; brows
 
 Open **How to use this tracker** for a three-step guide and an example you can change without affecting your data. The **?** buttons beside headings explain each measure: hover, focus with the keyboard, or tap to read; press Escape or click outside to dismiss.
 
-1. Click **Capture values** for each source when you need a new observation. The API, CLI, and optional worker share a persisted one-hour minimum between attempts, including failures. Run `npm run capture:plan` for a read-only schedule check or `npm run capture:worker` to keep local nightly collection running. The worker also refreshes values soon after a Sleeper roster addition. Capture never starts on page reload.
+1. Click **Capture values** for each source when you need a new observation. The API, CLI, and optional worker share a persisted one-hour minimum between attempts, including failures. Run `pnpm run capture:plan` for a read-only schedule check or `pnpm run capture:worker` to keep local nightly collection running. The worker also refreshes values soon after a Sleeper roster addition. Capture never starts on page reload.
 2. **Player values** shows one row per player with **Dynasty GM** and **DTC** columns. Each value includes growth from its own starting value. Click either value for that source's dated history. Search by name, filter by position, or sort growth for a specific source. **Value trends** draws one player line at a time within the selected provider and scoring format, with a position filter and links to exact observations. **Player alerts** identifies fresh target hits, changes of at least 10% since the previous capture, values older than 36 hours, and fresh provider trends moving in opposite directions.
 3. The **Sleeper roster automation** panel checks completed transactions no more than once per hour. Current players begin at their first saved provider values. A later addition uses its first fresh value, and a removal records its last fresh value. Stale or unexplained changes stay in the panel for review. **Record entry** and **Record exit** remain available for corrections and older acquisitions.
 4. Review **My investments**. Each acquisition appears once with Dynasty GM and DTC returns side by side. Return is `(value - cost) / cost * 100`; the editable initial target is 20%. A target hit is an unrealized signal, not proof that someone will accept the trade. Reacquiring a player creates a new investment row.
@@ -80,23 +80,23 @@ Settings, not their display label, define a context. A CSV's free-text format de
 
 ## Development and validation
 
-Start with `npm run doctor` and [the agent workflow](docs/agent-workflow.md).
+Start with `pnpm run doctor` and [the agent workflow](docs/agent-workflow.md).
 
-| Command                                          | Purpose                                                           |
-| ------------------------------------------------ | ----------------------------------------------------------------- |
-| `npm run verify:quick`                           | Repository checks, formatting, lint, and both TypeScript projects |
-| `npm run verify`                                 | Quick checks, isolated SQLite tests, and client/server builds     |
-| `npm run verify -- --e2e`                        | Full checks plus real Chromium UI and provider DOM fixtures       |
-| `npm run sync:nerds` / `npm run sync:calc`       | Explicit live capture using the same hourly guard as the UI       |
-| `npm run players:seed`                           | Seed/update canonical players using the daily local catalog cache |
-| `npm run players:match`                          | Link provider player catalogs to Sleeper players and summarize    |
-| `npm run db:deploy`                              | Apply checked-in SQLite migrations without resetting data         |
-| `npm run record:dtc` / `npm run record:nerds`    | Record a provider flow locally with Playwright Inspector          |
-| `npm run search:index` / `npm run search:status` | Build or inspect the ignored local zvec-grep index                |
+| Command                                            | Purpose                                                           |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| `pnpm run verify:quick`                            | Repository checks, formatting, lint, and both TypeScript projects |
+| `pnpm run verify`                                  | Quick checks, isolated SQLite tests, and client/server builds     |
+| `pnpm run verify -- --e2e`                         | Full checks plus real Chromium UI and provider DOM fixtures       |
+| `pnpm run sync:nerds` / `pnpm run sync:calc`       | Explicit live capture using the same hourly guard as the UI       |
+| `pnpm run players:seed`                            | Seed/update canonical players using the daily local catalog cache |
+| `pnpm run players:match`                           | Link provider player catalogs to Sleeper players and summarize    |
+| `pnpm run db:deploy`                               | Apply checked-in SQLite migrations without resetting data         |
+| `pnpm run record:dtc` / `pnpm run record:nerds`    | Record a provider flow locally with Playwright Inspector          |
+| `pnpm run search:index` / `pnpm run search:status` | Build or inspect the ignored local zvec-grep index                |
 
 Tests never contact the paid providers or use the real database. Browser tests run a separate app on port 4174 and use synthetic fixture data. The retained Sleeper ADP/keeper experiments are outside this MVP and remain unlinked in the UI.
 
-For an existing database created with the original schema, make a private backup first, then baseline that existing schema with `corepack pnpm exec prisma migrate resolve --applied 202609040001_baseline` before `npm run db:deploy`. Do not mark the baseline applied to an empty database. The additive tracker migration keeps old valuations under an explicit unverified context.
+For an existing database created with the original schema, make a private backup first, then baseline that existing schema with `corepack pnpm exec prisma migrate resolve --applied 202609040001_baseline` before `pnpm run db:deploy`. Do not mark the baseline applied to an empty database. The additive tracker migration keeps old valuations under an explicit unverified context.
 
 ## Product decisions
 

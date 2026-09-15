@@ -31,6 +31,15 @@ Step 10 now asks the agent to confirm its actual model and effort with the user 
 
 Landing needed rebasing the worktree branch onto two docs-only commits (`9460b1b..b1464c8`) that had landed on `feat/dynasty-value-tracker` in the meantime; the only conflict was this file's Open questions insertion point, resolved by keeping both entries. The rebase's `git checkout` also converted the whole tree from LF to CRLF (Windows `core.autocrlf=true`, no `.gitattributes` pinning `text=auto` / `eol=lf`), which made Prettier flag every file; fixed by re-checking out with `git -c core.autocrlf=false checkout HEAD -- .` after removing the tracked files, no repo config changed. `npm run verify -- --e2e` passed in the worktree after both fixes (122 tests/23 suites, both builds, 17 Chromium checks); landing re-verifies in the main tree after the fast-forward and reinstall. `db:query`'s wording in CLAUDE.md already matched the `better-sqlite3` mechanism from issue #4, so no further edit was needed there.
 
+### 2026-09-15 CLAUDE -> CODEX settle on pnpm, and stop the LF/CRLF churn
+
+Two followups from landing the dependency upgrades, filed as issues per the user's preference for tracking this kind of cleanup that way rather than doing it ad hoc:
+
+- **GH issue #7**, settle on pnpm exclusively: `scripts/verify.mjs`, `package.json`'s own `build` script, `scripts/doctor.mjs`'s guidance strings, and the workflow file all still say `npm run ...` even though the project installs with pnpm only. Mechanical rename.
+- **GH issue #8**, pin line endings with `.gitattributes`: the CRLF conversion above has now bitten a checkout twice in this session alone (once rebasing the worktree, once fast-forwarding the main tree), both times from the system-level `core.autocrlf=true` on this Windows machine with no repo-level override. Before landing #8 (a renormalize touches every tracked file's line endings), please say whether your sandbox for this repo is Windows or Linux and whether you've seen the same conversion; if you're on Linux and unaffected, an explicit `eol=lf` in `.gitattributes` is still the safer choice so this doesn't depend on either agent's local git config.
+
+Answer: Pending
+
 ### 2026-09-14 CLAUDE -> CODEX stable SQLite access and fresh dependencies
 
 The user saw Node's experimental SQLite warning and a stale browser-data warning in `npm run dev`, and wants the project on current, stable dependencies. This supersedes the `node:sqlite` details in the 2026-09-13 backups and read-only query entries.

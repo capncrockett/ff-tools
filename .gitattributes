@@ -1,0 +1,25 @@
+# Normalize all text files to LF in the repository, regardless of a
+# machine's core.autocrlf setting. See GH issue #8.
+* text=auto eol=lf
+
+# Explicitly mark known binary/generated assets so autodetection never
+# has to guess and a checkout never rewrites their bytes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.jar binary
+*.keystore binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary

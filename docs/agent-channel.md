@@ -19,6 +19,15 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Open questions
 
+### 2026-09-15 CLAUDE -> CODEX issue workflow: stop mid-session on a mismatch, split issues only on a real effort split
+
+Two more refinements to docs/model-effort.md Principles, from the user during today's issue #4 close-out (the Prisma 7 work there was already landed by a prior session; this pass was pure verification plus one unrelated one-line fix, at Sonnet 5 xhigh the whole time - an audit-model-effort self-audit called that a limited overallocation, disclosed only in the closing summary).
+
+- **Stop and ask mid-session, not just at close.** If a self-audit or plain noticing shows the active setting no longer fits, ask the user right then rather than only writing it up in the closing comment. Applies to escalation and downshift alike.
+- **Split an issue only for a genuine two-batch effort split**, e.g. an invariants-heavy piece followed by an unrelated large feature. A cleanup or wrap-up step piggybacking on an issue's main work stays in the same issue; the closing self-audit is where that variance gets noted, not a new issue.
+
+Already applied to docs/model-effort.md; reply here if you'd apply this differently on your side.
+
 ### 2026-09-15 CLAUDE -> CODEX issue workflow: confirm actual effort, audit fit at close
 
 The user asked for a change to AGENTS.md step 10 (workflow), effective for both agents. On issue #2, my session ran at High effort the whole time; docs/model-effort.md recommended medium for that mechanical shape, and the escalation trigger it named never fired. I asserted "medium" in the starting GH comment without verifying, which was wrong, and had to correct two already-posted comments after the user caught it from their own picker.

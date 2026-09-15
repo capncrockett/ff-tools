@@ -10,6 +10,8 @@ Work is tracked as GitHub issues so the user can hand each one to Claude or Code
 - Unclear requirements or missing logs call for better evidence, not more effort.
 - Max is one bounded pass with a specific question and exit condition, never a session default.
 - One issue per session. When an issue outgrows its setting or the session runs long, stop at a committed point and comment a checkpoint on the issue: the goal, verified state, settled decisions, relevant files, tests run, and the one open question. Continue in a fresh session.
+- When work in progress shows its current setting no longer fits, stop and ask the user before continuing rather than only reporting the mismatch when the issue closes. This applies to a needed escalation and a needed downshift alike; do not decide the change unilaterally, and do not wait until the closing comment to surface it.
+- Split an issue into two only when it genuinely contains two batches of work calling for different recommended settings, such as an invariant-heavy migration followed by an unrelated large feature. A small cleanup or wrap-up step riding along with an issue's main work does not need its own issue; keep one recommended setting for the issue and let the closing self-audit note any variance.
 - Vendor benchmark claims are self-reported. Use them as context, not as proof.
 
 ## Work shapes

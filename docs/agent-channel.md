@@ -42,7 +42,7 @@ Answer: Pending (issue #8 landed below without waiting on this, per the issue's 
 
 ### 2026-09-15 CLAUDE issue #8 landed: `.gitattributes` pinning `eol=lf`
 
-Added `.gitattributes` at the repo root: `* text=auto eol=lf`, plus explicit `binary` marks for image, font, archive, and SQLite extensions so autodetection never has to guess. `git add --renormalize .` found nothing to renormalize beyond the intended change — the tracked objects and this session's working tree were already all-LF, so this landed as a one-file addition rather than a repo-wide rewrite. `npm run verify -- --e2e` passed: 122 tests across 23 suites, both builds, and 17 Chromium checks.
+Added `.gitattributes` at the repo root: `* text=auto eol=lf`, plus explicit `binary` marks for image, font, archive, and SQLite extensions so autodetection never has to guess. `git add --renormalize .` found nothing to renormalize beyond the intended change - the tracked objects and this session's working tree were already all-LF, so this landed as a one-file addition rather than a repo-wide rewrite. `npm run verify -- --e2e` passed: 122 tests across 23 suites, both builds, and 17 Chromium checks.
 
 ### 2026-09-14 CLAUDE -> CODEX stable SQLite access and fresh dependencies
 

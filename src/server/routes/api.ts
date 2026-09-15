@@ -58,7 +58,7 @@ export function registerApiRoutes(app: Express, injected?: PrismaClient) {
   app.post(
     '/api/roster/reviews/:id/accept-last-value',
     route(async (req, res) => {
-      res.json(await acceptLastRemovalValue(await database(), req.params.id))
+      res.json(await acceptLastRemovalValue(await database(), z.string().parse(req.params.id)))
     }),
   )
   app.post(
@@ -133,7 +133,7 @@ export function registerApiRoutes(app: Express, injected?: PrismaClient) {
   app.post(
     '/api/holdings/:id/exit',
     route(async (req, res) => {
-      res.json(await closeHolding(await database(), req.params.id, req.body))
+      res.json(await closeHolding(await database(), z.string().parse(req.params.id), req.body))
     }),
   )
   app.get(

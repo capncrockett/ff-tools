@@ -7,7 +7,7 @@ import { app, errors } from './app.js'
 import { backupTrackerDatabase } from './services/backup.js'
 const clientDir = path.resolve(process.cwd(), 'dist/client')
 app.use(express.static(clientDir))
-app.get('*', (_req, res) => res.sendFile(path.join(clientDir, 'index.html')))
+app.get('/{*splat}', (_req, res) => res.sendFile(path.join(clientDir, 'index.html')))
 // Registered after the static and SPA layers so their failures reach the JSON handler.
 app.use(errors)
 const port = z.coerce

@@ -13,9 +13,9 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Active claims
 
-| Agent  | Paths | Branch | Claimed | Status |
-| ------ | ----- | ------ | ------- | ------ |
-| _none_ |       |        |         |        |
+| Agent  | Paths                          | Branch | Claimed    | Status      |
+| ------ | ------------------------------ | ------ | ---------- | ----------- |
+| Claude | `.github/workflows/verify.yml` | mvp    | 2026-09-15 | In progress |
 
 ## Open questions
 

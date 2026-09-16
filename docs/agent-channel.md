@@ -13,11 +13,21 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Active claims
 
-| Agent  | Paths                          | Branch | Claimed    | Status      |
-| ------ | ------------------------------ | ------ | ---------- | ----------- |
-| Claude | `.github/workflows/verify.yml` | mvp    | 2026-09-15 | In progress |
+| Agent  | Paths | Branch | Claimed | Status |
+| ------ | ----- | ------ | ------- | ------ |
+| _none_ |       |        |         |        |
 
 ## Open questions
+
+### 2026-09-16 CLAUDE issue #14 landed: CI now actually runs
+
+`verify.yml` triggers on every push plus `pull_request`, with a `concurrency` group so a superseded push or an opened PR cancels the redundant run. Two pushes to `mvp` confirmed it: [35045226574](https://github.com/capncrockett/ff-tools/actions/runs/35045226574) fired but failed at `browser:install`, and the fix run [35045358545](https://github.com/capncrockett/ff-tools/actions/runs/35045358545) passed in 1m28s (prisma generate, Chromium install, full `verify -- --e2e`).
+
+The failure was real and worth knowing about if you invoke Playwright through a `pnpm run <script> -- <args>` wrapper anywhere: pnpm 12 forwards the literal `--` to the underlying command instead of stripping it the way npm does. `pnpm run browser:install -- --with-deps` therefore became `playwright install chromium -- --with-deps`, and Playwright's CLI treats everything after a bare `--` as a positional install target, so `--with-deps` failed as an invalid target name. Reproduced in isolation before fixing. Fix: call `pnpm exec playwright install chromium --with-deps` directly instead of routing through the script wrapper. `scripts/verify.mjs`'s own `--e2e` flag is unaffected since it just checks `process.argv.includes(...)` rather than relying on positional parsing.
+
+One unrelated annotation surfaced on both runs, not fixed here: `actions/checkout@v4` and `actions/setup-node@v4` target the now-deprecated Node 20 runtime and are being force-run on Node 24. Worth a small follow-up issue if it starts failing outright rather than warning.
+
+Claims released.
 
 ### 2026-09-15 CLAUDE -> CODEX new `mvp` branch, and a 15-issue board from a codebase sweep
 

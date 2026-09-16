@@ -19,6 +19,31 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Open questions
 
+### 2026-09-15 CLAUDE -> CODEX new `mvp` branch, and a 15-issue board from a codebase sweep
+
+Two things changed that affect where you work.
+
+**Branch.** The user asked for the work to be pushed and moved onto a branch called `mvp`. `feat/dynasty-value-tracker` was pushed to the remote first, so its 72 commits are backed up rather than living only on this machine; nothing had ever been pushed before today. `mvp` branches from that same tip and is now the working branch, tracking `origin/mvp`. The user said explicitly that both agents may commit directly to it, so the pull-request step is not expected for ordinary work here.
+
+**Issues #9 through #23.** The user asked for a sweep of the codebase for issue candidates, including things worth investigating and things worth deleting. All fifteen follow the `docs/model-effort.md` format with a work shape and settings for both of us. Grouped:
+
+- Removal and decisions: #9 `sleeper-mini`, #10 `sleeper-lfas`, #11 the ADP and keeper experiments, #12 the root workbook, #13 assorted housekeeping.
+- Open review-log findings, now tracked properly: #15 (S10), #16 (S5), #17 (S2), #18 (Q5), #19 (S7), #20 (S11 remainder).
+- Infrastructure: #14, CI has never actually run.
+- Features: #21 draft picks, #22 the source-truth review screen, #23 hosting and backup UX.
+
+Three of these touch your judgment more than mine, so flagging them rather than assuming:
+
+1. **#11, the ADP and keeper experiments.** Unlike the two dead folders, this is live code with registered routes at `/api/sleeper-tools/*` and three passing test files. `README.md` calls it retained but unlinked. I filed it as a question for the user rather than proposing removal, because "retained" reads like a deliberate call. If you know the intent behind keeping it, answer here and the issue can skip a round trip.
+
+2. **#9 and #10 versus `AGENTS.md`.** The rulebook opens with "Keep other experiments intact". The user's instruction on 2026-09-15 was that `sleeper-mini` and `sleeper-lfas` "aren't a thing anymore", which supersedes that line for those two directories specifically. I did not edit `AGENTS.md`; both issues note that the sentence may need revisiting once they land. Say if you read the original line as broader than I have.
+
+3. **#14, CI.** `verify.yml` triggers on `push` to `[main, 'release/**']` plus `pull_request`, and all work has happened on feature branches that match neither. Combined with the user's direct-commit instruction for `mvp`, the `pull_request` trigger will not fire either. So the workflow has never validated a commit, and every verification to date has been a local `verify -- --e2e` reported by one of us. The first real run may surface setup problems in the Linux runner that have simply never been exercised, particularly around `browser:install` and Prisma generation. Worth knowing before either of us takes it.
+
+Also added `docs/grill-me-hosting-and-backups.md`, drafted rather than merely proposed, so the user has questions to answer now instead of after another session. It covers whether hosting is wanted at all, where data would live given that every migration is SQLite, whether anything hosted should ever contact the providers (recommended: never), source-of-truth if a replica exists, access control, and three backup questions. Eight questions, all `Answer: Pending`.
+
+No claim row was added for this session: the docs edits (`TODO.md`, this file, the new Grill Me document) land in a single commit, and the claims table was empty throughout.
+
 ### 2026-09-15 CLAUDE -> CODEX issue workflow: stop mid-session on a mismatch, split issues only on a real effort split
 
 Two more refinements to docs/model-effort.md Principles, from the user during today's issue #4 close-out (the Prisma 7 work there was already landed by a prior session; this pass was pure verification plus one unrelated one-line fix, at Sonnet 5 xhigh the whole time - an audit-model-effort self-audit called that a limited overallocation, disclosed only in the closing summary).
@@ -261,6 +286,8 @@ Severity reflects impact on a single-user local tool, not a hosted service.
 | S9  | Low      | Hygiene         | `cors`, `@types/cors`, and `pino-http` have no imports anywhere. `pino-http` was superseded by the manual request log in `app.ts`.                                                                                                                                                                                                  | Fixed    |
 | S10 | Low      | Coverage        | `collectCoverageFrom` omits `src/web` entirely, so roughly 2,900 lines including `ValueTracker.tsx` have no unit coverage and are exercised only by Playwright.                                                                                                                                                                     | Backlog  |
 | S11 | Low      | Maintainability | `ValueTracker.tsx` is 1,282 lines with about 20 `useState` in one component and five sub-components in-file. It is the most likely collision surface between us. Memoization is also uneven: `investments`, `open`, `targets`, `portfolios`, and `trendSeries` recompute on every render while a 15-second clock forces re-renders. | Backlog  |
+
+Every finding still open in this table now has a GitHub issue, filed 2026-09-15: S2 is [#17](https://github.com/capncrockett/ff-tools/issues/17), S5 is [#16](https://github.com/capncrockett/ff-tools/issues/16), S7 is [#19](https://github.com/capncrockett/ff-tools/issues/19), S10 is [#15](https://github.com/capncrockett/ff-tools/issues/15), and S11's remainder is [#20](https://github.com/capncrockett/ff-tools/issues/20). Q5, which never had an S number, is [#18](https://github.com/capncrockett/ff-tools/issues/18). The State column is left as it was; the issues are now the working record.
 
 Additional Codex security findings from `b662c60`, recorded above:
 

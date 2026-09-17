@@ -299,6 +299,13 @@ export default function ValueTracker() {
             'Last known value accepted for the roster exit.',
           )
         }
+        onAcknowledge={(id) =>
+          action(
+            `review:${id}`,
+            () => api(`/api/roster/reviews/${id}/acknowledge`, {}),
+            'Acknowledged: no value basis exists for this addition.',
+          )
+        }
       />
       <section className="source-grid" aria-label="Value sources">
         {data.sources.map((s) => (

@@ -104,6 +104,7 @@ export type RosterReviewItem = {
   suggestedValue: number | null
   suggestedCapturedAt: string | null
   canAcceptLastValue: boolean
+  canAcknowledge: boolean
 }
 export type RosterAutomationView = {
   leagueName: string

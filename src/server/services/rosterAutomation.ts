@@ -576,13 +576,16 @@ async function summarizeMovement(db: PrismaClient, movementId: string, now: Date
   } else if (movement.resolutions.some((resolution) => resolution.status === 'pending')) {
     status = 'pending'
     message = 'Waiting for a fresh provider value.'
+  } else if (movement.resolutions.some((resolution) => resolution.status === 'acknowledged')) {
+    status = 'acknowledged'
+    message = 'At least one provider value was acknowledged as unavailable.'
   }
   await db.rosterMovement.update({
     where: { id: movement.id },
     data: {
       status,
       message,
-      resolvedAt: status === 'applied' ? now : null,
+      resolvedAt: status === 'applied' || status === 'acknowledged' ? now : null,
     },
   })
 }
@@ -591,6 +594,7 @@ export async function applyRosterMovements(db: PrismaClient, now = new Date()) {
   const contexts = await activeContexts(db)
   const open = await db.rosterMovement.findMany({
     where: { kind: { not: 'roster_diff' }, status: { in: ['pending', 'needs_review'] } },
+    include: { resolutions: { select: { targetKey: true, status: true } } },
   })
   // A provider's first capture can follow the other's, for example after a fresh database, and a
   // changed scoring setting starts a new context. Additions already applied elsewhere still need an
@@ -617,7 +621,18 @@ export async function applyRosterMovements(db: PrismaClient, now = new Date()) {
     )
     return missing.length && !departed ? [{ movement, contexts: missing }] : []
   })
-  const work = [...open.map((movement) => ({ movement, contexts })), ...late].sort(
+  const acknowledgedContexts = ({ resolutions, ...movement }: (typeof open)[number]) => {
+    const acknowledged = new Set(
+      resolutions
+        .filter((resolution) => resolution.status === 'acknowledged')
+        .map((r) => r.targetKey),
+    )
+    return {
+      movement,
+      contexts: contexts.filter((context) => !acknowledged.has(targetKey(context))),
+    }
+  }
+  const work = [...open.map(acknowledgedContexts), ...late].sort(
     (a, b) =>
       +a.movement.occurredAt - +b.movement.occurredAt || a.movement.id.localeCompare(b.movement.id),
   )
@@ -770,6 +785,7 @@ async function reviewItems(db: PrismaClient): Promise<RosterReviewItem[]> {
       resolution.movement.direction === 'remove' &&
       resolution.suggestedValue !== null &&
       resolution.holdingId !== null,
+    canAcknowledge: resolution.movement.direction === 'add',
   }))
   const unresolved = await db.rosterMovement.findMany({
     where: { status: 'needs_review', resolutions: { none: {} } },
@@ -791,6 +807,7 @@ async function reviewItems(db: PrismaClient): Promise<RosterReviewItem[]> {
       suggestedValue: null,
       suggestedCapturedAt: null,
       canAcceptLastValue: false,
+      canAcknowledge: movement.direction === 'add',
     })),
   )
   return items
@@ -871,4 +888,50 @@ export async function acceptLastRemovalValue(
   await summarizeMovement(db, resolution.movement.id, now)
   await applyRosterMovements(db, now)
   return { accepted: true }
+}
+
+// An addition can reach `needs_review` with no value basis and stay that way forever: the
+// window it could have been valued in has closed, so no future capture can retroactively
+// satisfy it. This records an explicit acknowledgement instead of inventing a cost basis.
+export async function acknowledgeMissingValue(db: PrismaClient, itemId: string, now = new Date()) {
+  const resolution = await db.movementResolution.findUnique({
+    where: { id: itemId },
+    include: { movement: true },
+  })
+  if (resolution) {
+    if (resolution.status !== 'needs_review' || resolution.movement.direction !== 'add')
+      throw new DataError('This roster review cannot be acknowledged.', 409)
+    await db.movementResolution.update({
+      where: { id: resolution.id },
+      data: {
+        status: 'acknowledged',
+        message: 'Acknowledged: no value basis was ever captured for this addition.',
+        resolvedAt: now,
+      },
+    })
+    await summarizeMovement(db, resolution.movementId, now)
+    await applyRosterMovements(db, now)
+    return { acknowledged: true }
+  }
+  const movement = await db.rosterMovement.findUnique({
+    where: { id: itemId },
+    include: { resolutions: { select: { id: true } } },
+  })
+  if (
+    !movement ||
+    movement.status !== 'needs_review' ||
+    movement.direction !== 'add' ||
+    movement.resolutions.length > 0
+  )
+    throw new DataError('This roster review cannot be acknowledged.', 409)
+  await db.rosterMovement.update({
+    where: { id: movement.id },
+    data: {
+      status: 'acknowledged',
+      message: 'Acknowledged: no provider context was active to capture a value for this addition.',
+      resolvedAt: now,
+    },
+  })
+  await applyRosterMovements(db, now)
+  return { acknowledged: true }
 }

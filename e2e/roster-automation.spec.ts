@@ -105,6 +105,7 @@ test('roster review explains a stale exit and accepts the last known value expli
               suggestedValue: 42,
               suggestedCapturedAt: new Date(Date.now() - 48 * 60 * 60_000).toISOString(),
               canAcceptLastValue: true,
+              canAcknowledge: false,
             },
           ],
     },
@@ -127,4 +128,56 @@ test('roster review explains a stale exit and accepts the last known value expli
   await expect(panel).toContainText('Watching 30 roster players')
   await expect(panel.getByRole('button', { name: 'Use last value' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('roster review acknowledges an addition that never received a value', async ({ page }) => {
+  let acknowledged = false
+  const dashboard = (): Dashboard => ({
+    market: [],
+    holdings: [],
+    sources: [],
+    roster: {
+      leagueName: 'A League For All Seasons',
+      status: acknowledged ? 'success' : 'needs_review',
+      message: acknowledged ? 'Watching 30 roster players.' : '1 roster movement needs review.',
+      lastCheckedAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+      nextAllowedAt: new Date(Date.now() + 50 * 60_000).toISOString(),
+      rosterPlayers: 30,
+      pending: 0,
+      reviews: acknowledged
+        ? []
+        : [
+            {
+              id: 'review-2',
+              movementId: 'movement-2',
+              playerName: 'Added Then Dropped Receiver',
+              sleeperPlayerId: '202',
+              direction: 'add',
+              kind: 'waiver',
+              occurredAt: new Date().toISOString(),
+              sourceName: null,
+              contextKey: null,
+              message: 'Waiting for a provider context and fresh player value.',
+              suggestedValue: null,
+              suggestedCapturedAt: null,
+              canAcceptLastValue: false,
+              canAcknowledge: true,
+            },
+          ],
+    },
+  })
+  await page.route('**/api/tracker', (route) => route.fulfill({ json: dashboard() }))
+  await page.route('**/api/roster/reviews/review-2/acknowledge', (route) => {
+    acknowledged = true
+    return route.fulfill({ json: { acknowledged: true } })
+  })
+  await page.goto('/')
+
+  const panel = page.getByRole('region', { name: 'Sleeper roster automation' })
+  await expect(panel).toContainText('1 move needs review')
+  await expect(panel).toContainText('Added Then Dropped Receiver / Added')
+  await panel.getByRole('button', { name: 'Acknowledge no value' }).click()
+  await expect(page.getByRole('status')).toContainText('Acknowledged: no value basis')
+  await expect(panel).toContainText('Watching 30 roster players')
+  await expect(panel.getByRole('button', { name: 'Acknowledge no value' })).toHaveCount(0)
 })

@@ -15,9 +15,15 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 | Agent  | Paths | Branch | Claimed | Status |
 | ------ | ----- | ------ | ------- | ------ |
-| Claude | `src/server/services/rosterAutomation.ts`, `src/server/routes/api.ts`, `src/web/components/RosterAutomation.tsx`, `src/shared/tracker.ts`, `prisma/schema.prisma` (possible) | mvp | 2026-09-17 | Issue #18: acknowledge action for unvalued additions |
+| _none_ |       |        |         |        |
 
 ## Open questions
+
+### 2026-09-17 CLAUDE issue #18 landed: acknowledgement for a permanently stuck addition
+
+Q5's scenario now has a way out. `acknowledgeMissingValue` in `rosterAutomation.ts` records an explicit acknowledgement for an addition that reached `needs_review` with no value basis and can never get one, without inventing a cost basis. It handles both shapes the bug could take: a movement with zero `MovementResolution` rows (no provider context was ever active), and a per-context resolution that timed out while another context on the same movement still succeeded. Both get a new terminal status, `acknowledged`, distinct from `applied`; `summarizeMovement` now recognizes it and `applyRosterMovements`'s `open` loop filters acknowledged target keys out of the contexts it reprocesses, otherwise the next reconcile would silently overwrite the acknowledgement back to `needs_review` for a movement that still has another context outstanding. That reprocessing interaction was the risk the issue flagged as worth escalating for; it turned out to be real, caught by a regression test, and fixed by filtering `open`'s contexts the same way `late` already filtered its `resolved` set.
+
+Panel gets a new "Acknowledge no value" button alongside "Use last value", wired through `POST /api/roster/reviews/:id/acknowledge`. Two integration tests cover the no-resolutions and mixed-resolutions shapes, including that a later capture cannot resurrect or retroactively resolve an acknowledged item. One new e2e test exercises the button. `pnpm run verify -- --e2e` passed: 124 tests across 23 suites, both builds, and 18 Chromium checks. Started and finished at Sonnet 5, high effort, matching the issue's recommendation; no escalation needed. Claims released.
 
 ### 2026-09-16 CLAUDE issue #14 landed: CI now actually runs
 

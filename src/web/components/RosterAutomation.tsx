@@ -7,6 +7,7 @@ type Props = {
   clock: number
   onCheck: () => void
   onAccept: (id: string) => void
+  onAcknowledge: (id: string) => void
   help: string
 }
 
@@ -20,7 +21,15 @@ const shownDate = (value: string | null) =>
       })
     : 'Not checked yet'
 
-export default function RosterAutomation({ roster, busy, clock, onCheck, onAccept, help }: Props) {
+export default function RosterAutomation({
+  roster,
+  busy,
+  clock,
+  onCheck,
+  onAccept,
+  onAcknowledge,
+  help,
+}: Props) {
   if (!roster) return null
   const coolingDown = Boolean(roster.nextAllowedAt && Date.parse(roster.nextAllowedAt) > clock)
   const reviewMoves = new Set(roster.reviews.map((review) => review.movementId)).size
@@ -100,6 +109,15 @@ export default function RosterAutomation({ roster, busy, clock, onCheck, onAccep
                   onClick={() => onAccept(review.id)}
                 >
                   {busy === `review:${review.id}` ? 'Saving...' : 'Use last value'}
+                </button>
+              )}
+              {review.canAcknowledge && (
+                <button
+                  className="btn btn-sm btn-ghost btn-outline"
+                  disabled={!!busy}
+                  onClick={() => onAcknowledge(review.id)}
+                >
+                  {busy === `review:${review.id}` ? 'Saving...' : 'Acknowledge no value'}
                 </button>
               )}
             </li>

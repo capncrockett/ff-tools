@@ -3,6 +3,7 @@ import type { AxiosInstance } from 'axios'
 import { createTestPrismaClient } from '../testPrismaClient'
 import {
   acceptLastRemovalValue,
+  acknowledgeMissingValue,
   getRosterAutomation,
   reconcileSleeperRoster,
 } from '../../src/server/services/rosterAutomation'
@@ -262,5 +263,132 @@ test('keeps stale removals open until the last known value is explicitly accepte
   expect((await getRosterAutomation(db)).reviews).toHaveLength(1)
   await expect(acceptLastRemovalValue(db, before.reviews[0].id)).rejects.toMatchObject({
     status: 409,
+  })
+})
+
+test('acknowledges an addition that never had an active provider context to value it', async () => {
+  // Matched to a canonical player so the review item is about the missing value, not the match.
+  await db.player.create({ data: { sleeperId: '101', name: 'Unvalued Receiver' } })
+  await reconcileSleeperRoster(db, {
+    http: sleeperHttp([]),
+    now: new Date('2026-09-01T09:00:00Z'),
+  })
+  const added = {
+    transaction_id: 'tx-add',
+    type: 'waiver',
+    status: 'complete',
+    status_updated: Date.parse('2026-09-01T10:00:00Z'),
+    adds: { '101': 7 },
+  }
+  await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101'], [added]),
+    now: new Date('2026-09-01T10:05:00Z'),
+  })
+  const movementId = 'sleeper:tx-add:add:101'
+  expect(await db.rosterMovement.findUnique({ where: { id: movementId } })).toMatchObject({
+    status: 'pending',
+  })
+
+  // Past the 36-hour window with no provider context ever active for this league.
+  const stale = await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101'], [added]),
+    now: new Date('2026-09-02T23:00:00Z'),
+  })
+  expect(stale.needsReview).toBe(1)
+  const before = await getRosterAutomation(db)
+  expect(before.reviews).toHaveLength(1)
+  expect(before.reviews[0]).toMatchObject({
+    id: movementId,
+    canAcknowledge: true,
+    direction: 'add',
+  })
+
+  await acknowledgeMissingValue(db, movementId, new Date('2026-09-02T23:05:00Z'))
+  expect(await db.rosterMovement.findUnique({ where: { id: movementId } })).toMatchObject({
+    status: 'acknowledged',
+  })
+  const after = await getRosterAutomation(db)
+  expect(after.reviews).toHaveLength(0)
+  await expect(acknowledgeMissingValue(db, movementId)).rejects.toMatchObject({ status: 409 })
+
+  // A later capture must not resurrect the item or retroactively open a holding.
+  await observation('dynasty-nerds', '101', 'Late Receiver', 70, '2026-09-05T08:00:00Z')
+  const later = await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101'], [added]),
+    now: new Date('2026-09-05T09:00:00Z'),
+  })
+  expect(later.needsReview).toBe(0)
+  expect(await db.rosterMovement.findUnique({ where: { id: movementId } })).toMatchObject({
+    status: 'acknowledged',
+  })
+  expect(await db.holding.count({ where: { player: { sleeperId: '101' } } })).toBe(0)
+})
+
+test('acknowledging one provider context leaves the other context untouched and does not reopen', async () => {
+  await observation('dynasty-nerds', '101', 'Baseline Receiver', 100, '2026-09-01T08:00:00Z')
+  await observation('dynasty-calculator', '101', 'Baseline Receiver', 10, '2026-09-01T08:05:00Z')
+  await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101']),
+    now: new Date('2026-09-01T09:00:00Z'),
+  })
+
+  const addedAt = '2026-09-01T10:00:00Z'
+  const added = {
+    transaction_id: 'tx-add',
+    type: 'waiver',
+    status: 'complete',
+    status_updated: Date.parse(addedAt),
+    adds: { '202': 7 },
+  }
+  // Only Dynasty GM captures a value within the window; DTC never does.
+  await observation('dynasty-nerds', '202', 'Added Receiver', 80, '2026-09-01T10:10:00Z')
+  await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101', '202'], [added]),
+    now: new Date('2026-09-01T11:00:00Z'),
+  })
+
+  const stale = await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101', '202'], [added]),
+    now: new Date('2026-09-03T00:00:00Z'),
+  })
+  expect(stale.needsReview).toBe(1)
+  const movementId = 'sleeper:tx-add:add:202'
+  expect(
+    await db.holding.count({
+      where: { player: { sleeperId: '202' }, sourceName: 'dynasty-nerds' },
+    }),
+  ).toBe(1)
+  expect(
+    await db.holding.count({
+      where: { player: { sleeperId: '202' }, sourceName: 'dynasty-calculator' },
+    }),
+  ).toBe(0)
+
+  const before = await getRosterAutomation(db)
+  const calculatorReview = before.reviews.find(
+    (review) => review.movementId === movementId && review.sourceName === 'dynasty-calculator',
+  )
+  expect(calculatorReview).toMatchObject({ canAcknowledge: true, direction: 'add' })
+
+  await acknowledgeMissingValue(db, calculatorReview!.id, new Date('2026-09-03T00:05:00Z'))
+  expect(await db.rosterMovement.findUnique({ where: { id: movementId } })).toMatchObject({
+    status: 'acknowledged',
+  })
+  expect((await getRosterAutomation(db)).reviews).toHaveLength(0)
+
+  // A later DTC capture must not reopen the acknowledged context.
+  await observation('dynasty-calculator', '202', 'Added Receiver', 8, '2026-09-05T08:00:00Z')
+  const later = await reconcileSleeperRoster(db, {
+    http: sleeperHttp(['101', '202'], [added]),
+    now: new Date('2026-09-05T09:00:00Z'),
+  })
+  expect(later.needsReview).toBe(0)
+  expect(
+    await db.holding.count({
+      where: { player: { sleeperId: '202' }, sourceName: 'dynasty-calculator' },
+    }),
+  ).toBe(0)
+  expect(await db.rosterMovement.findUnique({ where: { id: movementId } })).toMatchObject({
+    status: 'acknowledged',
   })
 })

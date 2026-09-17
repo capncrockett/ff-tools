@@ -13,6 +13,7 @@ import { addHolding, closeHolding, getHoldings } from '../services/holdings.js'
 import { getSourceStatuses, syncSource } from '../services/sync.js'
 import {
   acceptLastRemovalValue,
+  acknowledgeMissingValue,
   getRosterAutomation,
   reconcileSleeperRoster,
 } from '../services/rosterAutomation.js'
@@ -59,6 +60,12 @@ export function registerApiRoutes(app: Express, injected?: PrismaClient) {
     '/api/roster/reviews/:id/accept-last-value',
     route(async (req, res) => {
       res.json(await acceptLastRemovalValue(await database(), z.string().parse(req.params.id)))
+    }),
+  )
+  app.post(
+    '/api/roster/reviews/:id/acknowledge',
+    route(async (req, res) => {
+      res.json(await acknowledgeMissingValue(await database(), z.string().parse(req.params.id)))
     }),
   )
   app.post(

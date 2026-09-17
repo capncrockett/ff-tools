@@ -15,7 +15,7 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 | Agent  | Paths | Branch | Claimed | Status |
 | ------ | ----- | ------ | ------- | ------ |
-| _none_ |       |        |         |        |
+| Claude | `src/server/services/rosterAutomation.ts`, `src/server/routes/api.ts`, `src/web/components/RosterAutomation.tsx`, `src/shared/tracker.ts`, `prisma/schema.prisma` (possible) | mvp | 2026-09-17 | Issue #18: acknowledge action for unvalued additions |
 
 ## Open questions
 

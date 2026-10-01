@@ -16,6 +16,7 @@ import HelpTip from './HelpTip'
 import TrackerGuide from './TrackerGuide'
 import TrackerAlerts from './TrackerAlerts'
 import RosterAutomation from './RosterAutomation'
+import PlayerMatchReview from './PlayerMatchReview'
 import { trackerHelp } from '../trackerHelp'
 import AcquisitionForm from './valueTracker/AcquisitionForm'
 import ExitForm from './valueTracker/ExitForm'
@@ -60,6 +61,7 @@ export default function ValueTracker() {
     [sort, setSort] = useState('name'),
     [portfolio, setPortfolio] = useState('all')
   const [clock, setClock] = useState(() => Date.now())
+  const [showMatches, setShowMatches] = useState(false)
   const [trendSource, setTrendSource] = useState<SourceName>('dynasty-calculator'),
     [trendContextKey, setTrendContextKey] = useState('')
   useEffect(() => {
@@ -218,6 +220,9 @@ export default function ValueTracker() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <button className="btn btn-outline btn-sm" onClick={() => setShowMatches(true)}>
+            Review player matches
+          </button>
           <button className="btn btn-outline btn-sm" onClick={() => setShowImport(true)}>
             Import snapshot
           </button>
@@ -227,6 +232,7 @@ export default function ValueTracker() {
         </div>
       </section>
       <TrackerGuide />
+      {showMatches && <PlayerMatchReview onClose={() => setShowMatches(false)} />}
       <div className="summary-grid" aria-label="Tracker summary">
         <div>
           <span className="eyebrow help-label">

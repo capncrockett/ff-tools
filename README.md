@@ -38,6 +38,8 @@ Zero cost produces absolute gain with undefined percentage ROI. Quotes older tha
 
 Each provider and scoring context keeps a separate series. DTC's imported league is half-PPR/1QB; Dynasty GM calls its valuation set PPR. Their numbers are never averaged. Current capture scope is the owned QB/RB/WR/TE roster, including supported bench/taxi/IR players. Per the user-confirmed rule, a player absent from DTC's position exports gets a zero on DTC, since DTC ranks only about a top 300. Dynasty GM lists the whole player pool, so a player it cannot match is a matching error, not a zero; its "NR" players display and save as 0. Failed captures and unreadable values retain their error state. Draft-pick valuation remains separate pending work.
 
+**Review player matches** opens unresolved matches for the saved roster first. Compare the provider details with Sleeper, choose a player explicitly, and confirm the link. Use **All catalog players**, search, and **All matches (including linked)** to find an existing link. A confirmed decision survives catalog refreshes and automatic matching. Captures validate strict identities before saving observations; a missing or disagreeing birth date/age requires an explicit decision. The provider catalog remains available for review after this validation stops a capture.
+
 See [source behavior and limitations](docs/sources.md).
 
 DTC capture opens its official rankings page, explicitly selects and verifies 12-team `.5 PPR` Standard/1QB settings, and downloads the QB, RB, WR, and TE exports in memory. It matches those rows to the current Sleeper roster before saving. Unlisted players receive zero under the tracker rule, with a capture-status note; no exception list is needed. Ambiguous matches and invalid exports still stop capture and preserve saved history. See [source limits](docs/sources.md#limits-and-failures). The [original workbook review](docs/workbook-review.md) records the workflow and all 21 sheets reviewed, including hidden sheets; this change does not import historical spreadsheet values.
@@ -74,7 +76,7 @@ JSON preserves structured settings and is preferable when continuing an existing
 }
 ```
 
-Include a confirmed `sleeperId` for exact identity. Otherwise a unique normalized name and position can match the seeded Sleeper catalog. Unmatched players retain a visible source identity; ambiguous matches fail the entire import. Existing mappings never silently switch players. There is no mapping-correction UI yet.
+Include a confirmed `sleeperId` for exact identity. Otherwise a unique normalized name and position can match the seeded Sleeper catalog. Unmatched players retain a visible source identity; ambiguous matches fail the entire import. Existing mappings never silently switch players. **Review player matches** can explicitly correct a provider catalog link and its corresponding mapping for future observations. Earlier observations and holdings keep their recorded identity. Manual imports retain their explicit identity contract; unrelated source keys are unchanged by a catalog correction.
 
 Settings, not their display label, define a context. A CSV's free-text format defines a separate context from browser captures; importing an old CSV does not silently splice its values into a live provider series. Identical reimports are idempotent. Conflicting same-time values and malformed/truncated batches fail atomically.
 

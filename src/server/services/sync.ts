@@ -25,6 +25,7 @@ import {
 import { ProviderError, type ValueProvider } from '../providers/types.js'
 import { backupTrackerDatabase } from './backup.js'
 import { matchProviderCatalogs, saveProviderCatalog } from './playerCatalogs.js'
+import { getManualPlayerLinks, validateCapturedPlayerLinks } from './playerReview.js'
 import { DataError, saveSnapshot } from './valuations.js'
 import {
   applyRosterMovements,
@@ -171,9 +172,19 @@ export async function syncSource(
     } = await provider.run({
       headless: options?.headless,
       sleeperRoster,
+      playerLinks: await getManualPlayerLinks(db, source),
     })
     if (snapshot.source !== source)
       throw new ProviderError('format', 'Provider returned the wrong source. No values saved.')
+    // Save reviewable identities even when strict matching stops an observation batch. A manual
+    // correction must be effective on the next capture, rather than only decorating a catalog row.
+    if (catalog) {
+      if (catalog.source !== source)
+        throw new ProviderError('format', 'Provider returned the wrong catalog. No values saved.')
+      await saveProviderCatalog(db, catalog, new Date(snapshot.capturedAt))
+      await matchProviderCatalogs(db)
+      await validateCapturedPlayerLinks(db, snapshot, catalog)
+    }
     const result = await saveSnapshot(db, snapshot, 'browser')
     if (provider.tracksSleeperRoster) {
       try {
@@ -184,21 +195,12 @@ export async function syncSource(
         rosterMessage = ' Values were saved, but Sleeper movement application needs attention.'
       }
     }
-    // The player catalog refresh rides along with the capture; its failure never costs saved values.
-    let catalogNote = ''
-    if (catalog?.source === source)
-      try {
-        await saveProviderCatalog(db, catalog, new Date(snapshot.capturedAt))
-        await matchProviderCatalogs(db)
-      } catch {
-        catalogNote = ' The player catalog could not be updated.'
-      }
     await db.syncRun.update({
       where: { id: run.id },
       data: {
         status: 'success',
         message: [
-          `Saved ${result.saved} player observations.${rosterMessage}${backupNote}${catalogNote}`,
+          `Saved ${result.saved} player observations.${rosterMessage}${backupNote}`,
           ...warnings,
         ].join(' '),
         saved: result.saved,

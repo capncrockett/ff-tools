@@ -104,6 +104,7 @@ export function buildDtcSnapshot(
   rankings: DtcRankingRow[],
   roster: CanonicalPlayer[],
   now = new Date(),
+  playerLinks: { key: string; sleeperId: string }[] = [],
 ): ProviderSnapshot {
   if (!rankings.length)
     throw new ProviderError('format', 'DTC rankings are empty. No snapshot saved.')
@@ -116,6 +117,7 @@ export function buildDtcSnapshot(
   const rankingsByPlayer = new Map<string, DtcRankingRow[]>()
   const rankingsByPlayerWithoutSuffix = new Map<string, DtcRankingRow[]>()
   for (const row of rankings) {
+    if (playerLinks.some((link) => link.key === playerKey(row.playerName, row.position))) continue
     for (const [map, key] of [
       [rankingsByPlayer, playerKey(row.playerName, row.position)],
       [rankingsByPlayerWithoutSuffix, playerKey(row.playerName, row.position, true)],
@@ -126,11 +128,17 @@ export function buildDtcSnapshot(
   const matchedRows = new Set<DtcRankingRow>()
   const missing: CanonicalPlayer[] = []
   const records = eligibleRoster.flatMap((player) => {
+    const manual = playerLinks.find((link) => link.sleeperId === player.sleeperId)
+    const manualRows = manual
+      ? rankings.filter((row) => playerKey(row.playerName, row.position) === manual.key)
+      : []
     const exact = rankingsByPlayer.get(playerKey(player.name, player.position ?? '')) ?? []
-    const candidates = exact.length
-      ? exact
-      : (rankingsByPlayerWithoutSuffix.get(playerKey(player.name, player.position ?? '', true)) ??
-        [])
+    const candidates = manual
+      ? manualRows
+      : exact.length
+        ? exact
+        : (rankingsByPlayerWithoutSuffix.get(playerKey(player.name, player.position ?? '', true)) ??
+          [])
     if (candidates.length > 1)
       throw new ProviderError('format', `DTC has an ambiguous match for ${player.name}.`)
     const row = candidates[0]
@@ -405,7 +413,7 @@ export const dynastyCalculatorProvider: ValueProvider = {
         const rankings = await downloadDtcRankingExports(page)
         stage = 'matching rankings to the Sleeper roster'
         return {
-          ...buildDtcSnapshot(rankings, roster),
+          ...buildDtcSnapshot(rankings, roster, new Date(), options.playerLinks),
           // Every ranked player from the four exports is saved to the DTC player table.
           catalog: { source: 'dynasty-calculator' as const, rows: rankings },
         }

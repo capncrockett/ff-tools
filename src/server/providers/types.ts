@@ -5,6 +5,7 @@ export type { SourceName } from '../../shared/tracker.js'
 export type ProviderRunOptions = {
   headless?: boolean
   sleeperRoster?: CanonicalPlayer[]
+  playerLinks?: { key: string; sleeperId: string }[]
 }
 
 // Every player a provider lists, as its capture already received it. Saved to that provider's

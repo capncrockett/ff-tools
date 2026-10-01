@@ -25,12 +25,14 @@ The completed [initial Grill Me document](docs/archive/grill-me-dynasty-tracker-
 
 - [ ] Track owned draft picks, then convert a used pick holding into the drafted player's holding while preserving the transaction history. (issue #21)
 - [ ] Add acquisition targets later; current scope remains the owned roster.
-- [ ] Add a source-truth review queue for ambiguous player mappings and acquisition corrections. Continue unambiguous automation without manual confirmation. (issue #22)
+- [x] Add a roster-first source-truth review queue for ambiguous player mappings and explicit corrections. Continue unambiguous automation without manual confirmation. (issue #22; acquisition corrections remain separate)
 - [ ] Design Vercel hosting with durable storage, exact-user access, and upload from the local browser worker. Local nightly execution is implemented; hosted collection and service installation remain separate. (issue #23, pending answers in [the hosting and backup follow-up](docs/grill-me-hosting-and-backups.md))
 - [x] Add in-app target, opposite-provider-trend, 10% sharp-move, and 36-hour stale-data alerts. Decide later whether any should be delivered elsewhere.
 - [ ] Define backup/restore UX. (issue #23, same document)
 
 ## Operational follow-ups
+
+The first usable local slice is the owned Sleeper player roster, separate Dynasty GM/DTC values, saved history, player-level returns, and explicit identity review. Use the existing local app and manual capture buttons. Draft picks remain a confirmed next feature; hosting, whole-market review, parser consolidation, UI refactoring, and experiment cleanup do not block this player slice. A current paid-provider capture is a deliberate acceptance step, not part of fixture verification. This is the implementation scope chosen for the 2026-09-30 usability request; it does not cancel the user's earlier pick or hosting decisions.
 
 - [ ] Observe a later real capture to establish actual movement; never invent a prior price.
 - [ ] Keep provider DOM fixtures aligned when either subscription UI changes.

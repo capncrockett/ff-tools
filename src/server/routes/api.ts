@@ -7,6 +7,7 @@ import { getKeeperData } from '../services/keeper.js'
 import { dynastyNerdsProvider } from '../providers/dynastyNerds.js'
 import { dynastyCalculatorProvider } from '../providers/dynastyCalculator.js'
 import { matchProviderCatalogs } from '../services/playerCatalogs.js'
+import { getPlayerMatchReview, linkPlayerMatch } from '../services/playerReview.js'
 import { listPlayers, seedPlayersFromSleeper } from '../services/players.js'
 import { DataError, getMarket, parseCsvSnapshot, saveSnapshot } from '../services/valuations.js'
 import { addHolding, closeHolding, getHoldings } from '../services/holdings.js'
@@ -193,6 +194,56 @@ export function registerApiRoutes(app: Express, injected?: PrismaClient) {
       const db = await database()
       const seeded = await seedPlayersFromSleeper({ prisma: db })
       res.json({ ...seeded, matching: await matchProviderCatalogs(db) })
+    }),
+  )
+  app.get(
+    '/api/player-matches',
+    route(async (req, res) => {
+      const options = z
+        .object({
+          source: sourceSchema.optional(),
+          search: z.string().max(100).optional(),
+          scope: z.enum(['roster', 'all']).optional(),
+          status: z.enum(['review', 'all']).optional(),
+        })
+        .parse(req.query)
+      res.json(await getPlayerMatchReview(await database(), options))
+    }),
+  )
+  app.get(
+    '/api/player-matches/players',
+    route(async (req, res) => {
+      const input = z
+        .object({ search: z.string().min(1).max(100), position: z.enum(['QB', 'RB', 'WR', 'TE']) })
+        .parse(req.query)
+      const db = await database()
+      res.json(
+        (
+          await db.player.findMany({
+            where: {
+              sleeperId: { not: null },
+              position: input.position,
+              name: { contains: input.search },
+            },
+            take: 20,
+            orderBy: { name: 'asc' },
+            select: { id: true, name: true, position: true, birthDate: true, sleeperId: true },
+          })
+        ).map((p) => ({ ...p, rostered: false })),
+      )
+    }),
+  )
+  app.post(
+    '/api/player-matches/link',
+    route(async (req, res) => {
+      const input = z
+        .object({
+          source: sourceSchema,
+          key: z.string().min(1).max(200),
+          playerId: z.number().int().positive().nullable(),
+        })
+        .parse(req.body)
+      res.json(await linkPlayerMatch(await database(), input.source, input.key, input.playerId))
     }),
   )
 }

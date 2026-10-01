@@ -240,7 +240,7 @@ test('a stale manual DTC link remains reserved when the current spelling changes
   })
 })
 
-test('a capture saves its catalog, and a catalog failure never costs the saved values', async () => {
+test('a capture saves its catalog, and an invalid catalog preserves the last good values', async () => {
   const provider = (catalog: unknown, capturedAt = seenAt): ValueProvider => ({
     name: 'dynasty-nerds',
     run: async () =>
@@ -248,7 +248,15 @@ test('a capture saves its catalog, and a catalog failure never costs the saved v
         source: 'dynasty-nerds',
         capturedAt: capturedAt.toISOString(),
         context: { label: 'Fixture', settings: { scoring: 'PPR' } },
-        records: [{ sourceKey: '501', playerName: 'Fixture Receiver', value: 50 }],
+        records: [
+          {
+            sourceKey: '501',
+            sleeperId: '11',
+            playerName: 'Fixture Receiver',
+            position: 'WR',
+            value: 50,
+          },
+        ],
         catalog,
       }) as never,
   })
@@ -266,15 +274,12 @@ test('a capture saves its catalog, and a catalog failure never costs the saved v
   await db.syncRun.updateMany({ data: { startedAt: new Date(Date.now() - 3_600_001) } })
   // A league position gets past the scope filter, so the missing name fails the catalog save.
   const broken = { source: 'dynasty-nerds', players: [{ id: 'not-a-number', pos: 'WR' }] }
-  const result = await syncSource(
-    db,
-    'dynasty-nerds',
-    provider(broken, new Date('2026-09-13T13:00:00Z')),
-  )
-  expect(result).toMatchObject({ saved: 1 })
+  await expect(
+    syncSource(db, 'dynasty-nerds', provider(broken, new Date('2026-09-13T13:00:00Z'))),
+  ).rejects.toThrow('No snapshot was saved')
+  expect(await db.valuation.count()).toBe(1)
   const run = await db.syncRun.findFirstOrThrow({ orderBy: { startedAt: 'desc' } })
   expect(run).toMatchObject({
-    status: 'success',
-    message: expect.stringContaining('The player catalog could not be updated.'),
+    status: 'failed',
   })
 })

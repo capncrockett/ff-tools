@@ -109,6 +109,7 @@ export function parseNerdsRows(
   leagueId: string,
   now = new Date(),
   sleeperRoster?: CanonicalPlayer[],
+  playerLinks: { key: string; sleeperId: string }[] = [],
 ): ProviderSnapshot {
   const parsedInit = initSchema.safeParse(rawInit)
   if (!parsedInit.success)
@@ -162,7 +163,7 @@ export function parseNerdsRows(
   )
     throw new ProviderError('format', 'Dynasty GM roster capture is incomplete. No snapshot saved.')
 
-  if (sleeperRoster) matchSleeperRoster(records, init, sleeperRoster)
+  if (sleeperRoster) matchSleeperRoster(records, init, sleeperRoster, playerLinks)
   return {
     source: 'dynasty-nerds',
     capturedAt: now.toISOString(),
@@ -194,6 +195,7 @@ function matchSleeperRoster(
   records: Observation[],
   init: NerdsInit,
   sleeperRoster: CanonicalPlayer[],
+  playerLinks: { key: string; sleeperId: string }[],
 ) {
   const nameKey = (
     p: { firstName: string; lastName: string; pos: string },
@@ -207,11 +209,19 @@ function matchSleeperRoster(
     const find = (removeSuffix: boolean) =>
       records.filter(
         (record) =>
+          !playerLinks.some(
+            (link) => link.key === record.sourceKey && link.sleeperId !== player.sleeperId,
+          ) &&
           nameKey(init.players[record.sourceKey], removeSuffix) ===
-          sleeperKey(player, removeSuffix),
+            sleeperKey(player, removeSuffix),
       )
     const exact = find(false)
-    const candidates = exact.length ? exact : find(true)
+    const manual = playerLinks.find((link) => link.sleeperId === player.sleeperId)
+    const candidates = manual
+      ? records.filter((r) => r.sourceKey === manual.key)
+      : exact.length
+        ? exact
+        : find(true)
     if (candidates.length > 1 || candidates[0]?.sleeperId)
       throw new ProviderError(
         'format',
@@ -256,6 +266,7 @@ export async function captureNerdsPage(
   page: Page,
   leagueId: string,
   sleeperRoster?: CanonicalPlayer[],
+  playerLinks: { key: string; sleeperId: string }[] = [],
 ): Promise<ProviderSnapshot> {
   let init: NerdsInit | undefined
   let initChanged = false
@@ -330,7 +341,7 @@ export async function captureNerdsPage(
     .map((p) => ({ id: String(p.id), name: `${p.firstName} ${p.lastName}` }))
   const rows = await readNerdsRows(page, candidates)
   return {
-    ...parseNerdsRows(rows, metadata, leagueId, new Date(), sleeperRoster),
+    ...parseNerdsRows(rows, metadata, leagueId, new Date(), sleeperRoster, playerLinks),
     // The same response lists the whole player pool; it is saved to the Dynasty GM player table.
     catalog: { source: 'dynasty-nerds', players: Object.values(metadata.players) },
   }
@@ -347,7 +358,7 @@ export const dynastyNerdsProvider: ValueProvider = {
         'DYNASTY_NERDS_LEAGUE_ID must be a numeric analyzer ID.',
       )
     return withProviderPage('dynasty-nerds', options.headless !== false, (page) =>
-      captureNerdsPage(page, leagueId, options.sleeperRoster),
+      captureNerdsPage(page, leagueId, options.sleeperRoster, options.playerLinks),
     )
   },
 }

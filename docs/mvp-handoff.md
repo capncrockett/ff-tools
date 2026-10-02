@@ -21,7 +21,7 @@ Process change (user, 2026-10-01): only one agent works in this repository at a 
 
 ### Hosting decisions (issue #23, answered 2026-10-01)
 
-In [the hosting Grill Me](grill-me-hosting-and-backups.md): full hosted app, Turso/libSQL as the single source of truth, local worker only for provider capture (MVP), GitHub sign-in for one allowed account. **Unresolved conflict:** an earlier session recorded that provider prices must keep being collected while the PC is off (hosted capture). The Mac session was then told capture stays on the local worker for now because this is an MVP, which stops collection when the PC is off. Both are in the Grill Me under Q3. Ask the user which one governs before building anything on #27. Q6 to Q8 (backup panel, pruning, restore test) are still pending and do not block #27. Turso also fixes the machine problem: both computers would share one database. #27 comes after #26.
+In [the hosting Grill Me](grill-me-hosting-and-backups.md): full hosted app, Turso/libSQL as the single source of truth, local worker only for provider capture (MVP), GitHub sign-in for one allowed account. **Q3 reconciled (user, 2026-10-01):** the point of the cloud database is one source of truth shared by every computer. The local worker captures and writes to Turso; local copies are backups. Hosted capture with the PC off is deferred, not part of the first slice. An earlier session's note that off-PC collection is required is superseded by this for sequencing. Q6 to Q8 (backup panel, pruning, restore test) are still pending and do not block #27. Turso also fixes the machine problem: both computers would share one database. #27 comes after #26.
 
 ### Environment notes
 

@@ -52,7 +52,7 @@ Answer: User-confirmed on 2026-10-01: yes. New provider prices must continue to 
 
 Later the same day, in a separate session: Local worker only for now, because this is still an MVP (user, 2026-10-01). Hosted capture is not part of this work.
 
-NOTE: these two answers conflict (off-PC capture vs local worker only) and have not been reconciled. Ask the user before building.
+Clarified by the user later on 2026-10-01: the point of the cloud database is one source of truth that every computer shares. The local worker captures and writes to it, and local copies are backups, not a second system of record. Hosted capture that runs with the PC off is deferred, not part of the first slice.
 
 ## 4. Which copy is the source of truth?
 

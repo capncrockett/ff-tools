@@ -2,7 +2,7 @@
 
 Two `TODO.md` items have been parked as "confirmed next directions" without the decisions needed to start them: "Design Vercel hosting with durable storage, exact-user access, and upload from the local browser worker", and "Define backup/restore UX". This document asks for those decisions.
 
-Neither blocks current work. The tracker runs locally today, captures on schedule, and backs itself up. These questions decide whether that changes and how.
+The tracker currently runs locally and backs itself up. On 2026-10-01 the user confirmed that the MVP must be accessible from any device with their PC off and must keep collecting provider prices then. Hosting and hosted capture are therefore part of the intended MVP. Fixing DTC capture remains the first task, followed by hosted operation. The remaining questions decide deployment details, not whether hosting is wanted.
 
 Answer by replacing `Answer: Pending`. Recommendations are the agent's reading of the existing constraints, not decisions already made.
 
@@ -28,13 +28,13 @@ Recommended: Say which of these you actually want, because the rest of the answe
 
 Recommendation if you are unsure: (b). It covers the realistic use (checking the portfolio during a trade conversation) without moving the system of record off your machine.
 
-Answer: Pending
+Answer: User-confirmed on 2026-10-01: access from any device, even when the PC is off, and keep collecting new provider prices automatically while it is off. A local-only app or a hosted view that waits for the PC to capture does not satisfy this requirement. Hosted entry/exit editing and the exact login mechanism were not separately discussed.
 
 ## 2. Where would the data live?
 
 Question: Vercel's serverless filesystem is ephemeral, so a SQLite file cannot persist there. Hosting means either a different database or a different host. Which direction?
 
-Recommended: Depends on question 1. If (b), the hosted side can be fed a periodically uploaded read-only copy and needs no real database at all. If (c), the choice is a hosted Postgres, a libSQL/Turso service that keeps the SQLite dialect, or a host with a genuine persistent disk instead of Vercel.
+Recommended after the confirmed always-on requirement: keep SQLite on a host with genuine persistent storage, with the app and capture worker using the same database in one service instance. This preserves the current engine and migrations. Hosted Postgres or libSQL remain alternatives if the chosen platform requires them. No platform or storage option has been user-approved yet; Vercel was an earlier planning idea, not a deployment requirement.
 
 Note the migration risk either way: Prisma 7 with the `better-sqlite3` adapter is current, and every migration in `prisma/migrations` is SQLite. Moving engines is a real port, not a connection string change, and the existing captured history has to survive it exactly.
 
@@ -44,17 +44,15 @@ Answer: Pending
 
 Question: Capture needs a logged-in browser session against your paid subscriptions. Should that ever run on a server, or should the local worker remain the only thing that contacts a provider?
 
-Recommended: Local only, permanently. Running subscription logins from a datacenter changes the nature of the access in a way the current data boundaries deliberately avoid, and it is the kind of thing that gets an account flagged. Keep the worker on your machine, and have it push observations up. This is what the `TODO.md` phrase "upload from the local browser worker" already implies; this question just asks you to confirm it as a hard rule rather than a default.
+Recommended following the 2026-10-01 answer: run the existing browser capture worker on always-on hosted compute. Preserve normal authenticated page flows, provider cooldowns, visible failures, and session recovery. Deliberate hosted-browser acceptance must establish that both provider flows work there; local fixtures do not establish that. The earlier local-only recommendation was not user-approved and is superseded by the confirmed off-PC capture requirement.
 
-Answer: Pending
+Answer: User-confirmed on 2026-10-01: yes. New provider prices must continue to be collected automatically while the PC is off. This authorizes planning hosted capture through normal browser flows; it does not authorize challenge bypass or relaxed validation.
 
 ## 4. Which copy is the source of truth?
 
 Question: If a hosted copy exists and the local worker keeps capturing, there are two databases. Which one is authoritative, and what happens when they disagree?
 
-Recommended: The local database stays the system of record, and the hosted side is a downstream replica that is never written to by a human. This makes the sync one-directional and makes a hosted failure a display outage rather than a data loss.
-
-The alternative, letting you record an acquisition from your phone, means the hosted side becomes authoritative for some rows and the local worker for others, which needs real conflict handling. That is a significantly larger project. Worth it only if you would genuinely use it.
+Recommended after the confirmed hosted-capture requirement: one hosted database becomes the production system of record after a backed-up, verified cutover. The existing local database remains preserved during that transition; local development and tests use separate data. Avoid concurrent local and hosted production capture workers writing independent histories. This removes a two-way synchronization problem. The cutover details and remote manual entry/exit editing have not been user-approved separately.
 
 Answer: Pending
 

@@ -1,8 +1,20 @@
-# Local player MVP handoff - 2026-10-01
+# Dynasty tracker MVP handoff - 2026-10-01
 
 ## First task: fix failed DTC captures
 
 The user explicitly made DTC capture recovery the first task for the next agent chat. Get the existing player tracker reliably usable before expanding scope. Do not start draft picks, hosting, refactoring, experiment removal, or broad catalog cleanup first.
+
+## Confirmed MVP update: always-on hosted access and capture
+
+Later on 2026-10-01 the user confirmed both requirements: access from any device while their PC is off, and automatic collection of new provider prices while it is off. The local player slice is a checkpoint, not the complete intended MVP. DTC recovery remains first; hosted app, durable storage, private access, and hosted browser capture come next. A read-only hosted copy fed only by an awake PC is insufficient.
+
+The user's answers are recorded in [hosting decisions](grill-me-hosting-and-backups.md), questions 1 and 3. Hosting provider, database engine, exact login mechanism, source-of-truth cutover, and backup destination are not yet user-approved. Do not turn a recommendation into a confirmed decision or collect unrelated backup preferences before fixing DTC.
+
+Proposed smallest architecture: keep the existing SQLite engine and run the app plus existing browser worker within one always-on service with persistent storage and single-user authentication. This is a recommendation, not a selected platform. [Render persistent disks](https://render.com/docs/disks), checked 2026-10-01, are supported on paid services and survive restarts/deploys; a disk belongs to only one service instance, so separate Render web and worker services cannot share the same SQLite file. Co-locate those processes if this route is selected. Brief deployment downtime and single-instance operation are documented tradeoffs. [Vercel's SQLite guidance](https://vercel.com/kb/guide/is-sqlite-supported-in-vercel) says its Functions do not provide the persistent shared local filesystem needed by this database. A Vercel plus remote-database plus separate-browser-worker design would be a broader change.
+
+Hosted implementation must add authentication and the correct network/origin configuration before exposure; the current loopback-only API is not deployable by simply changing its bind address. Keep production history and subscription credentials out of local development/testing. Preserve the existing history through a backed-up, verified cutover rather than inventing two writable production copies. Prove restart persistence, provider session recovery, the existing hourly reservation, hosted capture with the PC off, and recoverable off-host backups. Provider browser acceptance remains unverified; do not relax challenges or scoring/identity validation to make a hosted run appear successful.
+
+## DTC diagnostic starting point
 
 Read-only inspection of saved runs found the same controlled failure on the two latest DTC attempts:
 
@@ -59,9 +71,32 @@ On Windows, the first sandboxed browser run completed its tests but stalled duri
 - Paid-provider credentials are in ignored `.env.local`; sessions and recordings are under ignored `.local`. Never log or commit them. This repository and its issue tracker are public.
 - Use `pnpm run dev` and open [the local tracker](http://127.0.0.1:5173). The prior session started it, but verify whether it is still running. App startup backs up local data; it does not start paid captures or the capture worker. `pnpm run capture:plan` is read-only; `pnpm run capture:worker` starts live automation.
 - Preserve only QB/RB/WR/TE players and draft-pick scope. Keep provider values and scoring contexts separate, retain historical observations, and preserve fail-closed identity rules.
-- Draft picks (#21), hosting/backups UX (#23), and cleanup remain future work. They are not prerequisites for fixing DTC and using the local player slice. Earlier confirmed pick/hosting decisions have not been canceled.
+- Draft picks (#21) and cleanup remain later work. Hosting (#23) is now required for the intended MVP, after DTC recovery. Backup/restore UI remains a separate preference; hosted persistence and recovery are required operational work. Earlier confirmed pick decisions have not been canceled.
 - No release, merge, or deployment was requested. The package remains `0.1.0`; this is an MVP checkpoint, not a shipped release.
+
+## Continue from another computer
+
+The user requested this handoff and all changes be pushed so work can continue across computers. The shared checkpoint is the `mvp` branch at [capncrockett/ff-tools](https://github.com/capncrockett/ff-tools). This committed document is the handoff; do not depend on another machine's chat history, agent memory, absolute paths, or linked worktrees.
+
+For a new checkout, use Node 24+ and the pnpm version pinned in `package.json` (`12.4.1` at this checkpoint):
+
+```powershell
+git clone --branch mvp https://github.com/capncrockett/ff-tools.git
+Set-Location ff-tools
+corepack pnpm install --frozen-lockfile
+pnpm run prisma:generate
+pnpm run browser:install
+pnpm run doctor
+```
+
+For an existing checkout, inspect `git status --short --branch` first, preserve local edits, select `mvp` when safe, then run `git pull --ff-only origin mvp`. Reinstall dependencies if the lockfile changed. Confirm the checked-out commit against `origin/mvp` before beginning. Read this handoff and `AGENTS.md`, confirm the new chat's actual model/effort, and use the agent channel for claims. Pull before starting work and push verified checkpoints before switching computers. Git does not prevent two agents on different computers from editing the same paths; coordinate through the channel and keep changes sequential.
+
+Git transfers code, migrations, fixtures, decisions, and this handoff. It does **not** transfer captured history (`prisma/dev.db`), `.env.local`, `.local/sessions`, recordings, local caches, or backups. A fresh clone is sufficient for isolated development and `pnpm run verify -- --e2e`; missing live configuration in doctor is expected until privately configured. Do not run `db:deploy`, `players:seed`, or live captures just to make the new checkout look complete.
+
+Until hosting is working, the existing computer remains the live tracker and capture location. To move live operation deliberately, stop its app and worker, create a fresh consistent backup with `pnpm run db:backup`, transfer that backup privately, configure the destination's ignored `.env.local` and `TRACKER_BACKUP_DIR`, and restore through [the documented restore wrapper](backups.md). On the destination, keep the app and worker stopped while restoring; `pnpm run db:restore` lists available backups and `pnpm run db:restore -- <file name>` restores the chosen one. Inspect restored data through `db:query` before starting it. Keep the original and backups as recovery copies, and run live capture on only the designated computer. Do not sync an actively written SQLite file or merge independently captured databases.
+
+Configure paid-provider credentials privately and use normal login/session recovery on the new machine; browser sessions are sensitive and may not remain valid across machines. Never add them or the database to Git. No private data transfer, restore, or new-machine login was performed by this documentation update. Once the hosted MVP is accepted, devices should use its authenticated URL and development checkouts should remain separate from production data and credentials.
 
 ## Suggested opening message for the next chat
 
-> Read docs/mvp-handoff.md and AGENTS.md. First fix DTC's failed captures. The last inspected failures said "DTC did not apply the requested ranking settings." Recheck current saved status, identify which control fails using the normal authorized browser flow, add a sanitized regression, and make the smallest fix without weakening scoring or identity validation. Run the full e2e gate and verify guarded live capture when authorized. Keep picks, hosting, and unrelated refactors out of this task.
+> Read docs/mvp-handoff.md and AGENTS.md. First fix DTC's failed captures. The last inspected failures said "DTC did not apply the requested ranking settings." Recheck current saved status, identify which control fails using the normal authorized browser flow, add a sanitized regression, and make the smallest fix without weakening scoring or identity validation. Run the full e2e gate and verify guarded live capture when authorized. Keep picks and unrelated refactors out. After the DTC checkpoint, route hosted operation as its own slice: the app must be accessible from any device and keep collecting prices while the PC is off.

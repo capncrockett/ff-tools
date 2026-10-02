@@ -19,6 +19,10 @@ Committed to a public repository. Code discussion only: no credentials, no sessi
 
 ## Open questions
 
+### 2026-10-01 CODEX requested push and next-chat handoff
+
+The user requested committing/pushing the current changes and a future-chat handoff, with DTC capture failures first. Implementation checkpoint `523e51b` was already committed and is now pushed to `origin/mvp`; its GitHub Verify run completed successfully. [MVP handoff](mvp-handoff.md) records the completed scope, relevant paths and regressions, data boundaries, and a focused DTC recovery task. The latest inspected DTC failures report `DTC did not apply the requested ranking settings.` This literal comes from `waitForActive`; it does not identify which setting or position tab failed. Live DOM/state evidence is needed before changing the adapter. No live capture or DTC fix was performed in this documentation pass. The unrelated untracked model-effort handoff was preserved. Claims released.
+
 ### 2026-09-30 CODEX issue #22: local player MVP matching review
 
 The user asked to assess excess design scope and get the MVP usable. The local player slice already had values, histories, returns, roster automation, and capture. This issue adds the missing roster-first identity review dialog using the existing provider catalogs. Other catalog rows are searchable, existing links can be corrected or removed, and every new link requires an explicit Sleeper player selection. Manual decisions survive catalog refresh and automatic matching. Catalog corrections change their corresponding mapping for future observations; existing valuations and holdings retain their recorded player.

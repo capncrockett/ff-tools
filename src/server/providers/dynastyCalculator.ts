@@ -215,21 +215,32 @@ export function buildDtcSnapshot(
   }
 }
 
-async function waitForActive(control: Locator, expected: boolean) {
-  await control.waitFor({ state: 'visible' })
+async function waitForActive(control: Locator, expected: boolean, label: string) {
+  try {
+    await control.waitFor({ state: 'visible', timeout: 10_000 })
+  } catch {
+    throw new ProviderError('format', `DTC control was not visible: ${label}.`)
+  }
   for (let attempt = 0; attempt < 20; attempt++) {
     const active = (await control.getAttribute('class'))?.split(/\s+/).includes('active') ?? false
     if (active === expected) return
     await control.page().waitForTimeout(100)
   }
-  throw new ProviderError('format', 'DTC did not apply the requested ranking settings.')
+  throw new ProviderError(
+    'format',
+    `DTC did not apply the requested ranking settings: ${label} (expected ${expected ? 'active' : 'inactive'}).`,
+  )
 }
 
-async function setActive(control: Locator, expected: boolean) {
-  await control.waitFor({ state: 'visible' })
+async function setActive(control: Locator, expected: boolean, label: string) {
+  try {
+    await control.waitFor({ state: 'visible', timeout: 10_000 })
+  } catch {
+    throw new ProviderError('format', `DTC control was not visible: ${label}.`)
+  }
   const active = (await control.getAttribute('class'))?.split(/\s+/).includes('active') ?? false
   if (active !== expected) await control.click()
-  await waitForActive(control, expected)
+  await waitForActive(control, expected, label)
 }
 
 async function verifyExclusive(page: Page, selector: string, expectedId: string) {
@@ -241,7 +252,10 @@ async function verifyExclusive(page: Page, selector: string, expectedId: string)
         .map((control) => control.getAttribute('data-id')),
     )
   if (activeIds.length !== 1 || activeIds[0] !== expectedId)
-    throw new ProviderError('format', 'DTC did not retain the requested ranking settings.')
+    throw new ProviderError(
+      'format',
+      `DTC did not retain the requested ranking settings: ${selector} (expected ${expectedId}).`,
+    )
 }
 
 export async function verifyDtcRankingSettings(page: Page) {
@@ -257,14 +271,14 @@ export async function verifyDtcRankingSettings(page: Page) {
   ] as const
   for (const [id, expected] of extras) {
     const control = page.locator(`.dtc-top-extra[data-id="${id}"]:visible`).first()
-    await waitForActive(control, expected)
+    await waitForActive(control, expected, id)
   }
 }
 
 export async function configureDtcRankingSettings(page: Page) {
   const choose = async (selector: string, id: string) => {
     const control = page.locator(`${selector}[data-id="${id}"]:visible`).first()
-    await setActive(control, true)
+    await setActive(control, true, `${selector} ${id}`)
   }
   await choose('.dtc-top-team-size', '12')
   await choose('.dtc-top-team-type', 'half_ppr')
@@ -272,6 +286,7 @@ export async function configureDtcRankingSettings(page: Page) {
   await setActive(
     page.locator('.dtc-top-extra[data-id="top-offense-format-field"]:visible').first(),
     true,
+    'top-offense-format-field',
   )
   for (const id of [
     'top-idp-format-field',
@@ -279,7 +294,7 @@ export async function configureDtcRankingSettings(page: Page) {
     'top-tepre-format-field',
     'top-rbppc-format-field',
   ])
-    await setActive(page.locator(`.dtc-top-extra[data-id="${id}"]:visible`).first(), false)
+    await setActive(page.locator(`.dtc-top-extra[data-id="${id}"]:visible`).first(), false, id)
   await page.waitForTimeout(1_500)
   await verifyDtcRankingSettings(page)
 }
@@ -308,7 +323,7 @@ export async function downloadDtcRankingExports(page: Page): Promise<DtcRankingR
       .locator(`.rank-tab-button[data-id="${position}"]:visible`)
       .filter({ hasText: new RegExp(`^\\s*${position}\\s*$`) })
       .first()
-    await setActive(tab, true)
+    await setActive(tab, true, `position tab ${position}`)
     await page.waitForTimeout(250)
     await verifyDtcRankingSettings(page)
     const [download] = await Promise.all([

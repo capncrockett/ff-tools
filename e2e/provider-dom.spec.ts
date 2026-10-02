@@ -260,3 +260,14 @@ test('DTC selects and verifies half-PPR before downloading every position export
   ])
   await expect(page.getByText('Rookie QB', { exact: true })).not.toHaveClass(/active/)
 })
+
+test('DTC names the control that ignores a click instead of a generic failure', async ({
+  page,
+}) => {
+  await page.setContent(`
+    <a class="dtc-top-team-size active" data-id="10">10</a>
+    <a class="dtc-top-team-size" data-id="12">12</a>`)
+  await expect(configureDtcRankingSettings(page)).rejects.toThrow(
+    'DTC did not apply the requested ranking settings: .dtc-top-team-size 12 (expected active).',
+  )
+})

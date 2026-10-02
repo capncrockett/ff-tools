@@ -30,6 +30,8 @@ Recommendation if you are unsure: (b). It covers the realistic use (checking the
 
 Answer: User-confirmed on 2026-10-01: access from any device, even when the PC is off, and keep collecting new provider prices automatically while it is off. A local-only app or a hosted view that waits for the PC to capture does not satisfy this requirement. Hosted entry/exit editing and the exact login mechanism were not separately discussed.
 
+Later the same day, in a separate session: Full hosted app (user, 2026-10-01). Capture, entry, exit, and review should all work from the hosted app.
+
 ## 2. Where would the data live?
 
 Question: Vercel's serverless filesystem is ephemeral, so a SQLite file cannot persist there. Hosting means either a different database or a different host. Which direction?
@@ -38,7 +40,7 @@ Recommended after the confirmed always-on requirement: keep SQLite on a host wit
 
 Note the migration risk either way: Prisma 7 with the `better-sqlite3` adapter is current, and every migration in `prisma/migrations` is SQLite. Moving engines is a real port, not a connection string change, and the existing captured history has to survive it exactly.
 
-Answer: Pending
+Answer: Turso/libSQL (user, 2026-10-01), keeping the SQLite dialect so existing migrations and captured history port with the least risk.
 
 ## 3. Should anything hosted ever talk to the providers?
 
@@ -48,13 +50,17 @@ Recommended following the 2026-10-01 answer: run the existing browser capture wo
 
 Answer: User-confirmed on 2026-10-01: yes. New provider prices must continue to be collected automatically while the PC is off. This authorizes planning hosted capture through normal browser flows; it does not authorize challenge bypass or relaxed validation.
 
+Later the same day, in a separate session: Local worker only for now, because this is still an MVP (user, 2026-10-01). Hosted capture is not part of this work.
+
+NOTE: these two answers conflict (off-PC capture vs local worker only) and have not been reconciled. Ask the user before building.
+
 ## 4. Which copy is the source of truth?
 
 Question: If a hosted copy exists and the local worker keeps capturing, there are two databases. Which one is authoritative, and what happens when they disagree?
 
 Recommended after the confirmed hosted-capture requirement: one hosted database becomes the production system of record after a backed-up, verified cutover. The existing local database remains preserved during that transition; local development and tests use separate data. Avoid concurrent local and hosted production capture workers writing independent histories. This removes a two-way synchronization problem. The cutover details and remote manual entry/exit editing have not been user-approved separately.
 
-Answer: Pending
+Answer: Turso is authoritative (user, 2026-10-01). The local app and worker use the one Turso database; the local SQLite file becomes a backup mirror, not a second system of record.
 
 ## 5. How should access be restricted?
 
@@ -62,7 +68,7 @@ Question: "Exact-user access" was the original phrase. What does that mean concr
 
 Recommended: A single-user check, not a user system. In practice: one provider-backed sign-in (GitHub or Google) with a hardcoded allowed account, or a long-lived signed cookie issued once from the local machine. No registration, no password storage, no roles. The repository is public, so the access rule has to work correctly with the source code fully visible.
 
-Answer: Pending
+Answer: GitHub sign-in with a single allowed account (user, 2026-10-01). No registration, passwords, or roles.
 
 ## 6. Should backup and restore have a UI at all?
 

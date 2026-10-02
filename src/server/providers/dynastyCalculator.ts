@@ -374,10 +374,25 @@ export async function fetchOwnedSleeperRoster(
   return players
 }
 
-async function signInIfNeeded(page: Page) {
-  if (!/wp-login|pricing/.test(page.url()) && !(await page.locator('#user_login').isVisible()))
-    return
-  const login = credentials('DYNASTY_CALC')
+async function needsDtcSignIn(page: Page) {
+  // Rankings also render for guests. Their controls open a subscription prompt rather than
+  // applying settings, even though there is no login form or redirect on this page.
+  return (
+    /wp-login|pricing/.test(page.url()) ||
+    (await page.locator('#user_login').isVisible()) ||
+    (await page
+      .locator('a[href*="wp-login.php"]:visible')
+      .filter({ hasText: /^\s*(sign in|log in)\s*$/i })
+      .count()) > 0
+  )
+}
+
+export async function signInDtcIfNeeded(
+  page: Page,
+  suppliedLogin?: { email: string; password: string },
+) {
+  if (!(await needsDtcSignIn(page))) return
+  const login = suppliedLogin ?? credentials('DYNASTY_CALC')
   await page.goto('https://dynastytradecalculator.com/wp-login.php', {
     waitUntil: 'domcontentloaded',
   })
@@ -388,7 +403,8 @@ async function signInIfNeeded(page: Page) {
   await page
     .waitForURL((url) => !url.pathname.includes('wp-login'), { timeout: 20_000 })
     .catch(() => {})
-  if (page.url().includes('wp-login'))
+  await checkAccess(page)
+  if (await needsDtcSignIn(page))
     throw new ProviderError(
       'login',
       'DTC sign-in needs attention. Open the site and complete sign-in manually.',
@@ -412,7 +428,7 @@ export const dynastyCalculatorProvider: ValueProvider = {
         })
         await checkAccess(page)
         stage = 'signing in'
-        await signInIfNeeded(page)
+        await signInDtcIfNeeded(page)
         if (!page.url().includes('/dynasty-rankings-2/')) {
           stage = 'opening the rankings page after sign-in'
           await page.goto('https://dynastytradecalculator.com/dynasty-rankings-2/', {
@@ -420,6 +436,11 @@ export const dynastyCalculatorProvider: ValueProvider = {
           })
         }
         await checkAccess(page)
+        if (await needsDtcSignIn(page))
+          throw new ProviderError(
+            'login',
+            'DTC rankings still require sign-in. Open the site and complete sign-in manually.',
+          )
         const announcement = page.locator('.pum-active .pum-close')
         if (await announcement.isVisible()) await announcement.click()
         stage = 'selecting 12-team half-PPR standard settings'

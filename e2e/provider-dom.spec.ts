@@ -9,6 +9,7 @@ import {
   configureDtcRankingSettings,
   downloadDtcRankingExports,
   verifyDtcRankingSettings,
+  signInDtcIfNeeded,
 } from '../src/server/providers/dynastyCalculator'
 
 test('Dynasty GM reads values for players with initials and rejects truncated rosters', async ({
@@ -270,4 +271,70 @@ test('DTC names the control that ignores a click instead of a generic failure', 
   await expect(configureDtcRankingSettings(page)).rejects.toThrow(
     'DTC did not apply the requested ranking settings: .dtc-top-team-size 12 (expected active).',
   )
+})
+
+test('DTC signs in when public rankings render guest controls without a login form', async ({
+  page,
+}) => {
+  const origin = 'https://dtc-fixture.test'
+  const requests: string[] = []
+  await page.route('**/*', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    requests.push(`${request.method()} ${url.pathname}`)
+    if (url.origin === origin && url.pathname === '/dynasty-rankings-2/')
+      return route.fulfill({
+        contentType: 'text/html',
+        body: '<a href="/wp-login.php">Sign in</a><a class="dtc-top-team-type" data-id="half_ppr">.5 PPR</a>',
+      })
+    if (
+      url.href === 'https://dynastytradecalculator.com/wp-login.php' &&
+      request.method() === 'GET'
+    )
+      return route.fulfill({
+        contentType: 'text/html',
+        body: `<form method="post" action="${origin}/member/"><input id="user_login" name="log"><input id="user_pass" name="pwd" type="password"><button id="wp-submit">Log In</button></form>`,
+      })
+    if (url.origin === origin && url.pathname === '/member/' && request.method() === 'POST') {
+      expect(new URLSearchParams(request.postData() ?? '').get('log')).toBe('fixture@example.test')
+      expect(new URLSearchParams(request.postData() ?? '').get('pwd')).toBe('fixture-password')
+      return route.fulfill({
+        contentType: 'text/html',
+        body: '<a href="/wp-login.php?action=logout">Log out</a>',
+      })
+    }
+    return route.abort()
+  })
+  await page.goto(`${origin}/dynasty-rankings-2/`)
+  await signInDtcIfNeeded(page, { email: 'fixture@example.test', password: 'fixture-password' })
+  await expect(page).toHaveURL(`${origin}/member/`)
+  expect(requests).toEqual(['GET /dynasty-rankings-2/', 'GET /wp-login.php', 'POST /member/'])
+  await signInDtcIfNeeded(page)
+  expect(requests).toHaveLength(3)
+})
+
+test('DTC reports login when sign-in returns another guest page', async ({ page }) => {
+  const origin = 'https://dtc-fixture.test'
+  await page.route('**/*', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    if (
+      url.href === 'https://dynastytradecalculator.com/wp-login.php' &&
+      request.method() === 'GET'
+    )
+      return route.fulfill({
+        contentType: 'text/html',
+        body: `<form method="post" action="${origin}/dynasty-rankings-2/"><input id="user_login"><input id="user_pass" type="password"><button id="wp-submit">Log In</button></form>`,
+      })
+    if (url.origin === origin && url.pathname === '/dynasty-rankings-2/')
+      return route.fulfill({
+        contentType: 'text/html',
+        body: '<a href="/wp-login.php">Sign in</a>',
+      })
+    return route.abort()
+  })
+  await page.goto(`${origin}/dynasty-rankings-2/`)
+  await expect(
+    signInDtcIfNeeded(page, { email: 'fixture@example.test', password: 'fixture-password' }),
+  ).rejects.toMatchObject({ code: 'login' })
 })

@@ -2,17 +2,9 @@
 
 [AGENTS.md](AGENTS.md) is the authoritative rulebook for this repository. Codex established it and it binds Claude equally. Read it first. This file adds only what is specific to working alongside another agent.
 
-## Two agents, one machine
+## Agents take turns
 
-Claude and Codex share this working tree. Before your first edit in a session, read the Active claims table in [the agent channel](docs/agent-channel.md) and claim the paths you intend to touch. Never edit a path another agent holds.
-
-For anything beyond a couple of files, prefer a separate worktree so there is nothing to collide over:
-
-```
-git worktree add ../ff-tools-claude feat/<scope>
-```
-
-Release a claim by deleting your row when the work lands.
+Work in the primary checkout, one agent at a time. Do not spawn parallel agents, maintain path claims, or create separate agent worktrees. Leave task-specific notes on issues and PRs, and keep [docs/agent-channel.md](docs/agent-channel.md) current for the next agent. Preserve existing outside work until the user directs reconciliation or removal.
 
 ## Talking to Codex
 

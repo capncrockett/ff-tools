@@ -1,21 +1,33 @@
 # Agent channel
 
-Claude and Codex coordinate here. Both agents share one working tree on one machine, so this file serves two purposes: it prevents collisions, and it carries questions between sessions that never run at the same time.
+This is the single ongoing handoff file. Claude and Codex take turns in the primary checkout. Task-specific notes belong on issues and PRs; keep the current state here concise enough for the next session to start.
 
 Committed to a public repository. Code discussion only: no credentials, no session data, no account or roster specifics.
 
 ## How to use it
 
-- **Before your first edit in a session**, read Active claims and add a row for what you intend to touch. Never edit a path another agent holds. Delete your row when the work lands.
-- **For anything beyond a couple of files**, prefer `git worktree add ../ff-tools-<agent> feat/<scope>` so there is nothing to collide over. The claims table is the lightweight path for small edits.
+- **Before your first edit in a session**, read Current handoff and the relevant issue or PR. Work here, one agent at a time; no path claims, parallel agents, or separate agent worktrees.
+- **Before ending a session**, update Current handoff with the checkpoint, verification, blockers, and next step, and leave task-specific evidence on the issue or PR. Do not create another ongoing handoff file.
 - **Open a question** under Open questions rather than changing a decision that looks deliberate. Answer in place by replacing `Answer: Pending`, same convention as [the Grill Me document](grill-me-dynasty-tracker.md).
 - **Findings** live under Review log with a stable `Sn` identifier so they can be referenced in commits and replies.
 
-## Active claims
+## Current handoff - 2026-10-02
 
-| Agent  | Paths | Branch | Claimed | Status |
-| ------ | ----- | ------ | ------- | ------ |
-| _none_ |       |        |         |        |
+- User-confirmed: work continues in this primary Windows checkout, one agent at a time. Existing outside worktrees are preserved, not active work locations. No outside work was deleted or integrated.
+- Codex is taking [DTC recovery #26](https://github.com/capncrockett/ff-tools/issues/26), using user-confirmed GPT-6.1 Sol, High. `mvp` was fast-forwarded to Claude's pushed checkpoint `4afaadf`. Diagnostic commit `3cf0b76` names a failing setting or position tab; it does not fix the capture. Claude reported 132 unit tests and 21 Chromium checks on the Mac; latest remote Verify passed. No live capture happened on the Mac.
+- Windows diagnosis: one guarded `pnpm run sync:calc` failed on `.dtc-top-team-type half_ppr (expected active)`. A focused normal-page DOM check showed the click leaves PPR active and the scoring form value on PPR. The attached DTC handler calls `dtc_top_subscribe()` and returns before changing the value or active class. The served page therefore gates this setting behind its subscription flow. Account entitlement versus saved-session state remains unverified; the user was asked to check half-PPR in their normal signed-in browser. Live diagnostics stopped. No adapter validation was relaxed, and no valuation batch was saved by the failed attempt. #26 stays open until guarded live recovery succeeds.
+- Next for #26: establish legitimate access in the normal browser and use the supported session-recovery flow if needed, then retry only when the one-hour reservation allows. Do not force the control's state or bypass the subscription handler. Reproduce any actual adapter defect with sanitized fixtures and retain settings, identity, and coverage checks. Run `pnpm run verify -- --e2e` before commit and handoff; fixture success alone does not establish recovery.
+- After #26: [Turso migration #27](https://github.com/capncrockett/ff-tools/issues/27). User-confirmed choices: full hosted app, Turso/libSQL as the shared source of truth, a local worker writing to it for the first slice, and GitHub sign-in for one allowed account. Capture while the PC is off is deferred. This supersedes the earlier sequencing below. The user has signed up for Turso; no database name, region, import, token setup, or cutover has been verified here.
+- #27 currently has a plan only: throwaway adapter/transaction/timestamp/migration spike, configurable backend, import rehearsal on a consistent backup with row-count/checksum comparison, remote backup/query/reservation tooling, then cutover. Hosting/auth is a follow-up. Preserve integer-millisecond timestamps and existing history. Q6-Q8 in [hosting decisions](grill-me-hosting-and-backups.md) remain pending and do not block the spike.
+- Database contents include valuations, player catalogs/mappings, roster state/movements, holdings/notes, and capture history. It is private tracker data, not scores alone. Credentials and browser sessions are separate ignored files. Keep row contents and secrets out of public notes.
+- Production secret isolation is not implemented. Recommendation: a separate throwaway development database and dev-only token for agents; production credentials only in the hosted runtime and a user-operated capture runtime outside the agent's OS identity/access. A vault or runtime injection alone is insufficient if the agent can retrieve the same secret. Do not request or retrieve a production token or reuse an account-wide Turso admin login. Turso file import helps copy data but does not make the app remote-compatible.
+- Boundaries: inspect the real database only through `db:query`; tests use approved wrappers with throwaway databases. Never reset/migrate/seed/restore the live database for testing. Paid captures use only the guarded paths. Local backups are documented in [backups](backups.md); credentials, sessions, recordings, and databases never enter Git.
+- Local setup: Node 24+, pinned pnpm 12.4.1; on a fresh machine install dependencies, generate Prisma, and install Chromium. Git transfers code only. Pull before taking a turn on another computer and push only when authorized. No release or deployment; version remains 0.1.0.
+- This checkpoint changes coordination documentation only. Verification passed: `pnpm run verify -- --e2e`, 132 tests across 24 suites, both builds, and 21 Chromium checks. The first run stalled in Windows teardown and exited successfully after stopping its identified test-only server; the full elevated rerun exited 0 without intervention. DTC live recovery remains blocked on legitimate scoring access. No Turso upload, provisioning, cutover, or production-token handling was performed.
+
+## Historical notes
+
+Entries below retain prior discussion and review identifiers. Current handoff and the latest user-confirmed decisions supersede older workflow and hosting recommendations.
 
 ## Open questions
 

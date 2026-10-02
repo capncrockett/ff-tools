@@ -6,7 +6,7 @@ Read [AGENTS.md](../AGENTS.md), [architecture](architecture.md), and [the Grill 
 
 1. Check `git status --short --branch` and preserve unrelated work.
 2. Run `pnpm run doctor`. It checks prerequisites and local-file presence without fetching data or printing credentials.
-3. Use a focused `feat/<scope>` branch. The current Grundle Ball guidance is authoritative over older memories of automatic commits.
+3. Work in the primary checkout, one agent at a time. Read [the agent channel](agent-channel.md) before editing. Use a focused `feat/<scope>` branch when needed, without a separate agent worktree.
 4. Identify the smallest coherent product slice and the checks that exercise it.
 
 ## Work
@@ -26,8 +26,7 @@ Keep secrets in ignored `.env.local`, sessions in `.local/sessions`, and tempora
 ## Verify
 
 - Small iteration: `pnpm run verify:quick`.
-- Handoff: `pnpm run verify`.
-- Visible UI or scraper DOM changes: `pnpm run verify -- --e2e`.
+- Every commit and handoff: `pnpm run verify -- --e2e`, including changes without a visible UI effect.
 
 The verifier runs sequentially and stops at the first failure. Fix failures instead of bypassing hooks or lowering coverage thresholds. Tests create isolated SQLite files, use fixture values, and block live paid-provider capture. Browser checks cover desktop/mobile fit, table scrolling, dialogs, persistence, and failure recovery.
 
@@ -37,4 +36,4 @@ Do not run history imports, player seeding, or live sync commands merely to exer
 
 Explain behavior, validation, and remaining limitations. Link the decision document rather than restarting the interview. Check `git diff --check`, changed-file scope, secret exclusion, and ASCII dash punctuation.
 
-Commit, push, create a release PR, merge, or deploy only when the user asks. When asked, review the current branch/remote/PR state and report actual check results. Use [versioning](versioning.md); never bypass a failing gate.
+Commit each working, verified MVP slice under the user's standing checkpoint authorization. Push, create a release PR, merge, or deploy only when asked. Leave task-specific progress and verification on the issue or PR, and update [the agent channel](agent-channel.md), the single ongoing handoff file. Use [versioning](versioning.md); never bypass a failing gate.

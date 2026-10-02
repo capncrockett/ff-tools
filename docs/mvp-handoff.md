@@ -1,5 +1,35 @@
 # Dynasty tracker MVP handoff - 2026-10-01
 
+## Update from the Mac session (read this first)
+
+Written by Claude on a second machine (macOS). The Mac has no tracker database, no `.env.local`, and no DTC browser session, so no live work happened there. The real data and saved session live on the Windows machine.
+
+Process change (user, 2026-10-01): only one agent works in this repository at a time. The claims table, worktree advice, and agent-channel posts in CLAUDE.md and AGENTS.md are no longer needed. Those files still describe them and have not been edited. Data boundaries, the verify gate, and the `db:query`-only rule are unchanged.
+
+### State
+
+- Branch `mvp`, commits `4a18f21` (hosting decisions) and `ddef958` (DTC diagnostic) on top of `1399f61`. Pull them before starting.
+- Issue #26 is the DTC capture fix, labeled `agent:claude`. Issue #27 is the Turso migration. Do #26 first.
+- `ddef958` changes only error messages in `dynastyCalculator.ts`: a failure now names the control, for example `DTC did not apply the requested ranking settings: .dtc-top-team-size 12 (expected active).`, and a control that never appears is a controlled `format` error. It adds one test in `e2e/provider-dom.spec.ts`. It does not fix the capture. Full gate passed on the Mac: 132 unit tests, 21 Chromium checks.
+
+### Next step, on Windows
+
+1. Pull `mvp`. Run a guarded DTC capture (the app button or `pnpm run sync:calc`), which respects the one-hour reservation.
+2. Read the new failure message with `pnpm run db:query` (`SELECT status, failureCode, message FROM SyncRun WHERE sourceName = 'dynasty-calculator' ORDER BY startedAt DESC LIMIT 1`). It now names the control. It contains no player data, but keep query output out of public issues anyway.
+3. Fix that control with a fixture that matches how the live page behaves. If selector evidence is needed, `pnpm run record:dtc` is the supported recorder.
+4. Keep the scoring, identity, and coverage checks. Run `pnpm run verify -- --e2e`, then a live capture to confirm recovery.
+
+### Hosting decisions (issue #23, answered 2026-10-01)
+
+In [the hosting Grill Me](grill-me-hosting-and-backups.md): full hosted app, Turso/libSQL as the single source of truth, local worker only for provider capture (MVP), GitHub sign-in for one allowed account. Q6 to Q8 (backup panel, pruning, restore test) are still pending and do not block #27. Turso also fixes the machine problem: both computers would share one database. #27 comes after #26.
+
+### Environment notes
+
+- The repo pins pnpm 12.4.1. A global pnpm 9.11.0 could not launch it (`ENOEXEC`); install a current global pnpm (`npm i -g pnpm@12`) if Windows shows the same.
+- On a fresh machine: `pnpm install`, `pnpm run prisma:generate`, `pnpm run browser:install` before `verify -- --e2e`.
+
+## Earlier handoff (Windows, Codex)
+
 ## First task: fix failed DTC captures
 
 The user explicitly made DTC capture recovery the first task for the next agent chat. Get the existing player tracker reliably usable before expanding scope. Do not start draft picks, hosting, refactoring, experiment removal, or broad catalog cleanup first.

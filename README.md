@@ -6,7 +6,7 @@ The active MVP uses React, Vite, Tailwind/DaisyUI, Express, Zod, and Prisma/SQLi
 
 ## Run locally
 
-Prerequisites: Node 24+, Corepack/pnpm 9, and Chromium for paid-provider capture.
+Prerequisites: Node 24+, Corepack, the pinned pnpm 12.4.1, and Chromium for browser tests and paid-provider capture. For macOS development setup, see [Continue development on another computer](#continue-development-on-another-computer).
 
 ```powershell
 corepack pnpm install --frozen-lockfile
@@ -23,6 +23,38 @@ Only copy the example on first setup; preserve an existing `.env.local`. Fill it
 Open [the local app](http://127.0.0.1:5173). For a built app, run `pnpm run build`, then `pnpm start` and open [port 3000](http://127.0.0.1:3000). Both servers bind to loopback. This MVP runs on your computer. An optional [local nightly capture worker](docs/local-capture-worker.md) is available. The database is [backed up automatically](docs/backups.md) outside the repository; `pnpm run db:restore` lists and restores backups. `pnpm run db:query -- --tables` and `pnpm run db:query -- "SELECT ..."` inspect saved data read-only. Vercel hosting, durable hosted storage, and authentication remain future work.
 
 The database is `prisma/dev.db`. Credentials live in ignored `.env.local`; browser sessions and the player catalog live in ignored `.local/`. Environment variables override local-file values. No credentials belong in Git or the browser app.
+
+## Continue development on another computer
+
+The current tracker work is on **`mvp`**. GitHub's default branch, `main`, still contains the older app. On a Mac with Git, Node 24+, and Corepack installed, clone the working branch explicitly:
+
+```sh
+git clone --branch mvp https://github.com/capncrockett/ff-tools.git
+cd ff-tools
+```
+
+For an existing clone, check for local edits first and preserve them before switching or pulling:
+
+```sh
+git status --short --branch
+git switch mvp
+git pull --ff-only origin mvp
+```
+
+From the repository root, enable the pinned package manager and prepare this machine's dependencies, Prisma client, and Chromium:
+
+```sh
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run prisma:generate
+pnpm run browser:install
+pnpm run doctor
+pnpm run verify -- --e2e
+```
+
+Read [AGENTS.md](AGENTS.md) and the current [agent channel](docs/agent-channel.md) before editing, then take the relevant GitHub issue. Use one computer and one agent at a time. Push a verified checkpoint before switching computers, then pull it on the receiving computer.
+
+This prepares code development and fixture-based tests without a live database or paid-provider credentials. Doctor may report those local files as absent. Git does not transfer `prisma/dev.db`, `.env.local`, `.local/sessions`, or private backups. Dependency binaries and browsers must be installed on the Mac rather than copied from Windows. To continue with existing tracker history, deliberately transfer a fresh, consistent [database backup](docs/backups.md) through a private channel and restore it only on the intended runtime; keep the original and its backups. Running both copies independently would split the history while shared storage is still pending. Credentials and normal provider sign-in are separate runtime setup, subject to [the credential-isolation protocol](SECURITY.md). None of these private files belongs in this public repository.
 
 ## Using the tracker
 
